@@ -159,7 +159,7 @@ if __name__ == "__main__":
             email_chains.append(chain)
             previous_chains.append(summary)
 
-        error
+        # error
 
     with open("verba_email_chains.jsonl", "w") as f:
         for chain in email_chains:
