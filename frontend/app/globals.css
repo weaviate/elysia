@@ -4,9 +4,9 @@
 
 
 .btn {
-  @apply flex items-center justify-start gap-2 hover:bg-foreground_alt hover:text-primary hover:scale-105 active:scale-95 transition-all duration-300 p-3 rounded-lg;
+  @apply flex items-center gap-2 hover:bg-foreground_alt hover:text-primary hover:scale-105 active:scale-95 transition-all duration-300 p-3 rounded-lg;
 }
 
 .btn-round {
-  @apply flex items-center justify-start gap-2 hover:bg-foreground_alt hover:text-primary hover:scale-105 active:scale-95 transition-all duration-300 p-3 rounded-full;
+  @apply flex items-center justify-start gap-2 hover:bg-foreground_alt hover:text-primary hover:scale-105 active:scale-95 transition-all duration-300 p-2 rounded-full;
 }

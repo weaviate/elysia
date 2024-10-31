@@ -13,12 +13,8 @@ export default function Home() {
 
   return (
     <div className="w-full flex">
-      <div className="w-2/12">
-        <Sidebar handlePageChange={handlePageChange} page={page} />
-      </div>
-      <div className="w-10/12">
-        <ChatInterface />
-      </div>
+      <Sidebar handlePageChange={handlePageChange} page={page} />
+      <ChatInterface />
     </div>
   );
 }

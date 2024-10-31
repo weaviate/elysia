@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { AiFillHome } from "react-icons/ai";
-import { FaDatabase } from "react-icons/fa";
+import { FaDatabase, FaExpandAlt } from "react-icons/fa";
 import { FaTicketSimple } from "react-icons/fa6";
 import { IoMdAddCircle } from "react-icons/io";
+import { ImShrink2 } from "react-icons/im";
+
+import SidebarButton from "./sidebar_button";
 
 interface SidebarProps {
   page: "home" | "data-explorer";
@@ -12,47 +15,84 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ handlePageChange, page }) => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const toggleCollapse = () => {
+    setCollapsed((prev) => !prev);
+  };
+
+  const asideClassName = `h-screen bg-background_alt p-5 flex flex-col gap-12 transition-transform duration-200 ${
+    collapsed ? "w-[90px]" : "w-[18vw]"
+  }`;
+
+  const logoSize = collapsed ? "w-10 h-10" : "w-6 h-6";
+
   return (
-    <aside className="h-screen bg-background_alt p-5 flex flex-col gap-12">
-      <div className="flex items-center justify-start gap-1">
-        <img src="/logo.svg" alt="elysia" className="w-6 h-6" />
-        <p className="text-sm font-extrabold text-primary">Elysia</p>
+    <aside className={asideClassName}>
+      <div
+        className={`flex items-center gap-1 ${
+          collapsed ? "justify-center" : "justify-between"
+        }`}
+      >
+        <div
+          className={`flex items-center gap-1 ${
+            collapsed ? "justify-center" : "justify-start"
+          }`}
+        >
+          <img
+            src="/logo.svg"
+            alt="elysia"
+            className={`transition-all duration-200 ${logoSize}`}
+          />
+          {!collapsed && (
+            <p className="text-sm font-extrabold text-primary">Elysia</p>
+          )}
+        </div>
+        {!collapsed && (
+          <button className="btn-round text-secondary" onClick={toggleCollapse}>
+            <ImShrink2 size={14} />
+          </button>
+        )}
       </div>
       <nav className="flex flex-col h-full gap-6">
         <div className="flex flex-col gap-2">
-          <button
-            className={`btn ${
-              page === "home" ? "bg-foreground text-primary" : "text-secondary"
-            }`}
+          <SidebarButton
+            icon={<AiFillHome />}
+            label="Home"
+            isActive={page === "home"}
+            isCollapsed={collapsed}
             onClick={() => handlePageChange("home")}
-          >
-            <AiFillHome size={14} />
-            <p className="text-xs font-medium ">Home</p>
-          </button>
-          <button
-            className={`btn ${
-              page === "data-explorer"
-                ? "bg-foreground text-primary"
-                : "text-secondary"
-            }`}
+          />
+          <SidebarButton
+            icon={<FaDatabase />}
+            label="Data Explorer"
+            isActive={page === "data-explorer"}
+            isCollapsed={collapsed}
             onClick={() => handlePageChange("data-explorer")}
-          >
-            <FaDatabase size={14} />
-            <p className="text-xs font-medium ">Data Explorer</p>
-          </button>
+          />
         </div>
         <div className="border-t border-secondary my-2"></div>
         <div className="flex flex-col gap-2">
-          <button className={`btn text-secondary`}>
-            <IoMdAddCircle size={14} />
-            <p className="text-xs font-medium ">New Chat</p>
-          </button>
-          <button className={`btn bg-foreground text-primary`}>
-            <FaTicketSimple size={14} />
-            <p className="text-xs font-medium ">Current Chat</p>
-          </button>
+          <SidebarButton
+            icon={<IoMdAddCircle />}
+            label="New Chat"
+            isCollapsed={collapsed}
+          />
+          <SidebarButton
+            icon={<FaTicketSimple />}
+            label="Current Chat"
+            isCollapsed={collapsed}
+            isActive={true}
+          />
         </div>
       </nav>
+      {collapsed && (
+        <div className="flex items-center justify-center w-full">
+          <button className="btn-round text-secondary" onClick={toggleCollapse}>
+            <FaExpandAlt size={20} />
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

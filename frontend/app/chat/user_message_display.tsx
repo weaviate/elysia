@@ -12,8 +12,8 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
   user_message,
 }) => {
   return (
-    <div className="bg-foreground p-4 rounded-lg">
-      <p className="font-semibold text-primary text-sm">{user_message}</p>
+    <div className="bg-foreground px-8 py-5 rounded-xl w-full flex justify-start items-start">
+      <p className="text-primary text-sm">{user_message}</p>
     </div>
   );
 };

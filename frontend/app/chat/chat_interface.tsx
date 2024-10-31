@@ -24,7 +24,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({}) => {
   };
 
   return (
-    <div className="h-screen flex flex-col p-10 items-center justify-center">
+    <div className="h-screen flex flex-col p-10 items-center justify-center flex-grow">
       <MessageDisplay messages={messages} />
       <div className="flex w-[50vw]">
         <QueryInput
