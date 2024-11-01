@@ -144,9 +144,9 @@ if __name__ == "__main__":
     )
 
     # read data frames
-    github_issues_df  = pd.read_csv("verba_github_issues.csv")
-    slack_messages_df = pd.read_csv("verba_slack_conversations.csv")
-    email_chains_df   = pd.read_csv("verba_email_chains.csv")
+    github_issues_df  = pd.read_csv("../verba_github_issues.csv")
+    slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
+    email_chains_df   = pd.read_csv("../verba_email_chains.csv")
 
     # add github issues data to weaviate collection
     add_issues_to_weaviate(client, github_issues_df, "example_verba_github_issues", force=True)
