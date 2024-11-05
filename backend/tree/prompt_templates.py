@@ -29,19 +29,33 @@ class DecisionPrompt(dspy.Signature):
         A list of tasks that have already been completed.
         This is so you know some history of what has been done, so you can avoid repeating tasks, and also so you know what is available to the user, to better decide which property to choose.
         This is a list of dicts, where each dict may have different information based on what the task was.
+        The format is:
+        - id: the id of the task
+        - options: a list of the available tasks at the time, with their descriptions as the values
+        - decision: the name of the task that was decided on at the time
+        - instruction: the prompt/instruction for this particular decision
+        - metadata: any metadata that was returned from the task, this is not as important as the other fields
         """.strip()
     )
     available_tasks = dspy.InputField(
         description="""
         A description of the tasks that can be completed.
+        This is what you will choose from to decide which task to complete.
         These will be in the form of a list of dictionaries, where each dictionary contains two keys:
-        - name: The name of the task
-        - description: A description of the task
+        - name: The name of the task (this is what you will choose from)
+        - description: A description of the task (this is for your information and to help you decide)
+        """.strip()
+    )
+    available_information = dspy.InputField(
+        description="""
+        A list of information that is available to the user, based on the history of completed tasks.
+        This is likely a list of retrieved objects, or summaries, or other information.
         """.strip()
     )
     task = dspy.OutputField(
         description="""
         The decided task. This must be one of the 'name' fields in available_tasks.
+        IMPORTANT: This MUST be from the available_tasks list _only_.
         Your output should be a dictionary with the following keys:
         - name: The name of the task
         - reason: A justification for why this task was chosen
@@ -54,9 +68,9 @@ class DecisionPrompt(dspy.Signature):
     )
     user_will_be_satisfied = dspy.OutputField(
         description="""
-        _After_ completing the task decided on above, will the OVERALL GOAL outlined in user_prompt be completed? 
+        _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), will the OVERALL GOAL outlined in user_prompt be completed? 
         Will everything that needs to be done to satisfy the user's query be done?
-        This includes all parts of what the user is requesting.
+        This includes all parts of what the user is requesting, so break this down into smaller parts if needed.
         Base this on the {{user_prompt}}, the {{instruction}} for the task decided on, and the history of completed tasks.
         Specifically, if needed, you should check the 'result' field in the completed_tasks list, to see if the requested information has been retrieved or the results of the previous tasks are enough to satisfy the user's query.
         You should also base your decision on the available options that were in the previous tasks, if an option is available that should be explored, then the overall goal is not satisfied.

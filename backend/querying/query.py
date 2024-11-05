@@ -3,24 +3,27 @@ from backend.globals.weaviate_client import client
 
 from backend.util.logging import backend_print
 from backend.querying.prompt_executors import QueryRewriterExecutor
+from backend.tree.objects import Returns
 
 class Query:
 
     def __init__(self, collection_name: str):
+        self.collection_name = collection_name
         self.collection = client.collections.get(collection_name)
 
-    def _find_previous_queries(self, completed_tasks: list[dict]):
+    def _find_previous_queries(self, available_information: Returns):
 
         previous_queries = []
-        for task in completed_tasks:
-            if "metadata" in task and "previous_queries" in task["metadata"]:
-                previous_queries.extend(task["metadata"]["previous_queries"])
+        if self.collection_name in available_information.retrieved:
+            metadata = available_information.retrieved[self.collection_name].metadata
+            if "previous_queries" in metadata:
+                previous_queries.extend(metadata["previous_queries"])
 
         return previous_queries
     
-    def query(self, user_prompt: str, completed_tasks: list[dict], limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
+    def query(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
 
-        previous_queries = self._find_previous_queries(completed_tasks)
+        previous_queries = self._find_previous_queries(available_information)
 
         if rewrite_query:
             query_rewriter = QueryRewriterExecutor()
@@ -29,7 +32,7 @@ class Query:
         else:
             query = user_prompt
 
-        metadata = {"previous_queries": previous_queries}
+        metadata = {"previous_queries": previous_queries, "collection_name": self.collection_name}
 
         if type == "hybrid":
             return self.hybrid(query, limit), metadata
@@ -38,8 +41,8 @@ class Query:
         else:
             raise ValueError(f"Invalid query type: {type}")
 
-    def __call__(self, user_prompt: str, completed_tasks: list[dict], limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
-        return self.query(user_prompt, completed_tasks, limit, type, rewrite_query, **kwargs)
+    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
+        return self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
     
 class MessageQuery(Query):
     """

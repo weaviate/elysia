@@ -6,3 +6,5 @@ weaviate-client
 rich
 psutil
 tqdm
+fastapi
+uvicorn

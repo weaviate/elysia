@@ -1,6 +1,7 @@
 import dspy
 import json
 from backend.tree.prompt_templates import DecisionPrompt
+from backend.tree.objects import Returns
 
 class DecisionExecutor(dspy.Module):
 
@@ -11,6 +12,7 @@ class DecisionExecutor(dspy.Module):
                 user_prompt: str, 
                 instruction: str,
                 available_tasks: list[dict], 
+                available_information: Returns,
                 completed_tasks: list[str]) -> tuple[dict, bool]:
 
         # convert available_tasks to a string
@@ -20,7 +22,8 @@ class DecisionExecutor(dspy.Module):
             user_prompt=user_prompt,
             instruction=instruction,
             completed_tasks=completed_tasks,
-            available_tasks=available_tasks_str
+            available_tasks=available_tasks_str,
+            available_information=available_information.to_str()
         )
 
         try:
