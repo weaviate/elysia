@@ -15,5 +15,5 @@ if __name__ == "__main__":
 
 
     tree.process(
-        "Give me all the information about the issue related to PDFs being too large to upload in verba, as well as what people are saying about it."
+        "List 5 random issues from the verba github issues collection."
     )

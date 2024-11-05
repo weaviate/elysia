@@ -5,7 +5,7 @@ from rich import print
 
 # from backend.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
 from backend.text.text import Summarizer, TextResponse
-from backend.querying.query import QueryOptions
+from backend.querying.agentic_query import QueryOptions
 from backend.tree.prompt_executors import DecisionExecutor, InputExecutor
 from backend.util.logging import backend_print
 from backend.tree.objects import Text, Returns, GenericRetrieval
@@ -41,16 +41,10 @@ class DecisionNode:
 
         if self.options[self.decision]['action'] is not None:
             action_fn = eval(self.options[self.decision]['action'])
-            self.result = action_fn(
-                user_prompt=user_prompt, 
-                completed_tasks=completed_tasks, 
-                available_information=available_information, 
-                **kwargs
-            )
         else:
-            self.result = None
+            action_fn = None
 
-        return self.decision, self.result, self.completed
+        return self.decision, action_fn, self.completed
 
     def __call__(self, user_prompt: str, completed_tasks: list[dict], available_information: list[dict], conversation_history: list[dict], **kwargs):
         return self.decide(user_prompt, completed_tasks, available_information, conversation_history, **kwargs)
@@ -128,7 +122,7 @@ class Tree:
                 },
                 "example_verba_github_issues": {
                     "description": "github issues for the verba app",
-                    "action": 'QueryOptions["issue"](collection_name = "example_verba_github_issues")',
+                    "action": 'QueryOptions["generic"](collection_name = "example_verba_github_issues")',
                     "returns": "Retrieved",
                     "next": None
                 }
@@ -172,6 +166,16 @@ class Tree:
             self.returns.add_text(objects=action_result)
             self._update_conversation_history(user_prompt, action_result.objects[0])
 
+    def _evaluate_actions(self, actions: list[Callable], user_prompt: str, **kwargs):
+        for action_fn in actions:
+            if action_fn is not None:
+                result = action_fn(
+                    user_prompt=user_prompt, 
+                    available_information=self.returns, 
+                    **kwargs
+                )
+                self._update_returns(result, user_prompt)
+
     def reset(self):
         self = Tree(verbosity=self.verbosity)
 
@@ -196,29 +200,27 @@ class Tree:
 
         current_decision_node = self.decision_nodes[self.root]
         
+        actions = []
+
         while True:
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")
                 backend_print(f"Instruction: [italic]{current_decision_node.instruction}[/italic]")
 
-            decision, action_result, completed = current_decision_node(
+            decision, action_fn, completed = current_decision_node(
                 user_prompt=user_prompt, 
                 completed_tasks=self.previous_info,
                 available_information=self.returns,
                 conversation_history=self.conversation_history,
                 **kwargs
             )
+            actions.append(action_fn) # update list of actions for later evaluation
 
             # another yield here for decision that was made (for updates to frontend)
 
             if self.verbosity > 1:
                 backend_print(f"Decision: [magenta]{decision}[/magenta]")
-
-                if completed:
-                    backend_print(f"[bold green]Model identified overall goal as completed![/bold green]")
-                else:
-                    backend_print(f"Model identified overall goal as [red]not[/red] completed ([italic]yet[/italic]).")
 
             self.previous_info.append(current_decision_node.construct_as_previous_info())
 
@@ -227,14 +229,18 @@ class Tree:
             else:
                 current_decision_node = self.decision_nodes[current_decision_node.options[decision]["next"]]
 
+        # evaluate actions
+        self._evaluate_actions(actions, user_prompt, **kwargs)
+        # self._update_returns(result, user_prompt)
 
         if not completed:
             
             if self.verbosity == 2:
                 backend_print("Model did [bold red]not[/bold red] complete overall goal! Restarting tree...")
 
-            self._update_returns(action_result, user_prompt)
+            # recursive call to restart the tree since the goal was not completed
             self.process(user_prompt, recursion_counter + 1, first_run=False, **kwargs)
+
         else:
             
             if self.verbosity >= 1:
@@ -243,8 +249,6 @@ class Tree:
 
                 for i, info in enumerate(self.previous_info):
                     backend_print(f"[Decision {i} ({info['id']})]: [bold]Instruction:[/bold] [cyan italic]{info['instruction']}[/cyan italic] -> [bold]Result:[/bold] [green]{info['decision']}[/green]")
-
-            self._update_returns(action_result, user_prompt)
 
         return self.returns
 
