@@ -16,7 +16,8 @@ class DecisionExecutor(dspy.Module):
                 completed_tasks: list[str]) -> tuple[dict, bool]:
 
         # convert available_tasks to a string
-        available_tasks_str = json.dumps(available_tasks)
+        available_tasks_list = list(available_tasks.keys()) # provide the task names 
+        available_tasks_str = str(available_tasks_list) + "\n" + json.dumps(available_tasks) # append the task descriptions
 
         decision = self.router(
             user_prompt=user_prompt,
@@ -45,5 +46,5 @@ class InputExecutor(dspy.Module):
     def __init__(self):
         self.input_model = dspy.ChainOfThought(InputPrompt)
 
-    def forward(self, instruction: str) -> list[str]:
-        return self.input_model(instruction=instruction).parts
+    def forward(self, task: str) -> list[str]:
+        return self.input_model(task=task).subtasks

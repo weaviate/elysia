@@ -127,8 +127,8 @@ class IssueQuery(Query):
 
         return [{k: v for k, v in obj.properties.items()} for obj in response.objects]
     
-    def __call__(self, query: str, limit: int = 10):
-        output, metadata = self.query(query, limit)
+    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
+        output, metadata = self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
         return GenericRetrieval(output, metadata)
 
 QueryOptions = {

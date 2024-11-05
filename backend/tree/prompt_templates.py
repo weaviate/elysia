@@ -35,22 +35,29 @@ class DecisionPrompt(dspy.Signature):
         - decision: the name of the task that was decided on at the time
         - instruction: the prompt/instruction for this particular decision
         - metadata: any metadata that was returned from the task, this is not as important as the other fields
-        """.strip()
+        """.strip(),
+        format = str
     )
     available_tasks = dspy.InputField(
         description="""
-        A description of the tasks that can be completed.
+        A list and description of the tasks that can be completed.
         This is what you will choose from to decide which task to complete.
-        These will be in the form of a list of dictionaries, where each dictionary contains two keys:
-        - name: The name of the task (this is what you will choose from)
+        To learn about the tasks, you should look at the 'description' field in the corresponding dictionary entry for each task.
+        These will be in the form of a list of dictionaries, where each dictionary contains values:
         - description: A description of the task (this is for your information and to help you decide)
-        """.strip()
+        - action: The function that will be called to complete the task, not relevant to your decision
+        - returns: The type of object that will be returned from the task, not relevant to your decision
+        - next: The next task to be completed, not relevant to your decision
+        """.strip(),
+        format = str
     )
     available_information = dspy.InputField(
         description="""
         A list of information that is available to the user, based on the history of completed tasks.
         This is likely a list of retrieved objects, or summaries, or other information.
-        """.strip()
+        If this is empty, then no information has currently been retrieved, but it can be, depending on the options available to you.
+        """.strip(),
+        format = str
     )
     task = dspy.OutputField(
         description="""
@@ -74,6 +81,7 @@ class DecisionPrompt(dspy.Signature):
         description="""
         _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), will the OVERALL GOAL outlined in user_prompt be completed? 
         Will everything that needs to be done to satisfy the user's query be done?
+        Do not include any other information in your response, only a True/False value, and nothing else.
         This includes all parts of what the user is requesting, so break this down into smaller parts if needed.
         Base this on the {{user_prompt}}, the {{instruction}} for the task decided on, and the history of completed tasks.
         Specifically, if needed, you should check the 'result' field in the completed_tasks list, to see if the requested information has been retrieved or the results of the previous tasks are enough to satisfy the user's query.
@@ -88,13 +96,21 @@ class DecisionPrompt(dspy.Signature):
 
 class InputPrompt(dspy.Signature):
     """
-    You are an expert at breaking down instructions into multiple parts.
+    You are an expert at breaking down a global task, which is a set of instructions, into multiple smaller distinct subtasks.
     IMPORTANT: Only include the parts that are necessary to complete the task, do not add redundant information related to style, tone, etc.
     These should only be parts of the instructions that can map to _actual_ tasks.
     """
-    instruction = dspy.InputField(
-        description="The instruction to break down"
+    task = dspy.InputField(
+        description="""
+        The overall task to break down. 
+        This is a set of instructions provided by the user that will be completed later.
+        These are usually in conversational or informal language, and are not necessarily task-like.
+        """.strip()
     )
-    parts = dspy.OutputField(
-        description="The breakdown of the instruction into multiple parts"
+    subtasks = dspy.OutputField(
+        description="""
+        The breakdown of the overall task into smaller distinct subtasks.
+        These should be in task-like language, and be as distinct as possible.
+        Your responses to this field should not include anything other than what was requested in the task field, but broken down into smaller parts with more descriptive instructions.
+        """.strip()
     )

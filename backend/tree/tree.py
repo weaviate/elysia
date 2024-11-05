@@ -1,9 +1,10 @@
 import json
+import os
 from typing import Callable, List
 from rich import print
 
-from backend.summarizing.prompt_executors import SummarizingExecutor
-from backend.summarizing.summarize import Summarizer
+# from backend.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
+from backend.text.text import Summarizer, TextResponse
 from backend.querying.query import QueryOptions
 from backend.tree.prompt_executors import DecisionExecutor, InputExecutor
 from backend.util.logging import backend_print
@@ -11,9 +12,10 @@ from backend.tree.objects import Text, Returns, GenericRetrieval
 
 import dspy
 
-# lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
+lm = dspy.LM(model="gpt-4o", max_tokens=8000)
 
-lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+# lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+# lm = dspy.LM("groq/llama-3.2-1b-preview", max_tokens=8192)
 
 dspy.settings.configure(lm=lm)
 
@@ -95,6 +97,12 @@ class Tree:
                     "action": 'Summarizer()', 
                     "returns": "text",
                     "next": None    # next=None represents the end of the tree
+                },
+                "text_response": {
+                    "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like.",
+                    "action": 'TextResponse()',
+                    "returns": "text",
+                    "next": None
                 }
             },
             root = True
@@ -170,7 +178,7 @@ class Tree:
             return self.returns
         
         if first_run:
-            
+
             if self.break_down_instructions:
                 user_prompt = self.input_executor(user_prompt)
 

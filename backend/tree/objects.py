@@ -12,8 +12,12 @@ class Objects:
         self.objects.extend(objects)
         for key, value in metadata.items():
             if key not in self.metadata:
-                self.metadata[key] = []
-            self.metadata[key].extend(value)
+                self.metadata[key] = value
+            
+            if isinstance(self.metadata[key], list):
+                self.metadata[key].extend(value)
+            else:
+                self.metadata[key] = value
 
     def to_json(self):
         return {
