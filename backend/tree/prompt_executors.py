@@ -1,6 +1,6 @@
 import dspy
 import json
-from backend.tree.prompt_templates import DecisionPrompt
+from backend.tree.prompt_templates import DecisionPrompt, InputPrompt
 from backend.tree.objects import Returns
 
 class DecisionExecutor(dspy.Module):
@@ -23,7 +23,7 @@ class DecisionExecutor(dspy.Module):
             instruction=instruction,
             completed_tasks=completed_tasks,
             available_tasks=available_tasks_str,
-            available_information=available_information.to_str()
+            available_information=available_information.to_llm_str()
         )
 
         try:
@@ -40,3 +40,10 @@ class DecisionExecutor(dspy.Module):
 
         return task["name"], completed
 
+class InputExecutor(dspy.Module):
+
+    def __init__(self):
+        self.input_model = dspy.ChainOfThought(InputPrompt)
+
+    def forward(self, instruction: str) -> list[str]:
+        return self.input_model(instruction=instruction).parts

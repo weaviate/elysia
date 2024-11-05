@@ -3,7 +3,7 @@ from backend.globals.weaviate_client import client
 
 from backend.util.logging import backend_print
 from backend.querying.prompt_executors import QueryRewriterExecutor
-from backend.tree.objects import Returns
+from backend.tree.objects import Returns, GenericRetrieval, ConversationRetrieval
 
 class Query:
 
@@ -35,11 +35,13 @@ class Query:
         metadata = {"previous_queries": previous_queries, "collection_name": self.collection_name}
 
         if type == "hybrid":
-            return self.hybrid(query, limit), metadata
+            output = self.hybrid(query, limit)
         elif type == "semantic":
-            return self.near_text(query, limit), metadata
+            output = self.near_text(query, limit)
         else:
             raise ValueError(f"Invalid query type: {type}")
+        
+        return output, metadata
 
     def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
         return self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
@@ -97,6 +99,10 @@ class MessageQuery(Query):
 
         return self.return_all_messages_in_conversation(response)
 
+    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
+        output, metadata = self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
+        return ConversationRetrieval(output, metadata)
+
 class IssueQuery(Query):
     """
     Applicable to github issues.
@@ -121,6 +127,9 @@ class IssueQuery(Query):
 
         return [{k: v for k, v in obj.properties.items()} for obj in response.objects]
     
+    def __call__(self, query: str, limit: int = 10):
+        output, metadata = self.query(query, limit)
+        return GenericRetrieval(output, metadata)
 
 QueryOptions = {
     "message": MessageQuery,

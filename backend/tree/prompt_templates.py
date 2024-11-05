@@ -63,7 +63,11 @@ class DecisionPrompt(dspy.Signature):
     )
     user_will_be_satisfied_reasoning = dspy.OutputField(
         description="""
-        State your reasoning for why the user will be satisfied after completing the task decided on above.
+        Break down all the requests in the user_prompt into smaller parts in an itemised list.
+        For each one, state, next to it, a True/False value, indicating whether _after completing the currently decided task_, the user will be satisfied for that particular topic.
+        Each True/False should take into account the description of all previous tasks in {{completed_tasks}}.
+        Finally, output a single boolean value, indicating whether the user will be satisfied as a whole (all parts of the user's query are satisfied) after completing the currently decided task.
+        This final True/False value should be the AND of all the True/False values for each part.
         """.strip()
     )
     user_will_be_satisfied = dspy.OutputField(
@@ -81,3 +85,16 @@ class DecisionPrompt(dspy.Signature):
         format=bool
     )
 
+
+class InputPrompt(dspy.Signature):
+    """
+    You are an expert at breaking down instructions into multiple parts.
+    IMPORTANT: Only include the parts that are necessary to complete the task, do not add redundant information related to style, tone, etc.
+    These should only be parts of the instructions that can map to _actual_ tasks.
+    """
+    instruction = dspy.InputField(
+        description="The instruction to break down"
+    )
+    parts = dspy.OutputField(
+        description="The breakdown of the instruction into multiple parts"
+    )

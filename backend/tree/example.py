@@ -1,19 +1,12 @@
 
 import os
 import sys
+import time
 sys.path.append(os.getcwd())
 os.chdir("../..")
 
 from backend.tree.tree import Tree
-import dspy
-import weaviate
-from weaviate.classes.init import Auth
-
-from rich import print
-
-# lm=dspy.LM(model="gpt-4o-mini", max_tokens=8000)
-# dspy.settings.configure(lm=lm)
-
+from backend.tree.tree import lm
 
 if __name__ == "__main__":
 
@@ -32,7 +25,10 @@ if __name__ == "__main__":
 
     tree = Tree(verbosity=1)
 
+    start = time.perf_counter()
     returns = tree.process(
-        "Summarise some solutions people have proposed in slack for the issue of PDFs being too large to upload"
+        "Summarise some solutions people have proposed in slack for the issue of PDFs being too large to upload. don't forget to summarise!"
     )
+    end = time.perf_counter()
+    print(f"Time taken: {end - start} seconds")
     # print(returns)
