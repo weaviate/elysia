@@ -13,6 +13,7 @@ class DecisionExecutor(dspy.Module):
                 instruction: str,
                 available_tasks: list[dict], 
                 available_information: Returns,
+                conversation_history: list[dict],
                 completed_tasks: list[str]) -> tuple[dict, bool]:
 
         # convert available_tasks to a string
@@ -24,7 +25,8 @@ class DecisionExecutor(dspy.Module):
             instruction=instruction,
             completed_tasks=completed_tasks,
             available_tasks=available_tasks_str,
-            available_information=available_information.to_llm_str()
+            available_information=available_information.to_llm_str(),
+            conversation_history=conversation_history
         )
 
         try:

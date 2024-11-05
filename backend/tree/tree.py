@@ -26,17 +26,17 @@ class DecisionNode:
         self.instruction = instruction
         self.options = options
         self.root = root
+        self.decision_executor = DecisionExecutor()
 
-    def decide(self, user_prompt: str, completed_tasks: list[dict], available_information: Returns, **kwargs):
+    def decide(self, user_prompt: str, completed_tasks: list[dict], available_information: Returns, conversation_history: list[dict], **kwargs):
         
-        decision_executor = DecisionExecutor()
-
-        self.decision, self.completed = decision_executor(
+        self.decision, self.completed = self.decision_executor(
             user_prompt = user_prompt, 
             instruction = self.instruction, 
             available_tasks = self.options, 
             available_information = available_information,
-            completed_tasks = completed_tasks
+            completed_tasks = completed_tasks,
+            conversation_history = conversation_history
         )
 
         if self.options[self.decision]['action'] is not None:
@@ -52,8 +52,8 @@ class DecisionNode:
 
         return self.decision, self.result, self.completed
 
-    def __call__(self, user_prompt: str, completed_tasks: list[dict], available_information: list[dict], **kwargs):
-        return self.decide(user_prompt, completed_tasks, available_information, **kwargs)
+    def __call__(self, user_prompt: str, completed_tasks: list[dict], available_information: list[dict], conversation_history: list[dict], **kwargs):
+        return self.decide(user_prompt, completed_tasks, available_information, conversation_history, **kwargs)
 
     def construct_as_previous_info(self):
         return {
@@ -73,6 +73,8 @@ class Tree:
         self.decision_nodes = {}
         self.verbosity = verbosity
         self.break_down_instructions = break_down_instructions
+
+        self.conversation_history = []
 
         self.returns = Returns(
             retrieved = {}, 
@@ -153,7 +155,13 @@ class Tree:
         if "root" not in dir(self):
             raise ValueError("No root decision node found")
 
-    def _update_returns(self, action_result: str | list):
+    def _update_conversation_history(self, user_prompt: str, assistant_response: str):
+        self.conversation_history.append({
+            "user": user_prompt,
+            "assistant": assistant_response
+        })
+
+    def _update_returns(self, action_result: str | list, user_prompt: str):
 
         # this is where we should put some yields
 
@@ -162,6 +170,7 @@ class Tree:
 
         elif isinstance(action_result, Text):
             self.returns.add_text(objects=action_result)
+            self._update_conversation_history(user_prompt, action_result.objects[0])
 
     def reset(self):
         self = Tree(verbosity=self.verbosity)
@@ -197,6 +206,7 @@ class Tree:
                 user_prompt=user_prompt, 
                 completed_tasks=self.previous_info,
                 available_information=self.returns,
+                conversation_history=self.conversation_history,
                 **kwargs
             )
 
@@ -223,7 +233,7 @@ class Tree:
             if self.verbosity == 2:
                 backend_print("Model did [bold red]not[/bold red] complete overall goal! Restarting tree...")
 
-            self._update_returns(action_result)
+            self._update_returns(action_result, user_prompt)
             self.process(user_prompt, recursion_counter + 1, first_run=False, **kwargs)
         else:
             
@@ -234,7 +244,7 @@ class Tree:
                 for i, info in enumerate(self.previous_info):
                     backend_print(f"[Decision {i} ({info['id']})]: [bold]Instruction:[/bold] [cyan italic]{info['instruction']}[/cyan italic] -> [bold]Result:[/bold] [green]{info['decision']}[/green]")
 
-            self._update_returns(action_result)
+            self._update_returns(action_result, user_prompt)
 
         return self.returns
 

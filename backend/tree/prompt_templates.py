@@ -21,6 +21,22 @@ class DecisionPrompt(dspy.Signature):
     user_prompt = dspy.InputField(
         description="The query that the user is asking"
     )
+    conversation_history = dspy.InputField(
+        description="""
+        The conversation history between the user and the assistant (you), including all previous messages.
+        During this conversation, the assistant has also generated some information, which is also relevant to the decision.
+        This information is stored in `available_information` field.
+        If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses can use these as context.
+        The history is a list of dictionaries of the format:
+        [
+            {
+                "user": The user's message
+                "assistant": The assistant's response
+            }
+        ]
+        """.strip(),
+        format = str
+    )
     instruction = dspy.InputField(
         description="The instruction for the decision"
     )
@@ -55,6 +71,7 @@ class DecisionPrompt(dspy.Signature):
         description="""
         A list of information that is available to the user, based on the history of completed tasks.
         This is likely a list of retrieved objects, or summaries, or other information.
+        You should use this information to judge whether more information is needed to satisfy the user's query.
         If this is empty, then no information has currently been retrieved, but it can be, depending on the options available to you.
         """.strip(),
         format = str
@@ -63,7 +80,7 @@ class DecisionPrompt(dspy.Signature):
         description="""
         The decided task. This must be one of the 'name' fields in available_tasks.
         IMPORTANT: This MUST be from the available_tasks list _only_.
-        Your output should be a dictionary with the following keys:
+        Your output should be a dictionary that is a proper JSON object (i.e. enclosing with double quotes) with the following keys:
         - name: The name of the task
         - reason: A justification for why this task was chosen
         """.strip()
@@ -71,16 +88,16 @@ class DecisionPrompt(dspy.Signature):
     user_will_be_satisfied_reasoning = dspy.OutputField(
         description="""
         Break down all the requests in the user_prompt into smaller parts in an itemised list.
-        For each one, state, next to it, a True/False value, indicating whether _after completing the currently decided task_, the user will be satisfied for that particular topic.
-        Each True/False should take into account the description of all previous tasks in {{completed_tasks}}.
-        Finally, output a single boolean value, indicating whether the user will be satisfied as a whole (all parts of the user's query are satisfied) after completing the currently decided task.
-        This final True/False value should be the AND of all the True/False values for each part.
+        After completing the currently decided task, will all the possible actions that can be taken to satisfy the user's query have been taken?
+        To answer this, you should look at the {{available_information}} field, to see if the information that is available satisfies the user's query.
+        You should also take into account the history of completed tasks in {{completed_tasks}}, to see if there are any other actions that could have been taken in the past that need to be completed.
+        Output a single boolean value, indicating whether the user will be satisfied as a whole (all parts of the user's query are satisfied) after completing the currently decided task.
         """.strip()
     )
     user_will_be_satisfied = dspy.OutputField(
         description="""
         _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), will the OVERALL GOAL outlined in user_prompt be completed? 
-        Will everything that needs to be done to satisfy the user's query be done?
+        Have all the _actions_ that _can be taken_, been taken to attempt to satisfy the user's query?
         Do not include any other information in your response, only a True/False value, and nothing else.
         This includes all parts of what the user is requesting, so break this down into smaller parts if needed.
         Base this on the {{user_prompt}}, the {{instruction}} for the task decided on, and the history of completed tasks.
