@@ -21,6 +21,10 @@ class DecisionPrompt(dspy.Signature):
     user_prompt = dspy.InputField(
         description="The query that the user is asking"
     )
+    reference = dspy.InputField(
+        description="Information about the state of the world NOW such as the date and time, used to frame the decision making.",
+        format = str
+    )
     conversation_history = dspy.InputField(
         description="""
         The conversation history between the user and the assistant (you), including all previous messages.
@@ -84,6 +88,22 @@ class DecisionPrompt(dspy.Signature):
         - name: The name of the task
         - reason: A justification for why this task was chosen
         """.strip()
+    )
+    possible_future_tasks = dspy.InputField(
+        description="""
+        A list of all the tasks that could be completed after the current task is completed.
+        This is the _full set_ of tasks available to you in the future, past and present.
+        Some of these may have already been completed, which you can find in the {{completed_tasks}} field.
+        This is a dictionary of the format:
+        {
+            "task1": {"task1_1": {"task1_1_1": {}}, "task1_2": {"task1_2_1": {}}},
+            "task2": {"task2_1": {"task2_1_1": {}}, "task2_2": {"task2_2_1": {}}}
+        }
+        etc.
+        Tasks that depend on other tasks are nested within them.
+        Use this to evaluate whether the user will be satisfied after completing the current task.
+        """.strip(),
+        format=str
     )
     user_will_be_satisfied_reasoning = dspy.OutputField(
         description="""

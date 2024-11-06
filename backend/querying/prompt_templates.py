@@ -91,15 +91,35 @@ class QueryCreatorPrompt(dspy.Signature):
     ```
     If the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.
 
+    You can also sort the results using the `sort` parameter, but only when using `fetch_objects`.
+    So you CANNOT use it with `near_text` or `hybrid`.
+
+    For example:
+    ```
+    collection.query.fetch_objects(
+        filters=Filter.by_property("answer").like("*inter*"),
+        sort = Sort.by_property("answer", ascending=True),
+        limit=3
+    )
+    ```
+
     ____
     Now that you have learned how the query function works, your job is to create a query based on the user prompt.
     Use the above examples to guide you, but create your own query that is specific to the user prompt.
     You should not use one of the above examples directly, but rather use them as a guide to create your own query.
     Filters are optional, and if not specified in the user prompt, you should not use them.
 
+    You have access to a function called `format_datetime(dt)` which formats a datetime object to the ISO format without the timezone offset. 
+    Use this function to format the datetime objects in the filters.
+
     Assume you have access to the object `collection` which is a Weaviate collection.
     """
     user_prompt = dspy.InputField(desc="The user's original query")
+    reference = dspy.InputField(desc="""
+        Information about the state of the world NOW such as the date and time, used to frame the query.
+        """.strip(), 
+        format = str
+    )
     data_fields = dspy.InputField(desc="""
         A list of fields that are available to search over.
         ["field_name", ...]

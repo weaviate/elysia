@@ -2,6 +2,7 @@ import dspy
 import json
 from backend.tree.prompt_templates import DecisionPrompt, InputPrompt
 from backend.tree.objects import Returns
+from backend.globals.reference import reference
 
 class DecisionExecutor(dspy.Module):
 
@@ -14,17 +15,22 @@ class DecisionExecutor(dspy.Module):
                 available_tasks: list[dict], 
                 available_information: Returns,
                 conversation_history: list[dict],
-                completed_tasks: list[str]) -> tuple[dict, bool]:
+                completed_tasks: list[str],
+                possible_future_tasks: dict) -> tuple[dict, bool]:
 
         # convert available_tasks to a string
         available_tasks_list = list(available_tasks.keys()) # provide the task names 
         available_tasks_str = str(available_tasks_list) + "\n" + json.dumps(available_tasks) # append the task descriptions
 
+        possible_future_tasks_str = json.dumps(possible_future_tasks)
+        
         decision = self.router(
             user_prompt=user_prompt,
+            reference=reference,
             instruction=instruction,
             completed_tasks=completed_tasks,
             available_tasks=available_tasks_str,
+            possible_future_tasks=possible_future_tasks_str,
             available_information=available_information.to_llm_str(),
             conversation_history=conversation_history
         )

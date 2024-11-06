@@ -12,7 +12,7 @@ from backend.tree.objects import Text, Returns, GenericRetrieval
 
 import dspy
 
-lm = dspy.LM(model="gpt-4o", max_tokens=8000)
+lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
 
 # lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
 # lm = dspy.LM("groq/llama-3.2-1b-preview", max_tokens=8192)
@@ -28,7 +28,7 @@ class DecisionNode:
         self.root = root
         self.decision_executor = DecisionExecutor()
 
-    def decide(self, user_prompt: str, completed_tasks: list[dict], available_information: Returns, conversation_history: list[dict], **kwargs):
+    def decide(self, user_prompt: str, completed_tasks: list[dict], available_information: Returns, conversation_history: list[dict], possible_future_tasks: dict, **kwargs):
         
         self.decision, self.completed = self.decision_executor(
             user_prompt = user_prompt, 
@@ -36,7 +36,8 @@ class DecisionNode:
             available_tasks = self.options, 
             available_information = available_information,
             completed_tasks = completed_tasks,
-            conversation_history = conversation_history
+            conversation_history = conversation_history,
+            possible_future_tasks = possible_future_tasks
         )
 
         if self.options[self.decision]['action'] is not None:
@@ -63,11 +64,13 @@ class DecisionNode:
 class Tree:
 
     def __init__(self, verbosity: int = 1, break_down_instructions: bool = False):
-        self.previous_info = []
+        
         self.decision_nodes = {}
         self.verbosity = verbosity
         self.break_down_instructions = break_down_instructions
 
+        self.previous_info = []
+        self.decision_history = []
         self.conversation_history = []
 
         self.returns = Returns(
@@ -75,7 +78,8 @@ class Tree:
             text = Text(objects=[], metadata={})
         )
 
-        self.input_executor = InputExecutor()
+        if self.break_down_instructions:
+            self.input_executor = InputExecutor()
 
         # default initialisations ---
         self.add_decision_node(
@@ -110,15 +114,15 @@ class Tree:
             options = {
                 "example_verba_email_chains": {
                     "description": "email correspondence within the company that is loosely related to verba",
-                    "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains")',
-                    "returns": "Conversation",
-                    "next": None
+                    "action": None,
+                    "returns": None,
+                    "next": "conversation_choice"
                 },
                 "example_verba_slack_conversations": {
                     "description": "slack chats in the company that is loosely related to verba",
-                    "action": 'QueryOptions["message"](collection_name = "example_verba_slack_conversations")',
-                    "returns": "Conversation",
-                    "next": None
+                    "action": None,
+                    "returns": None,
+                    "next": "conversation_choice"
                 },
                 "example_verba_github_issues": {
                     "description": "github issues for the verba app",
@@ -130,7 +134,28 @@ class Tree:
             root = False
         )
 
+        self.add_decision_node(
+            id = "conversation_choice",
+            instruction = "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+            options = {
+                "full_conversation": {
+                    "description": "show the full conversation",
+                    "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains", return_conversation = True)',
+                    "returns": "Conversation",
+                    "next": None
+                },
+                "message_only": {
+                    "description": "show only the message",
+                    "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains", return_conversation = False)',
+                    "returns": "Conversation",
+                    "next": None
+                }
+            },
+        )
+
         self._get_root()
+        self.tree = {}
+        self._construct_tree(self.root, self.tree)
 
         if verbosity > 1:
             backend_print("Initialised tree with the following decision nodes:")
@@ -154,6 +179,19 @@ class Tree:
             "user": user_prompt,
             "assistant": assistant_response
         })
+
+    def _construct_tree(self, node_id: str, tree: dict):
+        
+        decision_node = self.decision_nodes[node_id]
+
+        for option in decision_node.options:
+            tree[option] = {}
+            if decision_node.options[option]["next"] is not None:
+                self._construct_tree(decision_node.options[option]["next"], tree[option])
+        
+        return tree
+
+            
 
     def _update_returns(self, action_result: str | list, user_prompt: str):
 
@@ -213,14 +251,17 @@ class Tree:
                 completed_tasks=self.previous_info,
                 available_information=self.returns,
                 conversation_history=self.conversation_history,
+                possible_future_tasks=self.tree,
                 **kwargs
             )
+            
             actions.append(action_fn) # update list of actions for later evaluation
+            self.decision_history.append(decision)
 
             # another yield here for decision that was made (for updates to frontend)
 
             if self.verbosity > 1:
-                backend_print(f"Decision: [magenta]{decision}[/magenta]")
+                backend_print(f"Decision: [green]{decision}[/green]")
 
             self.previous_info.append(current_decision_node.construct_as_previous_info())
 

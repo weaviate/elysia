@@ -44,43 +44,53 @@ class GenericRetrieval(Objects):
         self.type = "retrieval"
 
 class ConversationRetrieval(GenericRetrieval):
-    def __init__(self, objects: list[dict], metadata: dict = {}):
+    def __init__(self, objects: list[dict], metadata: dict = {}, return_conversation: bool = False):
         super().__init__(objects, metadata)
         self.type = "conversation"
+        self.return_conversation = return_conversation
 
     def return_value(self, idx: int):
-        return self.objects[idx][0], self.objects[idx][1]
+        if self.return_conversation:
+            return self.objects[idx][0], self.objects[idx][1]
+        else:
+            return super().return_value(idx)
     
 
     def to_str(self):
         return json.dumps(self.objects)
     
     def to_llm_str(self):
-        out = "{'objects': \n"
-        for i, (conversation, retrieved_idx) in enumerate(self.objects):
-            out += "{'conversation_" + str(i+1) + "': "
-            inner_conversation = conversation.copy()
-            inner_conversation[int(retrieved_idx)]["relevant_message"] = True
-            out += json.dumps(inner_conversation) + "}, \n"
-        
-        out += "'metadata': " + json.dumps(self.metadata) + "\n"
-        out += "}"
+        if self.return_conversation:
+            out = "{'objects': \n"
+            for i, (conversation, retrieved_idx) in enumerate(self.objects):
+                out += "{'conversation_" + str(i+1) + "': "
+                inner_conversation = conversation.copy()
+                inner_conversation[int(retrieved_idx)]["relevant_message"] = True
+                out += json.dumps(inner_conversation) + "}, \n"
+            
+            out += "'metadata': " + json.dumps(self.metadata) + "\n"
+            out += "}"
+        else:
+            out = super().to_llm_str()
         
         return out
         
     def __repr__(self):
-        for i, (conversation, retrieved_idx) in enumerate(self.objects):
-            print(f"[bold green]Conversation {i+1}[/bold green]")
-            for j, message in enumerate(conversation):
-                if j == retrieved_idx:
-                    print(f"[bold green]Message {j+1}[/bold green]:", end="")
-                    print(f"[italic green]{message}[/italic green]")
-                else:
-                    print(f"[bold]Message {j+1}[/bold]:", end="")
-                    print(f"[italic indigo]{message}[/italic indigo]")
-                print("\n")
-            print("-"*100)
-            print("\n\n")
+        if self.return_conversation:
+            for i, (conversation, retrieved_idx) in enumerate(self.objects):
+                print(f"[bold green]Conversation {i+1}[/bold green]")
+                for j, message in enumerate(conversation):
+                    if j == retrieved_idx:
+                        print(f"[bold green]Message {j+1}[/bold green]:", end="")
+                        print(f"[italic green]{message}[/italic green]")
+                    else:
+                        print(f"[bold]Message {j+1}[/bold]:", end="")
+                        print(f"[italic indigo]{message}[/italic indigo]")
+                    print("\n")
+                print("-"*100)
+                print("\n\n")
+        else:
+            super().__repr__()
         return ""
     
 

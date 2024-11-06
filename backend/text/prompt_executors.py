@@ -1,5 +1,6 @@
 import dspy
 from backend.text.prompt_templates import SummarizingPrompt, TextResponsePrompt
+from backend.globals.reference import reference
 
 class SummarizingExecutor(dspy.Module):
 
@@ -8,7 +9,11 @@ class SummarizingExecutor(dspy.Module):
         self.summarizing_prompt = dspy.ChainOfThought(SummarizingPrompt)
 
     def forward(self, user_prompt: str, available_information: str) -> str:
-        return self.summarizing_prompt(user_prompt=user_prompt, available_information=available_information).summary
+        return self.summarizing_prompt(
+            user_prompt=user_prompt, 
+            available_information=available_information,
+            reference=reference
+        ).summary
 
 class TextResponseExecutor(dspy.Module):
 
@@ -17,4 +22,8 @@ class TextResponseExecutor(dspy.Module):
         self.text_response_prompt = dspy.ChainOfThought(TextResponsePrompt)
 
     def forward(self, user_prompt: str, available_information: str) -> str:
-        return self.text_response_prompt(user_prompt=user_prompt, available_information=available_information).response
+        return self.text_response_prompt(
+            user_prompt=user_prompt, 
+            available_information=available_information,
+            reference=reference
+        ).response

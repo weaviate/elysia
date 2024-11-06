@@ -1,6 +1,8 @@
 from weaviate.classes.query import Filter
 from backend.globals.weaviate_client import client
 
+from backend.globals.reference import reference
+
 from backend.util.logging import backend_print
 from backend.querying.prompt_executors import QueryRewriterExecutor
 from backend.tree.objects import Returns, GenericRetrieval, ConversationRetrieval

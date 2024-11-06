@@ -14,6 +14,14 @@ if __name__ == "__main__":
 
 
 
+    # tree.process(
+    #     "List the most common issues from the verba github issues collection from 2024, sort by the most recent."
+    # )
+
+    # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
+
     tree.process(
-        "List 5 random issues from the verba github issues collection."
+        "Create a summary of the last 10 messages sent by kaladin."
     )
+
+    tree.returns.retrieved["example_verba_email_chains"].return_value(0)
