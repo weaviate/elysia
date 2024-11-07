@@ -7,11 +7,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
+from starlette.websockets import WebSocketDisconnect
 
-
-from backend.tree.tree import Tree
+from backend.tree.tree import Tree, lm
 from backend.util.logging import backend_print
 from backend.api.types import ProcessData, GetCollectionData
+from backend.util.collection_metadata import get_collection_data_types, get_collection_data
 from backend.globals.weaviate_client import client
 
 # App variable declaration
@@ -54,51 +55,110 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
+async def process(data: ProcessData, websocket: WebSocket):
+    user_prompt = data.user_prompt
+    async for yielded_result in tree.process(user_prompt):
+        await websocket.send_json(yielded_result)
+
 # Process endpoint
-@app.post("/api/process")
-async def process(data: ProcessData):
-    logger.info(f"Processing user prompt: {data.user_prompt}")
-    return tree.process(data.user_prompt)
+@app.post("/ws/query")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for processing pipelines.
+    Handles real-time communication for pipeline execution and status updates.
+    """
+    global tree
+    try:
+        await websocket.accept()
+        while True:
+            try:
+                
+                # Wait for a message from the client
+                data = await websocket.receive_json()
+
+                # Check if the message is a disconnect request
+                if data.get("type") == "disconnect":
+                    logger.info("Received disconnect request")
+                    break  # Exit the loop instead of closing the websocket here
+                
+                logger.info(f"Received message: {data}")
+
+                await process(data, websocket)
+
+            except WebSocketDisconnect:
+                logger.info("WebSocket disconnected")
+                break  # Exit the loop on disconnect
+
+            except RuntimeError as e:
+                if (
+                    "Cannot call 'receive' once a disconnect message has been received"
+                    in str(e)
+                ):
+                    logger.info("WebSocket already disconnected")
+                    break  # Exit the loop if the connection is already closed
+                else:
+                    raise  # Re-raise other RuntimeErrors
+
+            except Exception as e:
+                logger.error(f"Error in WebSocket: {str(e)}")
+                try:
+                    await websocket.send_json(
+                        {
+                            "status": "error",
+                            "data": f"Error while processing query: {str(e)}",
+                            "type": "ERROR",
+                        },
+                    )
+                except RuntimeError:
+                    logger.warning(
+                        "Failed to send error message, WebSocket might be closed"
+                    )
+                break  # Exit the loop after sending the error message
+
+    except Exception as e:
+        logger.warning(f"Closing WebSocket: {str(e)}")
+    finally:
+        try:
+            await websocket.close()
+        except RuntimeError:
+            logger.info("WebSocket already closed")
 
 @app.get("/api/collections")
 async def collections():
 
+    # for now, only get collections that are in the tree
     collection_names = list(tree.decision_nodes["collection"].options.keys())
-    out = []
+
+    # get collection metadata
+    metadata = []
     for collection_name in collection_names:
         collection = client.collections.get(collection_name)
-        out.append({
+        metadata.append({
             "name": collection_name,
             "total": len(collection),
-            "vectorizer": collection.config.get().vectorizer
+            "vectorizer": collection.config.get().vectorizer # None when using namedvectors, TODO: implement for named vectors
         })
 
     return JSONResponse(content={
-        "collections": out,
+        "collections": metadata,
         "error": ""
     }, status_code=200)
 
 @app.post("/api/get_collection")
 async def get_collection(data: GetCollectionData):
     
-    # get collection from client
-    collection = client.collections.get(data.collection_name)
-
     # get collection properties
-    config = collection.config.get()
-    properties = config.properties
+    data_types = get_collection_data_types(data.collection_name)
 
     # obtain paginated results from collection
-    items = []
-    for i, item in enumerate(collection.iterator()):
-        if i >= data.page * data.pageSize and i < (data.page + 1) * data.pageSize:
-            items.append(item.properties)
-
+    items = get_collection_data(
+        collection_name = data.collection_name, 
+        lower_bound = data.page * data.pageSize, 
+        upper_bound = (data.page + 1) * data.pageSize
+    )
 
     return JSONResponse(content={
-        "properties": {
-            property.name: property.data_type[:] for property in properties
-        },
+        "properties": data_types,
         "items": items,
         "error": ""
     }, status_code=200)

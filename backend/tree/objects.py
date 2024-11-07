@@ -1,7 +1,7 @@
 import json
-
+import datetime
 from rich import print
-from backend.util.parsing import objects_dict_to_str
+from backend.util.parsing import objects_dict_to_str, format_datetime
 
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):
@@ -42,6 +42,13 @@ class GenericRetrieval(Objects):
     def __init__(self, objects: list[dict], metadata: dict = {}):
         super().__init__(objects, metadata)
         self.type = "retrieval"
+
+    def to_json(self):
+        for object in self.objects:
+            for key, value in object.items():
+                if isinstance(value, datetime.datetime):
+                    object[key] = format_datetime(value)
+        return super().to_json()
 
 class ConversationRetrieval(GenericRetrieval):
     def __init__(self, objects: list[dict], metadata: dict = {}, return_conversation: bool = False):
@@ -93,7 +100,10 @@ class ConversationRetrieval(GenericRetrieval):
             super().__repr__()
         return ""
     
-
+class TicketRetrieval(GenericRetrieval):
+    def __init__(self, objects: list[dict], metadata: dict = {}):
+        super().__init__(objects, metadata)
+        self.type = "ticket"
 
 
 class Text(Objects):

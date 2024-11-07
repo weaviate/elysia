@@ -133,5 +133,6 @@ class GenericQuery(AgenticQuery):
 
 QueryOptions = {
     "message": MessageQuery,
+    "ticket": TicketQuery,
     "generic": GenericQuery
 }

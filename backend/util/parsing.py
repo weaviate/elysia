@@ -1,4 +1,5 @@
 import json
+import datetime
 
 def objects_dict_to_str(objects: list) -> str:
 
@@ -18,3 +19,7 @@ def objects_dict_to_str(objects: list) -> str:
             out += item + "\n"
 
     return out
+
+def format_datetime(dt: datetime.datetime) -> str:
+    dt = dt.isoformat("T")
+    return dt[:dt.find("+")] + "Z"

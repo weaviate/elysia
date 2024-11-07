@@ -8,7 +8,8 @@ from backend.text.text import Summarizer, TextResponse
 from backend.querying.agentic_query import QueryOptions
 from backend.tree.prompt_executors import DecisionExecutor, InputExecutor
 from backend.util.logging import backend_print
-from backend.tree.objects import Text, Returns, GenericRetrieval
+from backend.util.api import parse_decision, parse_result
+from backend.tree.objects import Text, Returns, GenericRetrieval, Objects
 
 import dspy
 
@@ -63,11 +64,13 @@ class DecisionNode:
 
 class Tree:
 
-    def __init__(self, verbosity: int = 1, break_down_instructions: bool = False):
+    def __init__(self, conversation_id: str = "1", verbosity: int = 1, break_down_instructions: bool = False):
         
-        self.decision_nodes = {}
+        self.conversation_id = conversation_id
         self.verbosity = verbosity
         self.break_down_instructions = break_down_instructions
+
+        self.decision_nodes = {}
 
         self.previous_info = []
         self.decision_history = []
@@ -126,8 +129,8 @@ class Tree:
                 },
                 "example_verba_github_issues": {
                     "description": "github issues for the verba app",
-                    "action": 'QueryOptions["generic"](collection_name = "example_verba_github_issues")',
-                    "returns": "Retrieved",
+                    "action": 'QueryOptions["ticket"](collection_name = "example_verba_github_issues")',
+                    "returns": "TicketRetrieval",
                     "next": None
                 }
             },
@@ -141,13 +144,13 @@ class Tree:
                 "full_conversation": {
                     "description": "show the full conversation",
                     "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains", return_conversation = True)',
-                    "returns": "Conversation",
+                    "returns": "ConversationRetrieval",
                     "next": None
                 },
                 "message_only": {
                     "description": "show only the message",
                     "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains", return_conversation = False)',
-                    "returns": "Conversation",
+                    "returns": "ConversationRetrieval",
                     "next": None
                 }
             },
@@ -189,30 +192,31 @@ class Tree:
             if decision_node.options[option]["next"] is not None:
                 self._construct_tree(decision_node.options[option]["next"], tree[option])
         
-        return tree
-
-            
+        return tree         
 
     def _update_returns(self, action_result: str | list, user_prompt: str):
 
-        # this is where we should put some yields
-
-        if isinstance(action_result, GenericRetrieval): # for now assume a list = retrieved objects
+        if isinstance(action_result, GenericRetrieval): 
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
 
-        elif isinstance(action_result, Text):
+        if isinstance(action_result, Text):
             self.returns.add_text(objects=action_result)
             self._update_conversation_history(user_prompt, action_result.objects[0])
 
-    def _evaluate_actions(self, actions: list[Callable], user_prompt: str, **kwargs):
-        for action_fn in actions:
-            if action_fn is not None:
-                result = action_fn(
-                    user_prompt=user_prompt, 
-                    available_information=self.returns, 
-                    **kwargs
-                )
-                self._update_returns(result, user_prompt)
+    def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
+        result = action_fn(
+            user_prompt=user_prompt, 
+            available_information=self.returns, 
+            **kwargs
+        )
+        self._update_returns(result, user_prompt)
+        return result
+    
+    def _parse_decision(self, id: str, decision: str, instruction: str):
+        return parse_decision(decision, self.conversation_id, id, instruction, {})
+
+    def _parse_result(self, result: Objects):
+        return parse_result(result, self.conversation_id)
 
     def reset(self):
         self = Tree(verbosity=self.verbosity)
@@ -222,11 +226,10 @@ class Tree:
         self.decision_nodes[id] = decision_node
         return decision_node
 
-    def process(self, user_prompt: str, recursion_counter: int = 0, first_run: bool = True, **kwargs) -> dict:
+    async def process(self, user_prompt: str, recursion_counter: int = 0, first_run: bool = True, **kwargs) -> dict:
 
         if recursion_counter > 5:
             backend_print(f"[bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
-            return self.returns
         
         if first_run:
 
@@ -238,7 +241,6 @@ class Tree:
 
         current_decision_node = self.decision_nodes[self.root]
         
-        actions = []
 
         while True:
 
@@ -254,8 +256,13 @@ class Tree:
                 possible_future_tasks=self.tree,
                 **kwargs
             )
-            
-            actions.append(action_fn) # update list of actions for later evaluation
+
+            yield self._parse_decision(current_decision_node.id, decision, current_decision_node.instruction)
+
+            if action_fn is not None:
+                result = self._evaluate_action(action_fn, user_prompt, **kwargs)
+                yield self._parse_result(result)
+
             self.decision_history.append(decision)
 
             # another yield here for decision that was made (for updates to frontend)
@@ -271,7 +278,7 @@ class Tree:
                 current_decision_node = self.decision_nodes[current_decision_node.options[decision]["next"]]
 
         # evaluate actions
-        self._evaluate_actions(actions, user_prompt, **kwargs)
+        # yield self._evaluate_actions(actions, user_prompt, **kwargs)
         # self._update_returns(result, user_prompt)
 
         if not completed:
@@ -291,5 +298,4 @@ class Tree:
                 for i, info in enumerate(self.previous_info):
                     backend_print(f"[Decision {i} ({info['id']})]: [bold]Instruction:[/bold] [cyan italic]{info['instruction']}[/cyan italic] -> [bold]Result:[/bold] [green]{info['decision']}[/green]")
 
-        return self.returns
 

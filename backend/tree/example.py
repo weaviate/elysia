@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
 
     tree.process(
-        "Create a summary of the last 10 messages sent by kaladin."
+        "Find the last 10 messages sent by bobbbbb, then summarise the information."
     )
 
-    tree.returns.retrieved["example_verba_email_chains"].return_value(0)
+    tree.returns.retrieved["example_verba_email_chains"].return_value(2)
