@@ -10,3 +10,42 @@
 .btn-round {
   @apply flex items-center justify-start gap-2 hover:bg-foreground_alt hover:text-primary hover:scale-105 active:scale-95 transition-all duration-300 p-2 rounded-full;
 }
+
+@keyframes dropAndBounce {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+    scale: 0.9;
+  }
+  75% {
+    transform: translateY(-10%);
+    opacity: 1.1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.chat-animation {
+  animation: dropAndBounce 0.6s ease-in-out forwards;
+}
+
+
+.shine {
+  background: linear-gradient(90deg, #464C5F 30%, #fff 50%, #464C5F 70%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    background-position-x: -50%;
+  }
+  100% {
+    background-position-x: 140%;
+  }
+}

@@ -7,14 +7,28 @@ import { FaTicketSimple } from "react-icons/fa6";
 import { IoMdAddCircle } from "react-icons/io";
 import { ImShrink2 } from "react-icons/im";
 
+import { Conversation } from "../types";
 import SidebarButton from "./sidebar_button";
 
 interface SidebarProps {
   page: "home" | "data-explorer";
   handlePageChange: (p: "home" | "data-explorer") => void;
+  addConversation: () => void;
+  removeConversation: (id: string) => void;
+  selectConversation: (id: string) => void;
+  currentConversation: string;
+  conversations: Conversation[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ handlePageChange, page }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  handlePageChange,
+  page,
+  addConversation,
+  conversations,
+  removeConversation,
+  selectConversation,
+  currentConversation,
+}) => {
   const [collapsed, setCollapsed] = useState(false);
 
   const toggleCollapse = () => {
@@ -76,14 +90,21 @@ const Sidebar: React.FC<SidebarProps> = ({ handlePageChange, page }) => {
           <SidebarButton
             icon={<IoMdAddCircle />}
             label="New Chat"
+            onClick={addConversation}
             isCollapsed={collapsed}
+            onDelete={null}
           />
-          <SidebarButton
-            icon={<FaTicketSimple />}
-            label="Current Chat"
-            isCollapsed={collapsed}
-            isActive={true}
-          />
+          {conversations?.map((c) => (
+            <SidebarButton
+              key={c.id}
+              icon={<FaTicketSimple />}
+              label={c.name}
+              isCollapsed={collapsed}
+              isActive={currentConversation === c.id}
+              onClick={() => selectConversation(c.id)}
+              onDelete={() => removeConversation(c.id)}
+            />
+          ))}
         </div>
       </nav>
       {collapsed && (
