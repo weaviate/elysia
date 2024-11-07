@@ -1,4 +1,4 @@
-from backend.tree.objects import Objects
+from elysia.tree.objects import Objects
 
 def parse_decision(decision: str, conversation_id: str, id: str, instruction: str, tree: dict):
     return {

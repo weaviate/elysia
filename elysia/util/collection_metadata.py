@@ -1,5 +1,5 @@
 
-from backend.globals.weaviate_client import client
+from elysia.globals.weaviate_client import client
 
 def get_all_collection_names():
     return [k.lower() for k in list(client.collections.list_all().keys()) if k.lower().startswith("example_verba")]

@@ -3,13 +3,13 @@ import os
 from typing import Callable, List
 from rich import print
 
-# from backend.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
-from backend.text.text import Summarizer, TextResponse
-from backend.querying.agentic_query import QueryOptions
-from backend.tree.prompt_executors import DecisionExecutor, InputExecutor
-from backend.util.logging import backend_print
-from backend.util.api import parse_decision, parse_result
-from backend.tree.objects import Text, Returns, GenericRetrieval, Objects
+# from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
+from elysia.text.text import Summarizer, TextResponse
+from elysia.querying.agentic_query import QueryOptions
+from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
+from elysia.util.logging import backend_print
+from elysia.util.api import parse_decision, parse_result
+from elysia.tree.objects import Text, Returns, GenericRetrieval, Objects
 
 import dspy
 

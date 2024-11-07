@@ -1,7 +1,7 @@
 
-from backend.util.logging import backend_print
-from backend.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
-from backend.tree.objects import Returns, Text
+from elysia.util.logging import backend_print
+from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
+from elysia.tree.objects import Returns, Text
 
 class Summarizer:
 

@@ -11,8 +11,8 @@ from dspy.teleprompt import LabeledFewShot
 
 from weaviate.classes.query import Filter, MetadataQuery, Sort
 
-from backend.querying.prompt_executors import QueryCreatorExecutor
-from backend.globals.weaviate_client import client
+from elysia.querying.prompt_executors import QueryCreatorExecutor
+from elysia.globals.weaviate_client import client
 
 def remove_whitespace(code: str) -> str:
     return " ".join(code.split())

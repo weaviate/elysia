@@ -1,11 +1,11 @@
 from weaviate.classes.query import Filter
-from backend.globals.weaviate_client import client
+from elysia.globals.weaviate_client import client
 
-from backend.globals.reference import reference
+from elysia.globals.reference import reference
 
-from backend.util.logging import backend_print
-from backend.querying.prompt_executors import QueryRewriterExecutor
-from backend.tree.objects import Returns, GenericRetrieval, ConversationRetrieval
+from elysia.util.logging import backend_print
+from elysia.querying.prompt_executors import QueryRewriterExecutor
+from elysia.tree.objects import Returns, GenericRetrieval, ConversationRetrieval
 
 class Query:
 

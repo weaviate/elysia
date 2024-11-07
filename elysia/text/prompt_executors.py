@@ -1,6 +1,6 @@
 import dspy
-from backend.text.prompt_templates import SummarizingPrompt, TextResponsePrompt
-from backend.globals.reference import reference
+from elysia.text.prompt_templates import SummarizingPrompt, TextResponsePrompt
+from elysia.globals.reference import reference
 
 class SummarizingExecutor(dspy.Module):
 

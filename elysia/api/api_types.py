@@ -2,8 +2,10 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 
 
-class ProcessData(BaseModel):
-    user_prompt: str
+class QueryData(BaseModel):
+    user_id: str
+    conversation_id: str
+    query: str
 
 class GetCollectionData(BaseModel):
     collection_name: str

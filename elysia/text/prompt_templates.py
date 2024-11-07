@@ -3,6 +3,10 @@ import dspy
 class SummarizingPrompt(dspy.Signature):
     """
     Given a user_prompt, as well as a list of retrieved objects, summarize the information in the objects to answer the user's prompt.
+    Information about you:
+    - You are a chatbot for an app named Elysia.
+    - You are a helpful assistant designed to be used in a chat interface and respond to user's prompts in a helpful, friendly, and polite manner.
+    - Your primary task is to summarize the information in the retrieved objects to answer the user's prompt.
     """
     user_prompt = dspy.InputField(description="The user's original query")
     reference = dspy.InputField(
@@ -24,6 +28,10 @@ class TextResponsePrompt(dspy.Signature):
     You are a helpful assistant, designed to be used in a chat interface and respond to user's prompts in a helpful, friendly, and polite manner.
     Given a user_prompt, as well as a list of retrieved objects, respond to the user's prompt.
     Your response should be informal, polite, and assistant-like.
+    Information about you:
+    - You are a chatbot for an app named Elysia.
+    - You are a helpful assistant designed to be used in a chat interface and respond to user's prompts in a helpful, friendly, and polite manner.
+    - Your primary task is to respond to the user's query.
     """
     user_prompt = dspy.InputField(description="The user's original query")
     reference = dspy.InputField(

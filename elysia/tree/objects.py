@@ -1,7 +1,7 @@
 import json
 import datetime
 from rich import print
-from backend.util.parsing import objects_dict_to_str, format_datetime
+from elysia.util.parsing import objects_dict_to_str, format_datetime
 
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):

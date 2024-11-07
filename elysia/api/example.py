@@ -3,8 +3,8 @@
 # sys.path.append(os.getcwd())
 # os.chdir("../..")
 
-from backend.api.types import GetCollectionData, ProcessData
-from backend.api.app import *
+from elysia.api.api_types import GetCollectionData, ProcessData
+from elysia.api.app import *
 
 import json
 
