@@ -226,7 +226,7 @@ class Tree:
         self.decision_nodes[id] = decision_node
         return decision_node
 
-    async def process(self, user_prompt: str, recursion_counter: int = 0, first_run: bool = True, **kwargs) -> dict:
+    async def process(self, user_prompt: str, recursion_counter: int = 0, first_run: bool = True, **kwargs):
 
         if recursion_counter > 5:
             backend_print(f"[bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
