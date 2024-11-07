@@ -12,9 +12,13 @@ import { FaCircle } from "react-icons/fa6";
 
 interface MessageDisplayProps {
   messages: Message[];
+  current_status: string;
 }
 
-const MessageDisplay: React.FC<MessageDisplayProps> = ({ messages }) => {
+const MessageDisplay: React.FC<MessageDisplayProps> = ({
+  messages,
+  current_status,
+}) => {
   return (
     <div className="h-[80vh] w-[60vw] flex justify-start items-start mt-10 ">
       <div className="flex flex-col gap-10 w-full">
@@ -68,10 +72,12 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({ messages }) => {
             )}
           </div>
         ))}
-        <div className="w-full flex justify-start items-center gap-2">
-          <FaCircle className="text-secondary text-sm shine" />
-          <p className="text-sm shine">Querying...</p>
-        </div>
+        {current_status != "" && (
+          <div className="w-full flex justify-start items-center gap-2">
+            <FaCircle className="text-secondary text-sm shine" />
+            <p className="text-sm shine">{current_status}</p>
+          </div>
+        )}
       </div>
     </div>
   );

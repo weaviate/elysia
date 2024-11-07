@@ -30,6 +30,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       ? conversations.find((c) => c.id === currentConversation)?.messages || []
       : [];
 
+  const current_status =
+    currentConversation && conversations.length > 0
+      ? conversations.find((c) => c.id === currentConversation)?.current || ""
+      : "";
+
   const handleQueryChange = (q: string) => {
     setQuery(q);
   };
@@ -48,7 +53,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="h-screen flex flex-col items-center justify-center flex-grow">
-      <MessageDisplay messages={messages} />
+      <MessageDisplay messages={messages} current_status={current_status} />
       <div className="flex w-[60vw]">
         <QueryInput
           query={query}

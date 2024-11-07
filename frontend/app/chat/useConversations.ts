@@ -27,7 +27,7 @@ export function useConversations(id: string) {
     setConversations((prevConversations) =>
       prevConversations.map((c) => {
         if (c.id === conversationId) {
-          return { ...c, status };
+          return { ...c, current: status };
         }
         return c;
       })

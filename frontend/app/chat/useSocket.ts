@@ -85,18 +85,19 @@ export function useSocket(
 
     setTimeout(() => {
       setConversationStatus("Querying...", conversation_id);
-    }, 1000);
+    }, 2000);
 
     setTimeout(() => {
       setConversationStatus("Collecting...", conversation_id);
-    }, 2000);
+    }, 4000);
 
     setTimeout(() => {
       addMessageToConversation(
         [text_message, error_message, ticket_message, tree_update_message],
         conversation_id
       );
-    }, 4000);
+      setConversationStatus("", conversation_id);
+    }, 8000);
 
     //socket?.send(JSON.stringify({ user_id, query, conversation_id }));
   };
