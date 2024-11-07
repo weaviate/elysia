@@ -12,3 +12,4 @@ dist/
 build/
 *.egg
 *.whl
+venv/
