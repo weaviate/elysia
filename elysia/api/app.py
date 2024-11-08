@@ -80,16 +80,6 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
-
-async def process(data: QueryData, websocket: WebSocket):
-    user_prompt = data.query
-
-    tree = tree_manager.get_tree(data.user_id, data.conversation_id)
-
-    async for yielded_result in tree.process(user_prompt):
-        await websocket.send_json(yielded_result)
-
-
 # Process endpoint
 @app.websocket("/ws/query")
 async def websocket_endpoint(websocket: WebSocket):
@@ -113,7 +103,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 logger.info(f"Received message: {data}")
 
-                await process(data, websocket)
+                # == main code ==
+
+                user_prompt = data["query"]
+                tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
+                async for yielded_result in tree.process(user_prompt):
+                    await websocket.send_json(yielded_result)
 
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected")
