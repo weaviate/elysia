@@ -30,7 +30,9 @@ class TreeManager:
     def add_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.trees[user_id] = {}
-        self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id)
+        self.trees[user_id][conversation_id] = Tree(
+            verbosity=2, conversation_id=conversation_id
+        )
 
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
@@ -80,6 +82,7 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
+
 async def process(data: QueryData, websocket: WebSocket):
     global tree_manager
     user_prompt = data["query"]
@@ -87,6 +90,7 @@ async def process(data: QueryData, websocket: WebSocket):
     async for yielded_result in tree.process(user_prompt):
         # print(yielded_result)
         await websocket.send_json(yielded_result)
+
 
 # Process endpoint
 @app.websocket("/ws/query")
@@ -112,7 +116,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 # == main code ==
                 await process(data, websocket)
-                    
+
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected")
                 break  # Exit the loop on disconnect
@@ -153,7 +157,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.get("/api/collections")
-async def collections(data: GetCollectionsData):
+async def collections():
 
     # for now, only get collections that are in the tree
     # conversation_id = list(tree_manager.trees[data.user_id].keys())[0]
@@ -162,7 +166,7 @@ async def collections(data: GetCollectionsData):
     collection_names = [
         "example_verba_github_issues",
         "example_verba_email_chains",
-        "example_verba_slack_conversations"
+        "example_verba_slack_conversations",
     ]
 
     # get collection metadata

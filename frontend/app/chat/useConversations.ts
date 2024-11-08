@@ -36,6 +36,17 @@ export function useConversations(id: string) {
     );
   };
 
+  const setConversationTitle = (title: string, conversationId: string) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === conversationId && c.name === "New Conversation") {
+          return { ...c, name: title };
+        }
+        return c;
+      })
+    );
+  };
+
   const setAllConversationStatuses = (status: string) => {
     setConversations((prevConversations) =>
       prevConversations.map((c) => ({ ...c, current: status }))
@@ -67,5 +78,6 @@ export function useConversations(id: string) {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
+    setConversationTitle,
   };
 }

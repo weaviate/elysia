@@ -23,7 +23,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
   return (
     <div
-      className={`w-[60vw] flex justify-startitems-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
+      className={`w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
     >
       <div className="flex flex-col gap-10 w-full">
         {messages.map((message, index) => (

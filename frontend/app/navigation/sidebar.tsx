@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import { AiFillHome } from "react-icons/ai";
 import { FaDatabase, FaExpandAlt } from "react-icons/fa";
-import { FaTicketSimple } from "react-icons/fa6";
+import { LuRefreshCw } from "react-icons/lu";
 import { IoMdAddCircle } from "react-icons/io";
+import { IoChatbubble } from "react-icons/io5";
 import { ImShrink2 } from "react-icons/im";
 
-import { Conversation } from "../types";
+import { Collection, Conversation } from "../types";
 import SidebarButton from "./sidebar_button";
 
 interface SidebarProps {
@@ -16,9 +17,13 @@ interface SidebarProps {
   addConversation: () => void;
   removeConversation: (id: string) => void;
   selectConversation: (id: string) => void;
+  fetchCollections: () => void;
+  selectCollection: (collection: string) => void;
+  selectedCollection: string | null;
   currentConversation: string;
   conversations: Conversation[];
   socketOnline: boolean;
+  collections: Collection[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -30,6 +35,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectConversation,
   currentConversation,
   socketOnline,
+  collections,
+  fetchCollections,
+  selectCollection,
+  selectedCollection,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -87,27 +96,52 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => handlePageChange("data-explorer")}
           />
         </div>
-        <div className="border-t border-secondary my-2"></div>
+        <div className="border-t border-secondary"></div>
         {page === "home" && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-6">
             <SidebarButton
               icon={<IoMdAddCircle />}
-              label="New Chat"
+              label="New Conversation"
               onClick={addConversation}
               isCollapsed={collapsed}
               onDelete={null}
             />
-            {conversations?.map((c) => (
-              <SidebarButton
-                key={c.id}
-                icon={<FaTicketSimple />}
-                label={c.name}
-                isCollapsed={collapsed}
-                isActive={currentConversation === c.id}
-                onClick={() => selectConversation(c.id)}
-                onDelete={() => removeConversation(c.id)}
-              />
-            ))}
+            <div className="flex flex-col gap-2">
+              {conversations?.map((c) => (
+                <SidebarButton
+                  key={c.id}
+                  icon={<IoChatbubble />}
+                  label={c.name}
+                  isCollapsed={collapsed}
+                  isActive={currentConversation === c.id}
+                  onClick={() => selectConversation(c.id)}
+                  onDelete={() => removeConversation(c.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        {page === "data-explorer" && (
+          <div className="flex flex-col gap-6">
+            <SidebarButton
+              icon={<LuRefreshCw />}
+              label="Refresh"
+              onClick={fetchCollections}
+              isCollapsed={collapsed}
+              onDelete={null}
+            />
+            <div className="flex flex-col gap-2">
+              {collections?.map((c) => (
+                <SidebarButton
+                  key={c.name}
+                  icon={<FaDatabase />}
+                  label={c.name}
+                  isCollapsed={collapsed}
+                  isActive={selectedCollection === c.name}
+                  onClick={() => selectCollection(c.name)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </nav>
