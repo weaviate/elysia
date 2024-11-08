@@ -185,6 +185,7 @@ async def get_collection(data: GetCollectionData):
 
     # get collection properties
     data_types = get_collection_data_types(data.collection_name)
+    print(data_types)
 
     # obtain paginated results from collection
     items = get_collection_data(
