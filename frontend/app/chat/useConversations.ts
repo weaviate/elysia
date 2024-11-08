@@ -4,7 +4,9 @@ import { v4 as uuidv4 } from "uuid";
 
 export function useConversations(id: string) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<string>();
+  const [currentConversation, setCurrentConversation] = useState<string | null>(
+    null
+  );
 
   const addConversation = () => {
     const newConversation = { ...initialConversation, id: uuidv4() };
@@ -13,10 +15,10 @@ export function useConversations(id: string) {
   };
 
   const removeConversation = (id: string) => {
-    setConversations(conversations?.filter((c) => c.id !== id));
     if (currentConversation === id) {
-      setCurrentConversation(initialConversation.id);
+      setCurrentConversation(null);
     }
+    setConversations(conversations?.filter((c) => c.id !== id));
   };
 
   const selectConversation = (id: string) => {
@@ -34,6 +36,12 @@ export function useConversations(id: string) {
     );
   };
 
+  const setAllConversationStatuses = (status: string) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => ({ ...c, current: status }))
+    );
+  };
+
   const addMessageToConversation = (
     messages: Message[],
     conversationId: string
@@ -41,7 +49,6 @@ export function useConversations(id: string) {
     setConversations((prevConversations) =>
       prevConversations.map((c) => {
         if (c.id === conversationId) {
-          console.log("Adding message to conversation", messages.length);
           return { ...c, messages: [...(c.messages || []), ...messages] };
         }
         return c;
@@ -59,5 +66,6 @@ export function useConversations(id: string) {
     selectConversation,
     addMessageToConversation,
     setConversationStatus,
+    setAllConversationStatuses,
   };
 }

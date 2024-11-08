@@ -24,13 +24,15 @@ export default function Home() {
     addConversation,
     removeConversation,
     setConversationStatus,
+    setAllConversationStatuses,
     selectConversation,
     addMessageToConversation,
   } = useConversations(id || "");
 
   const { socketOnline, sendQuery } = useSocket(
     addMessageToConversation,
-    setConversationStatus
+    setConversationStatus,
+    setAllConversationStatuses
   );
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function Home() {
         removeConversation={removeConversation}
         selectConversation={selectConversation}
       />
-      {page === "home" && (
+      {page === "home" && currentConversation && (
         <ChatInterface
           currentConversation={currentConversation || ""}
           conversations={conversations}
