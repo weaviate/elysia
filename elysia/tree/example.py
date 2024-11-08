@@ -5,8 +5,8 @@ import time
 sys.path.append(os.getcwd())
 os.chdir("../..")
 
-from backend.tree.tree import Tree
-from backend.tree.tree import lm
+from elysia.tree.tree import Tree
+from elysia.tree.tree import lm
 
 if __name__ == "__main__":
 

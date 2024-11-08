@@ -1,5 +1,5 @@
 import dspy
-from backend.querying.prompt_templates import QueryCreatorPrompt
+from elysia.querying.prompt_templates import QueryCreatorPrompt
 
 class QueryCreatorExecutor(dspy.Module):
 

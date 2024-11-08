@@ -2,11 +2,11 @@ import datetime
 
 from weaviate.classes.query import Filter, Sort
 
-from backend.globals.weaviate_client import client
-from backend.globals.reference import reference
-from backend.util.logging import backend_print
-from backend.querying.prompt_executors import QueryCreatorExecutor
-from backend.tree.objects import Returns, GenericRetrieval, ConversationRetrieval
+from elysia.globals.weaviate_client import client
+from elysia.globals.reference import reference
+from elysia.util.logging import backend_print
+from elysia.querying.prompt_executors import QueryCreatorExecutor
+from elysia.tree.objects import Returns, GenericRetrieval, ConversationRetrieval, TicketRetrieval
 
 def format_datetime(dt: datetime.datetime) -> str:
     dt = dt.isoformat("T")
@@ -123,13 +123,21 @@ class MessageQuery(AgenticQuery):
         return ConversationRetrieval(output, metadata, self.return_conversation)
 
 class GenericQuery(AgenticQuery):
+    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
+        response, metadata = self.query(user_prompt, available_information)
+        output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
+        return GenericRetrieval(output, metadata)
+
+class TicketQuery(GenericQuery):
     """
     Applicable to github issues.
     """
     def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
         response, metadata = self.query(user_prompt, available_information)
         output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
-        return GenericRetrieval(output, metadata)
+        return TicketRetrieval(output, metadata)
+
+
 
 QueryOptions = {
     "message": MessageQuery,

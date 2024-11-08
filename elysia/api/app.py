@@ -9,11 +9,29 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.websockets import WebSocketDisconnect
 
-from backend.tree.tree import Tree, lm
-from backend.util.logging import backend_print
-from backend.api.types import ProcessData, GetCollectionData
-from backend.util.collection_metadata import get_collection_data_types, get_collection_data
-from backend.globals.weaviate_client import client
+from elysia.tree.tree import Tree, lm
+from elysia.util.logging import backend_print
+from elysia.api.api_types import QueryData, GetCollectionData
+from elysia.util.collection_metadata import get_collection_data_types, get_collection_data
+from elysia.globals.weaviate_client import client
+
+
+class TreeManager:
+    """
+    Manages trees for different conversations.
+    """
+    def __init__(self):
+        self.trees = {}
+    
+    def add_tree(self, user_id: str, conversation_id: str):
+        if user_id not in self.trees:
+            self.trees[user_id] = {}
+        self.trees[user_id][conversation_id] = Tree(verbosity=1)
+    
+    def get_tree(self, user_id: str, conversation_id: str):
+        if user_id not in self.trees:
+            self.add_tree(user_id, conversation_id)
+        return self.trees[user_id][conversation_id]
 
 # App variable declaration
 version = "0.1.0"
@@ -32,8 +50,8 @@ app.add_middleware(
 )
 
 # Global variables, to be changed to user-based later
-global tree
-tree = Tree(verbosity=1)
+global tree_manager
+tree_manager = TreeManager()
 
 # Request validation exception handler
 @app.exception_handler(RequestValidationError)
@@ -55,8 +73,11 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
-async def process(data: ProcessData, websocket: WebSocket):
-    user_prompt = data.user_prompt
+async def process(data: QueryData, websocket: WebSocket):
+    user_prompt = data.query
+    
+    tree = tree_manager.get_tree(data.user_id, data.conversation_id)
+
     async for yielded_result in tree.process(user_prompt):
         await websocket.send_json(yielded_result)
 

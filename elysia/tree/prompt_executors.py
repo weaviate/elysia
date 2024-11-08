@@ -1,8 +1,8 @@
 import dspy
 import json
-from backend.tree.prompt_templates import DecisionPrompt, InputPrompt
-from backend.tree.objects import Returns
-from backend.globals.reference import reference
+from elysia.tree.prompt_templates import DecisionPrompt, InputPrompt
+from elysia.tree.objects import Returns
+from elysia.globals.reference import reference
 
 class DecisionExecutor(dspy.Module):
 
