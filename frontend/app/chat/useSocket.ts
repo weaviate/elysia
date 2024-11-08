@@ -73,8 +73,8 @@ export function useSocket(
     query: string,
     conversation_id: string
   ) => {
-    //fakeQuery(conversation_id);
-    socket?.send(JSON.stringify({ user_id, query, conversation_id }));
+    fakeQuery(conversation_id);
+    //socket?.send(JSON.stringify({ user_id, query, conversation_id }));
   };
 
   const fakeQuery = (conversation_id: string) => {

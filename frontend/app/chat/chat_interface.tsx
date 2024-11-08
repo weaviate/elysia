@@ -44,7 +44,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const newMessage: Message = {
       type: "User",
       conversation_id: currentConversation,
-      payload: query,
+      payload: {
+        type: "text",
+        metadata: {},
+        objects: [query],
+      },
     };
     addMessageToConversation([newMessage], currentConversation);
     handleQuery(query, currentConversation);
@@ -54,13 +58,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="h-screen flex flex-col items-center justify-center flex-grow">
       <MessageDisplay messages={messages} current_status={current_status} />
-      <div className="flex w-[60vw]">
-        <QueryInput
-          query={query}
-          handleQueryChange={handleQueryChange}
-          handleSendQuery={handleSendQuery}
-        />
-      </div>
+      <QueryInput
+        query={query}
+        messages={messages}
+        handleQueryChange={handleQueryChange}
+        handleSendQuery={handleSendQuery}
+      />
     </div>
   );
 };

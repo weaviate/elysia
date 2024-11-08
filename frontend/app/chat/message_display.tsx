@@ -19,20 +19,26 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   messages,
   current_status,
 }) => {
+  const height_control = messages.length == 0 ? "h-[0px]" : "h-[80vh]";
+
   return (
-    <div className="h-[80vh] w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll ">
+    <div
+      className={`w-[60vw] flex justify-startitems-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
+    >
       <div className="flex flex-col gap-10 w-full">
         {messages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
             {message.type === "User" && (
               <div className="w-full flex flex-col justify-start items-start ">
                 <div className="max-w-3/5">
-                  <UserMessageDisplay
-                    key={index}
-                    user_message={
-                      typeof message.payload === "string" ? message.payload : ""
-                    }
-                  />
+                  {(message.payload as ResultPayload).objects.map(
+                    (text, idx) => (
+                      <UserMessageDisplay
+                        key={`${index}-${idx}`}
+                        user_message={text as string}
+                      />
+                    )
+                  )}
                 </div>
               </div>
             )}
