@@ -11,7 +11,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from elysia.tree.tree import Tree, lm
 from elysia.util.logging import backend_print
-from elysia.api.api_types import QueryData, GetCollectionData
+from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData
 from elysia.util.collection_metadata import (
     get_collection_data_types,
     get_collection_data,
@@ -30,7 +30,7 @@ class TreeManager:
     def add_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.trees[user_id] = {}
-        self.trees[user_id][conversation_id] = Tree(verbosity=1, conversation_id=conversation_id)
+        self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id)
 
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
@@ -81,9 +81,11 @@ async def health_check():
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
 async def process(data: QueryData, websocket: WebSocket):
+    global tree_manager
     user_prompt = data["query"]
     tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
     async for yielded_result in tree.process(user_prompt):
+        # print(yielded_result)
         await websocket.send_json(yielded_result)
 
 # Process endpoint
@@ -93,7 +95,6 @@ async def websocket_endpoint(websocket: WebSocket):
     WebSocket endpoint for processing pipelines.
     Handles real-time communication for pipeline execution and status updates.
     """
-    global tree
     try:
         await websocket.accept()
         while True:
@@ -110,7 +111,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.info(f"Received message: {data}")
 
                 # == main code ==
-
                 await process(data, websocket)
                     
             except WebSocketDisconnect:
@@ -153,10 +153,17 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.get("/api/collections")
-async def collections():
+async def collections(data: GetCollectionsData):
 
     # for now, only get collections that are in the tree
-    collection_names = list(tree.decision_nodes["collection"].options.keys())
+    # conversation_id = list(tree_manager.trees[data.user_id].keys())[0]
+    # tree = tree_manager.get_tree(data.user_id, conversation_id)
+    # collection_names = list(tree.decision_nodes["collection"].options.keys())
+    collection_names = [
+        "example_verba_github_issues",
+        "example_verba_email_chains",
+        "example_verba_slack_conversations"
+    ]
 
     # get collection metadata
     metadata = []
@@ -178,6 +185,7 @@ async def get_collection(data: GetCollectionData):
 
     # get collection properties
     data_types = get_collection_data_types(data.collection_name)
+    print(data_types)
 
     # obtain paginated results from collection
     items = get_collection_data(

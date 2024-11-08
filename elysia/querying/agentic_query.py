@@ -14,7 +14,7 @@ def format_datetime(dt: datetime.datetime) -> str:
 
 class AgenticQuery:
 
-    def __init__(self, collection_name: str, filepath: str = "backend/training/dspy_models/agentic_query/fewshot_k12.json"):
+    def __init__(self, collection_name: str, filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json"):
         self.collection_name = collection_name
         self.collection = client.collections.get(collection_name)
         self.query_creator = QueryCreatorExecutor()
