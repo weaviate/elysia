@@ -30,7 +30,7 @@ class TreeManager:
     def add_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.trees[user_id] = {}
-        self.trees[user_id][conversation_id] = Tree(verbosity=1)
+        self.trees[user_id][conversation_id] = Tree(verbosity=1, conversation_id=conversation_id)
 
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
@@ -80,6 +80,12 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
+async def process(data: QueryData, websocket: WebSocket):
+    user_prompt = data["query"]
+    tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
+    async for yielded_result in tree.process(user_prompt):
+        await websocket.send_json(yielded_result)
+
 # Process endpoint
 @app.websocket("/ws/query")
 async def websocket_endpoint(websocket: WebSocket):
@@ -105,11 +111,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 # == main code ==
 
-                user_prompt = data["query"]
-                tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
-                async for yielded_result in tree.process(user_prompt):
-                    await websocket.send_json(yielded_result)
-
+                await process(data, websocket)
+                    
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected")
                 break  # Exit the loop on disconnect
