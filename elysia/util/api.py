@@ -23,3 +23,10 @@ def parse_result(result: Objects, conversation_id: str):
             **result.to_json()
         }
     }
+
+def parse_finished(conversation_id: str):
+    return {
+        "type": "completed",
+        "conversation_id": conversation_id,
+        "payload": {}
+    }

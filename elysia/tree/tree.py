@@ -11,7 +11,7 @@ from elysia.text.text import Summarizer, TextResponse
 from elysia.querying.agentic_query import QueryOptions
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.logging import backend_print
-from elysia.util.api import parse_decision, parse_result
+from elysia.util.api import parse_decision, parse_result, parse_finished
 from elysia.tree.objects import Text, Returns, GenericRetrieval, Objects
 
 import dspy
@@ -291,6 +291,9 @@ class Tree:
 
     def _parse_result(self, result: Objects):
         return parse_result(result, self.conversation_id)
+    
+    def _parse_finished(self):
+        return parse_finished(self.conversation_id)
 
     def hard_reset(self):
         self = Tree(verbosity=self.verbosity)
@@ -379,6 +382,8 @@ class Tree:
 
             self.num_trees_completed += 1
             
+            yield self._parse_finished()
+
             if self.verbosity >= 1:
                 backend_print(f"[bold green]Model identified overall goal as completed![/bold green]")
                 backend_print(f"History:")
