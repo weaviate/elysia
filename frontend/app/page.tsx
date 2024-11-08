@@ -1,16 +1,16 @@
 "use client";
 
-import { v4 as uuidv4 } from "uuid";
-
 import Sidebar from "./navigation/sidebar";
 import ChatInterface from "./chat/chat_interface";
 import { useEffect, useState } from "react";
 
 import { generateIdFromIp } from "./util";
 
-import { Conversation, initialConversation, Message } from "./types";
+import { initialConversation } from "./types";
 import { useConversations } from "./chat/useConversations";
 import { useSocket } from "./chat/useSocket";
+import { useCollections } from "./explorer/useCollections";
+import DataExplorer from "./explorer/data_explorer";
 
 export default function Home() {
   const [page, setPage] = useState<"home" | "data-explorer">("home");
@@ -26,6 +26,7 @@ export default function Home() {
     setConversationStatus,
     setAllConversationStatuses,
     selectConversation,
+    setConversationTitle,
     addMessageToConversation,
   } = useConversations(id || "");
 
@@ -34,6 +35,16 @@ export default function Home() {
     setConversationStatus,
     setAllConversationStatuses
   );
+
+  const {
+    collections,
+    fetchCollections,
+    selectedCollection,
+    selectCollection,
+    collectionData,
+    loadingCollection,
+    loadingCollections,
+  } = useCollections();
 
   useEffect(() => {
     setConversations([initialConversation]);
@@ -47,6 +58,7 @@ export default function Home() {
 
   const handleQuery = (query: string, conversationId: string) => {
     sendQuery(id || "", query, conversationId);
+    setConversationTitle(query, conversationId);
   };
 
   return (
@@ -54,6 +66,10 @@ export default function Home() {
       <Sidebar
         handlePageChange={handlePageChange}
         page={page}
+        fetchCollections={fetchCollections}
+        selectCollection={selectCollection}
+        selectedCollection={selectedCollection}
+        collections={collections}
         socketOnline={socketOnline}
         conversations={conversations}
         currentConversation={currentConversation || ""}
@@ -67,6 +83,17 @@ export default function Home() {
           conversations={conversations}
           addMessageToConversation={addMessageToConversation}
           handleQuery={handleQuery}
+        />
+      )}
+      {page === "data-explorer" && (
+        <DataExplorer
+          collectionData={collectionData}
+          collectionLoading={loadingCollection}
+          collection={
+            collections.find((c) => c.name === selectedCollection) ||
+            collections[0]
+          }
+          collectionName={selectedCollection || ""}
         />
       )}
     </div>

@@ -36,6 +36,25 @@ export type Conversation = {
   current: string;
 };
 
+export type CollectionPayload = {
+  collections: Collection[];
+  error: string;
+};
+
+export type Collection = {
+  name: string;
+  total: number;
+  vectorizer: string;
+};
+
+export type CollectionData = {
+  properties: { [key: string]: string };
+  items: { [key: string]: any }[];
+  error: string;
+};
+
+// Example Objects
+
 export const initialConversation: Conversation = {
   messages: [],
   id: uuidv4(),

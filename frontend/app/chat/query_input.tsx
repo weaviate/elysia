@@ -1,23 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { RiSendPlane2Fill } from "react-icons/ri";
+import { FaQuestionCircle } from "react-icons/fa";
+import { IoArrowUpCircleSharp } from "react-icons/io5";
 import { Message } from "../types";
+import { IoDocumentText } from "react-icons/io5";
+import { FaGithub } from "react-icons/fa";
 
 interface QueryInputProps {
-  query: string;
-  handleQueryChange: (query: string) => void;
-  handleSendQuery: () => void;
+  handleSendQuery: (query: string) => void;
   messages: Message[];
 }
 
 const QueryInput: React.FC<QueryInputProps> = ({
-  query,
-  handleQueryChange,
   handleSendQuery,
   messages,
 }) => {
   const width_control = messages.length == 0 ? "w-[40vw]" : "w-[60vw]";
+
+  const [query, setQuery] = useState("");
 
   return (
     <div
@@ -36,36 +37,83 @@ const QueryInput: React.FC<QueryInputProps> = ({
         } p-2 border border-foreground text-primary placeholder:text-secondary`}
       >
         <div
-          className={`flex gap-2 w-full items-center bg-background_alt ${
-            messages.length === 0 ? "rounded-xl" : "rounded-full"
+          className={`flex gap-2 w-full bg-background_alt ${
+            messages.length === 0
+              ? "rounded-xl items-end"
+              : "rounded-full items-center"
           } p-2`}
         >
-          <input
-            type="textarea"
+          <textarea
             placeholder={
               messages.length != 0
                 ? "Ask a follow up question..."
                 : "Elysia will search through your data..."
             }
-            className={`w-full p-2 bg-transparent outline-none text-xs ${
-              messages.length === 0 ? "h-40 rounded-xl" : "h-10 rounded-full"
+            className={`w-full p-2 bg-transparent outline-none text-xs resize-none ${
+              messages.length === 0
+                ? "h-[20vh] rounded-xl"
+                : "h-[3vh] rounded-full"
             }`}
             value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSendQuery();
+              if (e.key === "Enter" && !e.shiftKey) {
+                handleSendQuery(query);
+                setQuery("");
               }
             }}
           />
           <button
             className="btn-round text-secondary rounded-full"
-            onClick={handleSendQuery}
+            onClick={() => {
+              handleSendQuery(query);
+              setQuery("");
+            }}
           >
-            <RiSendPlane2Fill size={16} />
+            <IoArrowUpCircleSharp size={16} />
           </button>
         </div>
       </div>
+      {messages.length == 0 && (
+        <div className="grid grid-cols-2 w-full gap-3">
+          <button
+            onClick={() => {
+              handleSendQuery("What is Elysia?");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <FaQuestionCircle size={16} />
+            <p>What is Elysia?</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("What is Verba?");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <FaQuestionCircle size={16} />
+            <p>What is Verba?</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("Summarize the last 10 GitHub Tickets");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <IoDocumentText size={16} />
+            <p>Summarize the last 10 GitHub Tickets</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("Return all GitHub Tickets");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <FaGithub size={16} />
+            <p>Return all GitHub Tickets</p>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

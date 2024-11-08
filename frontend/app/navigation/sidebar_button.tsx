@@ -29,7 +29,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     })}
     {!isCollapsed && (
       <div className="flex w-full items-center justify-between gap-2">
-        <p className="text-xs font-medium">{label}</p>
+        <p className="text-xs max-w-[10vw] font-medium truncate">{label}</p>
         {onDelete && isActive && (
           <div
             className="btn-round cursor-pointer text-secondary"

@@ -24,7 +24,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   addMessageToConversation,
   handleQuery,
 }) => {
-  const [query, setQuery] = useState("");
   const messages =
     currentConversation && conversations.length > 0
       ? conversations.find((c) => c.id === currentConversation)?.messages || []
@@ -35,35 +34,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       ? conversations.find((c) => c.id === currentConversation)?.current || ""
       : "";
 
-  const handleQueryChange = (q: string) => {
-    setQuery(q);
-  };
-
-  const handleSendQuery = () => {
+  const handleSendQuery = (query: string) => {
     if (query.trim() === "") return;
+    const trimmedQuery = query.trim();
     const newMessage: Message = {
       type: "User",
       conversation_id: currentConversation,
       payload: {
         type: "text",
         metadata: {},
-        objects: [query],
+        objects: [trimmedQuery],
       },
     };
     addMessageToConversation([newMessage], currentConversation);
-    handleQuery(query, currentConversation);
-    setQuery("");
+    handleQuery(trimmedQuery, currentConversation);
   };
 
   return (
     <div className="h-screen flex flex-col items-center justify-center flex-grow">
       <MessageDisplay messages={messages} current_status={current_status} />
-      <QueryInput
-        query={query}
-        messages={messages}
-        handleQueryChange={handleQueryChange}
-        handleSendQuery={handleSendQuery}
-      />
+      <QueryInput messages={messages} handleSendQuery={handleSendQuery} />
     </div>
   );
 };
