@@ -22,8 +22,7 @@ export function useSocket(
   const [reconnect, setReconnect] = useState(false);
 
   useEffect(() => {
-    //Uncomment once Backend is ready
-    //setReconnect(true);
+    setReconnect(true);
   }, []);
 
   useEffect(() => {
@@ -32,6 +31,7 @@ export function useSocket(
 
     localSocket.onopen = () => {
       setSocketOnline(true);
+      console.log("Socket opened");
     };
 
     localSocket.onmessage = (event) => {
@@ -48,13 +48,14 @@ export function useSocket(
     };
 
     localSocket.onerror = (error) => {
-      console.error(error);
+      console.log(error);
       setSocketOnline(false);
       setReconnect((prev) => !prev);
     };
 
     localSocket.onclose = () => {
       setSocketOnline(false);
+      console.log("Socket closed");
       setReconnect((prev) => !prev);
     };
 

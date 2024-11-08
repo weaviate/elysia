@@ -52,6 +52,7 @@ export default function Home() {
       <Sidebar
         handlePageChange={handlePageChange}
         page={page}
+        socketOnline={socketOnline}
         conversations={conversations}
         currentConversation={currentConversation || ""}
         addConversation={addConversation}

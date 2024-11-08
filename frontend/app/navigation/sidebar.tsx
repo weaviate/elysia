@@ -18,6 +18,7 @@ interface SidebarProps {
   selectConversation: (id: string) => void;
   currentConversation: string;
   conversations: Conversation[];
+  socketOnline: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -28,6 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   removeConversation,
   selectConversation,
   currentConversation,
+  socketOnline,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -54,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <img
-            src="/logo.svg"
+            src={socketOnline ? "/logo.svg" : "/logo_offline.svg"}
             alt="elysia"
             className={`transition-all duration-200 ${logoSize}`}
           />

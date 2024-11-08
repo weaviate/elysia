@@ -12,7 +12,10 @@ from starlette.websockets import WebSocketDisconnect
 from elysia.tree.tree import Tree, lm
 from elysia.util.logging import backend_print
 from elysia.api.api_types import QueryData, GetCollectionData
-from elysia.util.collection_metadata import get_collection_data_types, get_collection_data
+from elysia.util.collection_metadata import (
+    get_collection_data_types,
+    get_collection_data,
+)
 from elysia.globals.weaviate_client import client
 
 
@@ -20,18 +23,20 @@ class TreeManager:
     """
     Manages trees for different conversations.
     """
+
     def __init__(self):
         self.trees = {}
-    
+
     def add_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.trees[user_id] = {}
         self.trees[user_id][conversation_id] = Tree(verbosity=1)
-    
+
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.add_tree(user_id, conversation_id)
         return self.trees[user_id][conversation_id]
+
 
 # App variable declaration
 version = "0.1.0"
@@ -39,7 +44,7 @@ logger = logging.getLogger("uvicorn")
 
 
 # app declaration
-app = FastAPI(title = "Elysia API", version = version)
+app = FastAPI(title="Elysia API", version=version)
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,6 +58,7 @@ app.add_middleware(
 global tree_manager
 tree_manager = TreeManager()
 
+
 # Request validation exception handler
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -62,6 +68,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
     )
+
 
 # Health check endpoint
 @app.get("/api/health")
@@ -73,16 +80,18 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
+
 async def process(data: QueryData, websocket: WebSocket):
     user_prompt = data.query
-    
+
     tree = tree_manager.get_tree(data.user_id, data.conversation_id)
 
     async for yielded_result in tree.process(user_prompt):
         await websocket.send_json(yielded_result)
 
+
 # Process endpoint
-@app.post("/ws/query")
+@app.websocket("/ws/query")
 async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for processing pipelines.
@@ -93,7 +102,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         while True:
             try:
-                
+
                 # Wait for a message from the client
                 data = await websocket.receive_json()
 
@@ -101,7 +110,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if data.get("type") == "disconnect":
                     logger.info("Received disconnect request")
                     break  # Exit the loop instead of closing the websocket here
-                
+
                 logger.info(f"Received message: {data}")
 
                 await process(data, websocket)
@@ -144,6 +153,7 @@ async def websocket_endpoint(websocket: WebSocket):
         except RuntimeError:
             logger.info("WebSocket already closed")
 
+
 @app.get("/api/collections")
 async def collections():
 
@@ -154,32 +164,30 @@ async def collections():
     metadata = []
     for collection_name in collection_names:
         collection = client.collections.get(collection_name)
-        metadata.append({
-            "name": collection_name,
-            "total": len(collection),
-            "vectorizer": collection.config.get().vectorizer # None when using namedvectors, TODO: implement for named vectors
-        })
+        metadata.append(
+            {
+                "name": collection_name,
+                "total": len(collection),
+                "vectorizer": collection.config.get().vectorizer,  # None when using namedvectors, TODO: implement for named vectors
+            }
+        )
 
-    return JSONResponse(content={
-        "collections": metadata,
-        "error": ""
-    }, status_code=200)
+    return JSONResponse(content={"collections": metadata, "error": ""}, status_code=200)
+
 
 @app.post("/api/get_collection")
 async def get_collection(data: GetCollectionData):
-    
+
     # get collection properties
     data_types = get_collection_data_types(data.collection_name)
 
     # obtain paginated results from collection
     items = get_collection_data(
-        collection_name = data.collection_name, 
-        lower_bound = data.page * data.pageSize, 
-        upper_bound = (data.page + 1) * data.pageSize
+        collection_name=data.collection_name,
+        lower_bound=data.page * data.pageSize,
+        upper_bound=(data.page + 1) * data.pageSize,
     )
 
-    return JSONResponse(content={
-        "properties": data_types,
-        "items": items,
-        "error": ""
-    }, status_code=200)
+    return JSONResponse(
+        content={"properties": data_types, "items": items, "error": ""}, status_code=200
+    )
