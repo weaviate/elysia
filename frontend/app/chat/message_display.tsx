@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { Message, TicketPayload } from "../types";
+import { Message, ResultPayload } from "../types";
 
 import UserMessageDisplay from "./user_message_display";
 import MarkdownMessageDisplay from "./markdown_display";
@@ -20,7 +20,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   current_status,
 }) => {
   return (
-    <div className="h-[80vh] w-[60vw] flex justify-start items-start mt-10 ">
+    <div className="h-[80vh] w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll ">
       <div className="flex flex-col gap-10 w-full">
         {messages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
@@ -36,37 +36,41 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                 </div>
               </div>
             )}
-            {message.type === "Text" && (
+            {message.type === "result" && (
               <div className="w-full flex flex-col justify-start items-start ">
                 <div className="max-w-3/5">
-                  <MarkdownMessageDisplay
-                    key={index}
-                    markdown_message={
-                      typeof message.payload === "string" ? message.payload : ""
-                    }
-                  />
+                  {(message.payload as ResultPayload).type === "text" &&
+                    (message.payload as ResultPayload).objects.map(
+                      (text, idx) => (
+                        <MarkdownMessageDisplay
+                          key={`${index}-${idx}`}
+                          markdown_message={text as string}
+                        />
+                      )
+                    )}
+                  {(message.payload as ResultPayload).type === "ticket" &&
+                    (message.payload as ResultPayload).objects.map(
+                      (ticket, idx) => (
+                        <TicketMessageDisplay
+                          key={`${index}-${idx}`}
+                          ticket={ticket}
+                        />
+                      )
+                    )}
                 </div>
               </div>
             )}
-            {message.type === "Error" && (
+            {message.type === "error" && (
               <div className="w-full flex flex-col justify-start items-start ">
                 <div className="max-w-3/5">
-                  <ErrorMessageDisplay
-                    key={index}
-                    error_message={
-                      typeof message.payload === "string" ? message.payload : ""
-                    }
-                  />
-                </div>
-              </div>
-            )}
-            {message.type === "Ticket" && (
-              <div className="w-full flex flex-col justify-start items-end ">
-                <div className="max-w-3/5">
-                  <TicketMessageDisplay
-                    key={index}
-                    ticket={message.payload as TicketPayload}
-                  />
+                  {(message.payload as ResultPayload).objects.map(
+                    (error, idx) => (
+                      <ErrorMessageDisplay
+                        key={`${index}-${idx}`}
+                        error_message={error as string}
+                      />
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -74,7 +78,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         ))}
         {current_status != "" && (
           <div className="w-full flex justify-start items-center gap-2">
-            <FaCircle className="text-secondary text-sm shine" />
+            <FaCircle className="text-secondary text-sm pulsing" />
             <p className="text-sm shine">{current_status}</p>
           </div>
         )}

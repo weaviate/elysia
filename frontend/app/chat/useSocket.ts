@@ -4,8 +4,8 @@ import {
   TextMessage,
   ErrorMessage,
   TicketMessage,
-  TreeUpdateMessage,
-  TreeUpdatePayload,
+  DecisionMessage,
+  DecisionPayload,
 } from "../types";
 import { getWebsocketHost } from "../api";
 
@@ -37,9 +37,9 @@ export function useSocket(
     localSocket.onmessage = (event) => {
       try {
         const message: Message = JSON.parse(event.data);
-        if (message.type === "TreeUpdate") {
-          const payload = message.payload as TreeUpdatePayload;
-          setConversationStatus(payload.type, message.conversation_id);
+        if (message.type === "decision") {
+          const payload = message.payload as DecisionPayload;
+          setConversationStatus(payload.decision, message.conversation_id);
         }
         addMessageToConversation([message], message.conversation_id);
       } catch (error) {
@@ -73,12 +73,17 @@ export function useSocket(
     query: string,
     conversation_id: string
   ) => {
+    //fakeQuery(conversation_id);
+    socket?.send(JSON.stringify({ user_id, query, conversation_id }));
+  };
+
+  const fakeQuery = (conversation_id: string) => {
     // This is fake data for now
     const text_message: Message = { ...TextMessage, conversation_id };
     const error_message: Message = { ...ErrorMessage, conversation_id };
     const ticket_message: Message = { ...TicketMessage, conversation_id };
-    const tree_update_message: Message = {
-      ...TreeUpdateMessage,
+    const decision_message: Message = {
+      ...DecisionMessage,
       conversation_id,
     };
 
@@ -94,13 +99,11 @@ export function useSocket(
 
     setTimeout(() => {
       addMessageToConversation(
-        [text_message, error_message, ticket_message, tree_update_message],
+        [text_message, error_message, ticket_message, decision_message],
         conversation_id
       );
       setConversationStatus("", conversation_id);
     }, 8000);
-
-    //socket?.send(JSON.stringify({ user_id, query, conversation_id }));
   };
 
   return { socketOnline, sendQuery };

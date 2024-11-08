@@ -33,12 +33,12 @@
 
 
 .shine {
-  background: linear-gradient(90deg, #464C5F 30%, #fff 50%, #464C5F 70%);
+  background: linear-gradient(90deg, #464C5F 35%, #fff 50%, #464C5F 65%);
   background-size: 200% 200%;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shine 3s ease-in-out infinite;
+  animation: shine 4s ease-in-out infinite;
 }
 
 @keyframes shine {
@@ -48,4 +48,23 @@
   100% {
     background-position-x: 140%;
   }
+}
+
+@keyframes pulsing {
+  0% {
+    scale: 0.5;
+    color: #464C5F;
+  }
+  50% {
+    scale: 1;
+    color: #fff;
+  }
+  100% {
+    scale: 0.5;
+    color: #464C5F;
+  }
+}
+
+.pulsing {
+  animation: pulsing 5s ease-in-out infinite;
 }
