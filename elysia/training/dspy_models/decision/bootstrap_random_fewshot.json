@@ -1,0 +1,929 @@
+{
+  "router": {
+    "lm": null,
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "user_prompt": "What was Vin discussing in her most recent 10 emails?",
+        "reference": {
+          "datetime": "2024-08-15T00:00:0Z",
+          "day_of_week": "Thursday",
+          "time_of_day": "12:00 AM"
+        },
+        "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+        "completed_tasks": [
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "collection",
+            "options": {
+              "example_verba_email_chains": "email correspondence within the company that is loosely related to verba",
+              "example_verba_slack_conversations": "slack chats in the company that is loosely related to verba",
+              "example_verba_github_issues": "github issues for the verba app"
+            },
+            "decision": "example_verba_email_chains",
+            "instruction": "\n            You have decided to query, now choose a collection to query.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "collection",
+            "options": {
+              "example_verba_email_chains": "email correspondence within the company that is loosely related to verba",
+              "example_verba_slack_conversations": "slack chats in the company that is loosely related to verba",
+              "example_verba_github_issues": "github issues for the verba app"
+            },
+            "decision": "example_verba_email_chains",
+            "instruction": "\n            You have decided to query, now choose a collection to query.\n            "
+          }
+        ],
+        "available_tasks": "{\"full_conversation\": {\"description\": \"show the full conversation\", \"action\": \"QueryOptions[\\\"message\\\"](collection_name = \\\"example_verba_email_chains\\\", return_conversation = True)\", \"returns\": \"ConversationRetrieval\", \"next\": null}, \"message_only\": {\"description\": \"show only the message\", \"action\": \"QueryOptions[\\\"message\\\"](collection_name = \\\"example_verba_email_chains\\\", return_conversation = False)\", \"returns\": \"ConversationRetrieval\", \"next\": null}}",
+        "decision_tree": "{\"id\": \"base\", \"instruction\": \"\\n            Choose a task based on the user's prompt and the available information. \\n            Use all information available to you to make the decision.\\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \\n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\\n            \", \"options\": {\"query\": {\"id\": \"collection\", \"instruction\": \"\\n            You have decided to query, now choose a collection to query.\\n            \", \"options\": {\"example_verba_email_chains\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_slack_conversations\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_github_issues\": {}}}, \"summarize\": {}, \"text_response\": {}}}",
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "data_queried": "",
+        "conversation_history": [],
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Given that there is no conversation history and no previous tasks have been queried, I will need to query the knowledge base to gather information about Vin's most recent 10 emails. The user is asking for specific information that has not yet been retrieved, and since I have not queried yet, the appropriate action is to query for this information.",
+            "collection": "To satisfy the user's request for information about Vin's most recent 10 emails, I need to query the relevant collection of email chains. Since there is no previous conversation history or information retrieved, it is necessary to start by querying the collection that pertains to email correspondence. This is the most direct way to gather the required information to respond to the user's query."
+          },
+          "tree_2": {
+            "base": "Since there is no conversation history and no previous tasks have been queried, I need to query the knowledge base to gather information about Vin's most recent 10 emails. The user is asking for specific information that has not yet been retrieved. Therefore, the appropriate action is to query for this information.",
+            "collection": "I need to query the relevant collection to gather information about Vin's most recent 10 emails, as there is no previous conversation history or information retrieved. Since the user is specifically asking for details about recent emails, the most appropriate action is to query the email chains collection to obtain the necessary information."
+          }
+        },
+        "reasoning": "Since the user is asking about Vin's most recent 10 emails, I need to query the relevant collection of email chains. This will allow me to gather the required information to respond to the user's request. Given the options available, I need to decide whether to show the full conversation or just the messages. Since the user is interested in the context of the emails, I will opt to show the full conversation.",
+        "task": "full_conversation",
+        "all_actions_completed_reasoning": "The user will not be satisfied yet, as I have not yet provided the information to them in text format. Although I have decided on the task to gather the information, the actual response to the user will come after this query is executed.",
+        "all_actions_completed": "False"
+      },
+      {
+        "augmented": true,
+        "user_prompt": "summarize the issue related to 'PDFs being too large to upload'",
+        "reference": {
+          "datetime": "2023-01-18T00:00:0Z",
+          "day_of_week": "Wednesday",
+          "time_of_day": "12:00 AM"
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": "{\"query\": {\"description\": \"query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.\", \"action\": null, \"returns\": null, \"next\": \"collection\"}, \"summarize\": {\"description\": \"summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"Summarizer()\", \"returns\": \"text\", \"next\": null}, \"text_response\": {\"description\": \"respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"TextResponse()\", \"returns\": \"text\", \"next\": null}}",
+        "decision_tree": "{\"id\": \"base\", \"instruction\": \"\\n            Choose a task based on the user's prompt and the available information. \\n            Use all information available to you to make the decision.\\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \\n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\\n            \", \"options\": {\"query\": {\"id\": \"collection\", \"instruction\": \"\\n            You have decided to query, now choose a collection to query.\\n            \", \"options\": {\"example_verba_email_chains\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_slack_conversations\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_github_issues\": {}}}, \"summarize\": {}, \"text_response\": {}}}",
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "data_queried": "",
+        "conversation_history": [],
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {}
+        },
+        "reasoning": "Since I have not queried any information about the issue related to 'PDFs being too large to upload,' I need to query the knowledge base to gather this information. The user is asking for a summary, but I must first retrieve the relevant details before I can summarize them.",
+        "task": "query",
+        "all_actions_completed_reasoning": "The user will not be satisfied, as I haven't provided any relevant information about the issue yet. I need to gather this information first before summarizing it for the user.",
+        "all_actions_completed": "False"
+      },
+      {
+        "augmented": true,
+        "user_prompt": "Hi there, what can you do?",
+        "reference": {
+          "datetime": "2021-08-22T00:00:0Z",
+          "day_of_week": "Sunday",
+          "time_of_day": "12:00 AM"
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": "{\"query\": {\"description\": \"query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.\", \"action\": null, \"returns\": null, \"next\": \"collection\"}, \"summarize\": {\"description\": \"summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"Summarizer()\", \"returns\": \"text\", \"next\": null}, \"text_response\": {\"description\": \"respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"TextResponse()\", \"returns\": \"text\", \"next\": null}}",
+        "decision_tree": "{\"id\": \"base\", \"instruction\": \"\\n            Choose a task based on the user's prompt and the available information. \\n            Use all information available to you to make the decision.\\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \\n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\\n            \", \"options\": {\"query\": {\"id\": \"collection\", \"instruction\": \"\\n            You have decided to query, now choose a collection to query.\\n            \", \"options\": {\"example_verba_email_chains\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_slack_conversations\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_github_issues\": {}}}, \"summarize\": {}, \"text_response\": {}}}",
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "data_queried": "",
+        "conversation_history": [],
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {}
+        },
+        "reasoning": "Since the user is asking about my capabilities, I should provide a text response outlining what I can do. There is no need for a query as the user's request is straightforward and does not require additional information from a knowledge base.",
+        "task": "text_response",
+        "all_actions_completed_reasoning": "The user will be satisfied because I will provide a clear response about my capabilities. There are no further actions needed, so this response will fulfill the user's query.",
+        "all_actions_completed": "True"
+      },
+      {
+        "augmented": true,
+        "user_prompt": "What is the weather in Tokyo?",
+        "reference": {
+          "datetime": "2024-08-15T00:00:0Z",
+          "day_of_week": "Thursday",
+          "time_of_day": "12:00 AM"
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": "{\"query\": {\"description\": \"query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.\", \"action\": null, \"returns\": null, \"next\": \"collection\"}, \"summarize\": {\"description\": \"summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"Summarizer()\", \"returns\": \"text\", \"next\": null}, \"text_response\": {\"description\": \"respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"TextResponse()\", \"returns\": \"text\", \"next\": null}}",
+        "decision_tree": "{\"id\": \"base\", \"instruction\": \"\\n            Choose a task based on the user's prompt and the available information. \\n            Use all information available to you to make the decision.\\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \\n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\\n            \", \"options\": {\"query\": {\"id\": \"collection\", \"instruction\": \"\\n            You have decided to query, now choose a collection to query.\\n            \", \"options\": {\"example_verba_email_chains\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_slack_conversations\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_github_issues\": {}}}, \"summarize\": {}, \"text_response\": {}}}",
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "data_queried": "",
+        "conversation_history": [],
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {}
+        },
+        "reasoning": "The user is asking about the weather in Tokyo, which is not related to the available tasks. Since I have not queried any information yet, I should choose to query the knowledge base to find the weather information. However, since there is no task available for weather information, I will ultimately have to inform the user that I can't provide that information.",
+        "task": "text_response",
+        "all_actions_completed_reasoning": "The user will not be satisfied, as I am unable to provide the requested weather information.",
+        "all_actions_completed": "True"
+      },
+      {
+        "augmented": true,
+        "user_prompt": "How are you doing today?",
+        "reference": {
+          "datetime": "2023-01-18T00:00:0Z",
+          "day_of_week": "Wednesday",
+          "time_of_day": "12:00 AM"
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": "{\"query\": {\"description\": \"query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.\", \"action\": null, \"returns\": null, \"next\": \"collection\"}, \"summarize\": {\"description\": \"summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"Summarizer()\", \"returns\": \"text\", \"next\": null}, \"text_response\": {\"description\": \"respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.\", \"action\": \"TextResponse()\", \"returns\": \"text\", \"next\": null}}",
+        "decision_tree": "{\"id\": \"base\", \"instruction\": \"\\n            Choose a task based on the user's prompt and the available information. \\n            Use all information available to you to make the decision.\\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \\n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\\n            \", \"options\": {\"query\": {\"id\": \"collection\", \"instruction\": \"\\n            You have decided to query, now choose a collection to query.\\n            \", \"options\": {\"example_verba_email_chains\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_slack_conversations\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_github_issues\": {}}}, \"summarize\": {}, \"text_response\": {}}}",
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "data_queried": "",
+        "conversation_history": [],
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {}
+        },
+        "reasoning": "The user is asking a casual question about my well-being. Since this does not require any information retrieval and is more of a conversational response, I should provide a text response. This response will be friendly and informal, acknowledging their question.",
+        "task": "text_response",
+        "all_actions_completed_reasoning": "The user will be satisfied, as I will have provided a response to their question. There are no other actions I can perform, so this is the only option and hence the user will be satisfied.",
+        "all_actions_completed": "True"
+      },
+      {
+        "augmented": true,
+        "user_prompt": "Give me every piece of information you have about the 'PDFs being too large to upload' issue in verba",
+        "reference": {
+          "datetime": "2024-12-23T00:00:0Z",
+          "day_of_week": "Monday",
+          "time_of_day": "12:00 AM"
+        },
+        "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+        "completed_tasks": [
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          }
+        ],
+        "available_tasks": "{\"example_verba_email_chains\": {\"description\": \"email correspondence within the company that is loosely related to verba\", \"action\": null, \"returns\": null, \"next\": \"conversation_choice\"}, \"example_verba_slack_conversations\": {\"description\": \"slack chats in the company that is loosely related to verba\", \"action\": null, \"returns\": null, \"next\": \"conversation_choice\"}, \"example_verba_github_issues\": {\"description\": \"github issues for the verba app\", \"action\": \"QueryOptions[\\\"ticket\\\"](collection_name = \\\"example_verba_github_issues\\\")\", \"returns\": \"TicketRetrieval\", \"next\": null}}",
+        "decision_tree": "{\"id\": \"base\", \"instruction\": \"\\n            Choose a task based on the user's prompt and the available information. \\n            Use all information available to you to make the decision.\\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \\n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\\n            \", \"options\": {\"query\": {\"id\": \"collection\", \"instruction\": \"\\n            You have decided to query, now choose a collection to query.\\n            \", \"options\": {\"example_verba_email_chains\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_slack_conversations\": {\"id\": \"conversation_choice\", \"instruction\": \"Should the full conversation attached to the retrieved object be shown to the user or just the message?\", \"options\": {\"full_conversation\": {}, \"message_only\": {}}}, \"example_verba_github_issues\": {}}}, \"summarize\": {}, \"text_response\": {}}}",
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "data_queried": "",
+        "conversation_history": [],
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Since there is no previous information retrieved (as indicated by the empty `available_information`), I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This is the first decision, and querying is necessary to gather information that the user is seeking."
+          },
+          "tree_2": {
+            "base": "Since there is no previous information retrieved and the `available_information` is empty, I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This is the first decision, and querying is necessary to gather the information that the user is seeking."
+          }
+        },
+        "reasoning": "Since the user is asking for every piece of information about the 'PDFs being too large to upload' issue, I need to query the knowledge base to retrieve this information. The appropriate collection for this query would be the GitHub issues related to the Verba app, which may contain detailed information about the issue.",
+        "task": "example_verba_github_issues",
+        "all_actions_completed_reasoning": "The user will not be satisfied until I provide them with the information they requested. I need to retrieve the information first, and then I can summarize it for them.",
+        "all_actions_completed": "False"
+      },
+      {
+        "user_prompt": "What was the last email sent by Danny?",
+        "reference": {
+          "datetime": "2023-01-24T00:00:0Z",
+          "day_of_week": "Tuesday",
+          "time_of_day": "12:00 AM"
+        },
+        "reasoning": "We have retrieved the email conversation that Danny was involved in. I can see that they have said they made progress on the data analysis, so I should respond this to the user. Therefore, I should choose the text_response task.",
+        "task": "text_response",
+        "possible_tasks": [
+          "text_response",
+          "summarize"
+        ],
+        "all_actions_completed_reasoning": "The user will be satisfied, as I will have provided a response to their question. There are no other actions I can perform, so this is the last option and hence the decisions are completed.",
+        "all_actions_completed": true,
+        "conversation_history": [],
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": {
+          "query": {
+            "description": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+            "action": null,
+            "returns": null,
+            "next": "collection"
+          },
+          "summarize": {
+            "description": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+            "action": "Summarizer()",
+            "returns": "text",
+            "next": null
+          },
+          "text_response": {
+            "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+            "action": "TextResponse()",
+            "returns": "text",
+            "next": null
+          }
+        },
+        "data_queried": {},
+        "decision_tree": {
+          "id": "base",
+          "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+          "options": {
+            "query": {
+              "id": "collection",
+              "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+              "options": {
+                "example_verba_email_chains": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_slack_conversations": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_github_issues": {}
+              }
+            },
+            "summarize": {},
+            "text_response": {}
+          }
+        },
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {}
+        }
+      },
+      {
+        "user_prompt": "Summarise 20 of the most recent emails and slack messages sent by Danny",
+        "reference": {
+          "datetime": "2024-11-23T00:00:0Z",
+          "day_of_week": "Saturday",
+          "time_of_day": "12:00 AM"
+        },
+        "reasoning": "Since the user is asking for a summary of the most recent emails and slack messages sent by Danny, I should query the email chains collection, or the slack conversations collection, depending on which one hasn't been queried yet.",
+        "task": "example_verba_email_chains",
+        "possible_tasks": [
+          "example_verba_email_chains",
+          "example_verba_slack_conversations"
+        ],
+        "all_actions_completed_reasoning": "The user will not be satisfied, as I have not yet provided the information to them in text format.",
+        "all_actions_completed": false,
+        "conversation_history": [],
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+        "completed_tasks": [
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          }
+        ],
+        "available_tasks": {
+          "example_verba_email_chains": {
+            "description": "email correspondence within the company that is loosely related to verba",
+            "action": null,
+            "returns": null,
+            "next": "conversation_choice"
+          },
+          "example_verba_slack_conversations": {
+            "description": "slack chats in the company that is loosely related to verba",
+            "action": null,
+            "returns": null,
+            "next": "conversation_choice"
+          },
+          "example_verba_github_issues": {
+            "description": "github issues for the verba app",
+            "action": "QueryOptions[\"ticket\"](collection_name = \"example_verba_github_issues\")",
+            "returns": "TicketRetrieval",
+            "next": null
+          }
+        },
+        "data_queried": {},
+        "decision_tree": {
+          "id": "base",
+          "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+          "options": {
+            "query": {
+              "id": "collection",
+              "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+              "options": {
+                "example_verba_email_chains": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_slack_conversations": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_github_issues": {}
+              }
+            },
+            "summarize": {},
+            "text_response": {}
+          }
+        },
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Given that there is no prior conversation history and no information has been retrieved yet, the appropriate action is to query the knowledge base for the recent emails and Slack messages sent by Danny. The user has requested a summary of those communications, but without querying, I cannot provide that information. Thus, I will choose the query task to retrieve the necessary information."
+          },
+          "tree_2": {
+            "base": "Given that there is no prior conversation history and no information has been retrieved yet, the appropriate action is to query the knowledge base for the recent emails and Slack messages sent by Danny. The user has requested a summary of those communications, but without querying, I cannot provide that information. Thus, I will choose the query task to retrieve the necessary information."
+          }
+        }
+      },
+      {
+        "user_prompt": "summarize the latest issues related to the verba app",
+        "reference": {
+          "datetime": "2022-11-20T00:00:0Z",
+          "day_of_week": "Sunday",
+          "time_of_day": "12:00 AM"
+        },
+        "reasoning": "I have already retrieved the information about the latest issues related to the verba app, so I should summarize it. This is one of the actions I can perform, and is the last step to complete the overall goal.",
+        "task": "summarize",
+        "possible_tasks": [
+          "summarize",
+          "text_response"
+        ],
+        "all_actions_completed_reasoning": "The user will be satisfied, as I will have summarized the latest issues related to the verba app. There are no other actions I can perform, so this is the only option and hence the user will be satisfied.",
+        "all_actions_completed": true,
+        "conversation_history": [],
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": {
+          "query": {
+            "description": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+            "action": null,
+            "returns": null,
+            "next": "collection"
+          },
+          "summarize": {
+            "description": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+            "action": "Summarizer()",
+            "returns": "text",
+            "next": null
+          },
+          "text_response": {
+            "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+            "action": "TextResponse()",
+            "returns": "text",
+            "next": null
+          }
+        },
+        "data_queried": {},
+        "decision_tree": {
+          "id": "base",
+          "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+          "options": {
+            "query": {
+              "id": "collection",
+              "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+              "options": {
+                "example_verba_email_chains": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_slack_conversations": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_github_issues": {}
+              }
+            },
+            "summarize": {},
+            "text_response": {}
+          }
+        },
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {},
+          "tree_3": {}
+        }
+      },
+      {
+        "user_prompt": "Give me every piece of information you have about the 'PDFs being too large to upload' issue in verba",
+        "reference": {
+          "datetime": "2020-10-22T00:00:0Z",
+          "day_of_week": "Thursday",
+          "time_of_day": "12:00 AM"
+        },
+        "reasoning": "The user is asking for information about the 'PDFs being too large to upload' issue in verba, I should query any one of these collections. I will now choose the email chains collection, but in the future I should choose the slack conversations or github issues collection, depending on which one hasn't been queried yet. I will use the same query for these different collections.",
+        "task": "example_verba_email_chains",
+        "possible_tasks": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "all_actions_completed_reasoning": "The user will not be satisfied, as I have not yet provided the information to them in text format, but only the requested information. Later I will need to choose summarize to provide the information to the user in text format.",
+        "all_actions_completed": false,
+        "conversation_history": [],
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+        "completed_tasks": [
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          }
+        ],
+        "available_tasks": {
+          "example_verba_email_chains": {
+            "description": "email correspondence within the company that is loosely related to verba",
+            "action": null,
+            "returns": null,
+            "next": "conversation_choice"
+          },
+          "example_verba_slack_conversations": {
+            "description": "slack chats in the company that is loosely related to verba",
+            "action": null,
+            "returns": null,
+            "next": "conversation_choice"
+          },
+          "example_verba_github_issues": {
+            "description": "github issues for the verba app",
+            "action": "QueryOptions[\"ticket\"](collection_name = \"example_verba_github_issues\")",
+            "returns": "TicketRetrieval",
+            "next": null
+          }
+        },
+        "data_queried": {},
+        "decision_tree": {
+          "id": "base",
+          "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+          "options": {
+            "query": {
+              "id": "collection",
+              "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+              "options": {
+                "example_verba_email_chains": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_slack_conversations": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_github_issues": {}
+              }
+            },
+            "summarize": {},
+            "text_response": {}
+          }
+        },
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Since there is no previous information retrieved (as indicated by the empty `available_information`), I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This is the first decision, and querying is necessary to gather information that the user is seeking."
+          },
+          "tree_2": {
+            "base": "Since there is no previous information retrieved and the `available_information` is empty, I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This is the first decision, and querying is necessary to gather the information that the user is seeking."
+          },
+          "tree_3": {
+            "base": "Since there is no previous information retrieved and the `available_information` is empty, I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This will help gather the necessary information that the user is seeking."
+          }
+        }
+      },
+      {
+        "user_prompt": "Give me every piece of information you have about the 'PDFs being too large to upload' issue in verba",
+        "reference": {
+          "datetime": "2021-09-22T00:00:0Z",
+          "day_of_week": "Wednesday",
+          "time_of_day": "12:00 AM"
+        },
+        "reasoning": "Looking at the data_queried field, I have already retrieved the information about the 'PDFs being too large to upload' issue for some collections. I should now choose a different collection to retrieve the information, because the user is asking for all information I have. This should be the last query required, so later when given the opportunity, I should choose summarize to convey the information to the user.",
+        "task": "example_verba_slack_conversations",
+        "possible_tasks": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "all_actions_completed_reasoning": "The user will not be satisfied, as I have not yet provided the information to them in text format.",
+        "all_actions_completed": false,
+        "conversation_history": [],
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+        "completed_tasks": [
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          },
+          {
+            "id": "base",
+            "options": {
+              "query": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+              "summarize": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+              "text_response": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this."
+            },
+            "decision": "query",
+            "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            "
+          }
+        ],
+        "available_tasks": {
+          "example_verba_email_chains": {
+            "description": "email correspondence within the company that is loosely related to verba",
+            "action": null,
+            "returns": null,
+            "next": "conversation_choice"
+          },
+          "example_verba_slack_conversations": {
+            "description": "slack chats in the company that is loosely related to verba",
+            "action": null,
+            "returns": null,
+            "next": "conversation_choice"
+          },
+          "example_verba_github_issues": {
+            "description": "github issues for the verba app",
+            "action": "QueryOptions[\"ticket\"](collection_name = \"example_verba_github_issues\")",
+            "returns": "TicketRetrieval",
+            "next": null
+          }
+        },
+        "data_queried": {},
+        "decision_tree": {
+          "id": "base",
+          "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+          "options": {
+            "query": {
+              "id": "collection",
+              "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+              "options": {
+                "example_verba_email_chains": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_slack_conversations": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_github_issues": {}
+              }
+            },
+            "summarize": {},
+            "text_response": {}
+          }
+        },
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Since there is no previous information retrieved (as indicated by the empty `available_information`), I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This is the first decision, and querying is necessary to gather information that the user is seeking."
+          },
+          "tree_2": {
+            "base": "Since there is no previous information retrieved and the `available_information` is empty, I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This is the first decision, and querying is necessary to gather the information that the user is seeking."
+          },
+          "tree_3": {
+            "base": "Since there is no previous information retrieved and the `available_information` is empty, I need to query the knowledge base about the issue of 'PDFs being too large to upload' in Verba. This will help gather the necessary information that the user is seeking."
+          },
+          "tree_4": {
+            "base": "Given that there is no previous information retrieved and the available information indicates that nothing has been found regarding the issue of 'PDFs being too large to upload' in Verba, I need to query the knowledge base to gather this information. This is the first decision and querying is necessary to obtain the details that the user is seeking."
+          }
+        }
+      },
+      {
+        "user_prompt": "Tell me about the latest scientific developments in AI",
+        "reference": {
+          "datetime": "2020-03-18T00:00:0Z",
+          "day_of_week": "Wednesday",
+          "time_of_day": "12:00 AM"
+        },
+        "reasoning": "I have already attempted to retrieve information from the databases about this, but the available information is not relevant. Further, the collection names available in future actions are not relevant to the user's question. So there is nothing we can do to help the user with their question. Therefore, I will provide a text response to the user, and in it, I will state that I cannot help with their question.",
+        "task": "text_response",
+        "possible_tasks": [
+          "text_response",
+          "summarize"
+        ],
+        "all_actions_completed_reasoning": "The user will be satisfied, as there are no other actions I can perform. With this action, I will have provided a text response to the user, and in it, I state that I cannot help with their question. Therefore, the user will be satisfied.",
+        "all_actions_completed": true,
+        "conversation_history": [],
+        "available_information": {
+          "retrieval": {},
+          "text": {
+            "metadata": {},
+            "objects": []
+          }
+        },
+        "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+        "completed_tasks": [],
+        "available_tasks": {
+          "query": {
+            "description": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+            "action": null,
+            "returns": null,
+            "next": "collection"
+          },
+          "summarize": {
+            "description": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+            "action": "Summarizer()",
+            "returns": "text",
+            "next": null
+          },
+          "text_response": {
+            "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+            "action": "TextResponse()",
+            "returns": "text",
+            "next": null
+          }
+        },
+        "data_queried": {},
+        "decision_tree": {
+          "id": "base",
+          "instruction": "\n            Choose a task based on the user's prompt and the available information. \n            Use all information available to you to make the decision.\n            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), \n            you should assume that the task is impossible, hence choose text_response to reply this to the user.\n            Otherwise, if you haven't queried yet, you should query the knowledge base.\n            If you don't need to query, i.e. the user is talking to you, choose text_response.\n            If you have queried, and there is available information, you should choose summarize to reply this to the user.\n            ",
+          "options": {
+            "query": {
+              "id": "collection",
+              "instruction": "\n            You have decided to query, now choose a collection to query.\n            ",
+              "options": {
+                "example_verba_email_chains": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_slack_conversations": {
+                  "id": "conversation_choice",
+                  "instruction": "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
+                  "options": {
+                    "full_conversation": {},
+                    "message_only": {}
+                  }
+                },
+                "example_verba_github_issues": {}
+              }
+            },
+            "summarize": {},
+            "text_response": {}
+          }
+        },
+        "previous_reasoning": {
+          "tree_1": {},
+          "tree_2": {},
+          "tree_3": {},
+          "tree_4": {}
+        }
+      }
+    ],
+    "signature": {
+      "instructions": "You are an expert routing agent, who is responsible for routing a user's prompt to the most appropriate task.\nGiven a query (user_prompt) from a user, and a list of possible tasks (available_tasks), decide the task that needs to be completed.\nYou should think carefully and logically about the user's input and the tasks that you have available to you (available_tasks), and then decide which task is the most appropriate.\n\nYou may be asked to make this decision more than once at a later date, so you should try to choose the most appropriate task NOW, knowing that you may be asked again.\n\nYou are also responsible for checking if the overall goal has been completed, and returning False if it has, and True otherwise.\nRemember, the overall goal is to respond to the user's query in a satisfactory way, and you must do so by completing the necessary tasks.\n\nTo route the user's query to the most appropriate task, follow these steps:\n1. Evaluate what tasks are completed via the previous_reasoning field, as well as the information given within these tasks.\n2. If tasks have already been completed, there may be information that has been retrieved that can help you decide which task to choose.\n3. If there is no information available, then:\n    a. You could be in the first decision, in which case you should choose the most appropriate task based on the user's query.\n    b. You could be in the process of \n4. Evaluate whether the user's query can be answered by the available information.\n    a. If it can, then you should choose the next most appropriate task.\n    b. If it cannot, then you should choose the task so that you can respond to the user's query.\n5. Evaluate whether all the possible actions that can be taken to answer the user have been taken.\n    a. If the user's query is not satisfied, then you should choose the next most appropriate task.\n    b. If all the actions have been taken, then you should return False for the all_actions_completed field.\n6. Remember that it is possible that the task is impossible, in which case you have done all actions possible, so you should return True for the all_actions_completed field.",
+      "fields": [
+        {
+          "prefix": "User Prompt:",
+          "description": "The query that the user is asking"
+        },
+        {
+          "prefix": "Instruction:",
+          "description": "The instruction for the decision. Pay close attention to this. You must choose a task based on this instruction alone."
+        },
+        {
+          "prefix": "Reference:",
+          "description": "Information about the state of the world NOW such as the date and time, used to frame the decision making."
+        },
+        {
+          "prefix": "Conversation History:",
+          "description": "The conversation history between the user and the assistant (you), including all previous messages.\n            During this conversation, the assistant has also generated some information, which is also relevant to the decision.\n            This information is stored in `available_information` field.\n            If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses can use these as context.\n            The history is a list of dictionaries of the format:\n            [\n                {\n                    \"user\": The user's message\n                    \"assistant\": The assistant's response\n                }\n            ]"
+        },
+        {
+          "prefix": "Previous Reasoning:",
+          "description": "Your reasoning that you have output from previous decisions.\n            This is so you can use the information from previous decisions to help you make the current decision.\n            This should be considered as a train of thought, so you can continue thoughts, build on them, and incorporate them into your current decision.\n            Additionally, this means future decisions can also use this information, so it is cumulative, hence your reasoning for this task can include information for future decisions.\n            This is a dictionary of the form:\n            {\n                \"tree_1\": \n                {\n                    \"decision_1\": \"Your reasoning for the decision 1\",\n                    \"decision_2\": \"Your reasoning for the decision 2\",\n                    ...\n                },\n                \"tree_2\": {\n                    \"decision_1\": \"Your reasoning for the decision 1\",\n                    \"decision_2\": \"Your reasoning for the decision 2\",\n                    ...\n                }\n            }\n            where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.\n            Multiple trees represent multiple passes through the tree, so you can use the information from previous passes to help you make the current decision.\n            These are sequential, so the decisions in `tree_2` are after the decisions in `tree_1`, and so on.\n            DO NOT repeat the same reasoning in the previous_reasoning field, as this will cause a loop.\n            You should instead create _different_ reasoning for each decision, so you can build on them.\n            Use this to evaluate certain things, such as whether the task is possible given the information available."
+        },
+        {
+          "prefix": "Data Queried:",
+          "description": "A list of items, showing whether a query has been completed or not.\n            This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.\n            If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement."
+        },
+        {
+          "prefix": "Available Tasks:",
+          "description": "A list and description of the tasks that can be completed.\n            These are the ONLY tasks that you can choose from to decide which task to complete.\n            Do not choose a task that is not in this list.\n            Do not assume you know better than the task list. The program is dependent on you choosing an option from this list and ONLY this list.\n            To learn about the tasks, you should look at the 'description' field in the corresponding dictionary entry for each task.\n            These will be in the form of a list of dictionaries, where each dictionary contains values:\n            - description: A description of the task (this is for your information and to help you decide)\n            - action: The function that will be called to complete the task, not relevant to your decision\n            - returns: The type of object that will be returned from the task, not relevant to your decision\n            - next: The next task to be completed, not relevant to your decision"
+        },
+        {
+          "prefix": "Available Information:",
+          "description": "A list of information that is available to the user, based on the history of completed tasks.\n            This is likely a list of retrieved objects, or summaries, or other information.\n            You should use this information to judge whether more information is needed to satisfy the user's query.\n            If this is empty, then no information has currently been retrieved, but it can be, depending on the options available to you."
+        },
+        {
+          "prefix": "Decision Tree:",
+          "description": "A full nested dictionary of the entire decision tree.\n            This is the _full set_ of tasks available to you _in the future ONLY_, so you should not pick any tasks in this field now.\n            This is a dictionary of the format:\n            {\n                \"id\": id of the task, semi-descriptive\n                \"instruction\": instruction for the task, very descriptive, detailing what the task is about\n                \"options\": a dictionary of the available options for the task, with the tasks as the keys, the values are dictionaries with the same keys as above,\n                e.g.\n                {\n                    \"option_1\": {\n                        \"id\": id of the task, semi-descriptive\n                        \"instruction\": instruction for the task, very descriptive, detailing what the task is about\n                        \"options\": {\"option_1_1\": {...}, \"option_1_2\": {...}}\n                    }\n                }\n            }\n            etc.\n            Tasks that depend on other tasks are nested within the options of the current task.\n            You should NOT pick any tasks in this field, as it will cause an error.\n            Use this field to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward."
+        },
+        {
+          "prefix": "Reasoning: Let's think step by step in order to",
+          "description": "${reasoning}"
+        },
+        {
+          "prefix": "Task:",
+          "description": "The decided task. This must be one of the 'name' fields in available_tasks.\n            IMPORTANT: This MUST be from the available_tasks list _only_.\n            Return the name of the task only, exactly as it appears in the available_tasks list.\n            Do not pick a task that is not in the available_tasks list, even if you don't think it is relevant.\n            Future tasks will be available for you later, but right now you must choose from the available_tasks list."
+        },
+        {
+          "prefix": "All Actions Completed Reasoning:",
+          "description": "Break down all the requests in the user_prompt, and evaluate whether all the possible actions that can be taken to answer the user have been taken.\n            To answer this, you should look at the previous_reasoning field, to see if everything that can be done has been done.\n            You should also see if there are any other actions that could have been taken in the past that need to be completed.\n            Output a single boolean value, indicating whether all necessary actions have been completed."
+        },
+        {
+          "prefix": "All Actions Completed:",
+          "description": "_After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), will all actions that can be taken to answer the user have been taken?\n            Base this on the {{user_prompt}}, the {{instruction}} for the task decided on, and the history of completed tasks.\n            You should also base your decision on the available options that were in the previous tasks, if an option is available that should be explored, then the overall goal is not completed.\n            It is possible that the task is impossible, in which case you have done all actions possible, so you should return True, as all actions are completed.\n            If you identify a task that is in the previous options that hasn't been completed yet, but should be based on the user prompt, then you should return False.\n            Otherwise, you should return True.\n            Do not include any other information in your response, only a True\/False value, and nothing else.\n            (True\/False)"
+        }
+      ]
+    }
+  }
+}

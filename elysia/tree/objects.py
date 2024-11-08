@@ -54,14 +54,23 @@ class ConversationRetrieval(GenericRetrieval):
     def __init__(self, objects: list[dict], metadata: dict = {}, return_conversation: bool = False):
         super().__init__(objects, metadata)
         self.type = "conversation"
-        self.return_conversation = return_conversation
+        self.return_conversation = return_conversation   
 
-    def return_value(self, idx: int):
+    def to_json(self):
         if self.return_conversation:
-            return self.objects[idx][0], self.objects[idx][1]
+            for conversation in self.objects:
+                for message in conversation:
+                    for key, value in message.items():
+                        if isinstance(value, datetime.datetime):
+                            message[key] = format_datetime(value)
+            return {
+                "metadata": self.metadata,
+                "objects": self.objects
+            }
         else:
-            return super().return_value(idx)
-    
+            return super().to_json()
+
+        
 
     def to_str(self):
         return json.dumps(self.objects)
@@ -69,11 +78,9 @@ class ConversationRetrieval(GenericRetrieval):
     def to_llm_str(self):
         if self.return_conversation:
             out = "{'objects': \n"
-            for i, (conversation, retrieved_idx) in enumerate(self.objects):
+            for i, conversation in enumerate(self.objects):
                 out += "{'conversation_" + str(i+1) + "': "
-                inner_conversation = conversation.copy()
-                inner_conversation[int(retrieved_idx)]["relevant_message"] = True
-                out += json.dumps(inner_conversation) + "}, \n"
+                out += json.dumps(conversation) + "}, \n"
             
             out += "'metadata': " + json.dumps(self.metadata) + "\n"
             out += "}"
@@ -84,10 +91,10 @@ class ConversationRetrieval(GenericRetrieval):
         
     def __repr__(self):
         if self.return_conversation:
-            for i, (conversation, retrieved_idx) in enumerate(self.objects):
+            for i, conversation in enumerate(self.objects):
                 print(f"[bold green]Conversation {i+1}[/bold green]")
                 for j, message in enumerate(conversation):
-                    if j == retrieved_idx:
+                    if message["relevant"]:
                         print(f"[bold green]Message {j+1}[/bold green]:", end="")
                         print(f"[italic green]{message}[/italic green]")
                     else:
@@ -125,6 +132,12 @@ class Returns:
     def add_text(self, objects: Text):
         self.text.add(objects.objects)
 
+    def to_json(self):
+        return {
+            "retrieval": {collection_name: self.retrieved[collection_name].to_json() for collection_name in self.retrieved},
+            "text": self.text.to_json()
+        }
+
     def to_str(self):
         return json.dumps({
             "retrieval": {collection_name: self.retrieved[collection_name].to_str() for collection_name in self.retrieved},
@@ -137,6 +150,19 @@ class Returns:
             "text": self.text.to_llm_str()
         })
     
+    @classmethod
+    def from_json(cls, json_dict: dict):
+        retrieved = {}
+        if "retrieval" in json_dict:
+            for collection_name in json_dict["retrieval"]:
+                retrieved[collection_name] = Objects(json_dict["retrieval"][collection_name]["objects"], json_dict["retrieval"][collection_name]["metadata"])
+
+        text = []
+        if "text" in json_dict:
+            text = json_dict["text"]
+
+        return cls(retrieved=retrieved, text=Text(text))
+
     def return_retrieval(self, collection_name: str = "", idx = None):
 
         if collection_name == "":

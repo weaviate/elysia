@@ -1,12 +1,13 @@
 from elysia.tree.objects import Objects
 
-def parse_decision(decision: str, conversation_id: str, id: str, instruction: str, tree: dict):
+def parse_decision(decision: str, reasoning: str, conversation_id: str, id: str, instruction: str, tree: dict):
     return {
         "type": "decision",
         "conversation_id": conversation_id,
         "payload": {
             "id": id,
             "decision": decision,
+            "reasoning": reasoning,
             "instruction": instruction,
             "tree": tree
         }

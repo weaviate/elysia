@@ -8,11 +8,19 @@ class QueryCreatorExecutor(dspy.Module):
         self.query_creator_prompt = dspy.ChainOfThought(QueryCreatorPrompt)
 
     def forward(self, user_prompt: str, reference: str, data_fields: list, example_field: dict, previous_queries: list) -> str:
-        return self.query_creator_prompt(
+        prediction = self.query_creator_prompt(
             user_prompt=user_prompt, 
             reference=reference,
             data_fields=data_fields, 
             example_field=example_field, 
             previous_queries=previous_queries
-        ).code
+        )
+
+        dspy.Suggest(
+            prediction.code not in previous_queries,
+            f"The query code you have produced: {prediction.code} has already been used. Please produce a new query code.",
+            target_module=self.query_creator_prompt
+        )
+
+        return prediction.code
 

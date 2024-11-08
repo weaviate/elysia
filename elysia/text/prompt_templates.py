@@ -13,6 +13,29 @@ class SummarizingPrompt(dspy.Signature):
         description="Information about the state of the world NOW such as the date and time, used to frame the summarization.",
         format = str
     )
+    previous_reasoning = dspy.InputField(
+        description="""
+        Your reasoning that you have output from previous decisions.
+        This is so you can use the information from previous decisions to help you respond to the user's prompt.
+        This is a dictionary of the form:
+        {
+            "tree_1": 
+            {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            },
+            "tree_2": {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            }
+        }
+        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+        This may help you, as previous decisions might give insight into what to say.
+        """.strip(),
+        format = str
+    )
     available_information = dspy.InputField(
         description="""
         The retrieved objects from the knowledge base.
@@ -36,6 +59,29 @@ class TextResponsePrompt(dspy.Signature):
     user_prompt = dspy.InputField(description="The user's original query")
     reference = dspy.InputField(
         description="Information about the state of the world NOW such as the date and time, used to frame the response.",
+        format = str
+    )
+    previous_reasoning = dspy.InputField(
+        description="""
+        Your reasoning that you have output from previous decisions.
+        This is so you can use the information from previous decisions to help you respond to the user's prompt.
+        This is a dictionary of the form:
+        {
+            "tree_1": 
+            {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            },
+            "tree_2": {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            }
+        }
+        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+        This may help you, as previous decisions might give insight into what to say.
+        """.strip(),
         format = str
     )
     available_information = dspy.InputField(
