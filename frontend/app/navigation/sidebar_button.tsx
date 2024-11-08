@@ -30,10 +30,13 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     {!isCollapsed && (
       <div className="flex w-full items-center justify-between gap-2">
         <p className="text-xs font-medium">{label}</p>
-        {onDelete && (
+        {onDelete && isActive && (
           <div
             className="btn-round cursor-pointer text-secondary"
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
           >
             <FaMinusCircle size={12} />
           </div>

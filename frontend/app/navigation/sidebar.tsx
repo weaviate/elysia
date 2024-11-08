@@ -88,26 +88,28 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
         </div>
         <div className="border-t border-secondary my-2"></div>
-        <div className="flex flex-col gap-2">
-          <SidebarButton
-            icon={<IoMdAddCircle />}
-            label="New Chat"
-            onClick={addConversation}
-            isCollapsed={collapsed}
-            onDelete={null}
-          />
-          {conversations?.map((c) => (
+        {page === "home" && (
+          <div className="flex flex-col gap-2">
             <SidebarButton
-              key={c.id}
-              icon={<FaTicketSimple />}
-              label={c.name}
+              icon={<IoMdAddCircle />}
+              label="New Chat"
+              onClick={addConversation}
               isCollapsed={collapsed}
-              isActive={currentConversation === c.id}
-              onClick={() => selectConversation(c.id)}
-              onDelete={() => removeConversation(c.id)}
+              onDelete={null}
             />
-          ))}
-        </div>
+            {conversations?.map((c) => (
+              <SidebarButton
+                key={c.id}
+                icon={<FaTicketSimple />}
+                label={c.name}
+                isCollapsed={collapsed}
+                isActive={currentConversation === c.id}
+                onClick={() => selectConversation(c.id)}
+                onDelete={() => removeConversation(c.id)}
+              />
+            ))}
+          </div>
+        )}
       </nav>
       {collapsed && (
         <div className="flex items-center justify-center w-full">

@@ -14,7 +14,8 @@ export function useSocket(
     message: Message[],
     conversation_id: string
   ) => void,
-  setConversationStatus: (status: string, conversationId: string) => void
+  setConversationStatus: (status: string, conversationId: string) => void,
+  setAllConversationStatuses: (status: string) => void
 ) {
   const [socketOnline, setSocketOnline] = useState(false);
   const [socket, setSocket] = useState<WebSocket>();
@@ -39,7 +40,7 @@ export function useSocket(
         const message: Message = JSON.parse(event.data);
         if (message.type === "decision") {
           const payload = message.payload as DecisionPayload;
-          setConversationStatus(payload.decision, message.conversation_id);
+          setConversationStatus(payload.instruction, message.conversation_id);
         }
         addMessageToConversation([message], message.conversation_id);
       } catch (error) {
@@ -50,11 +51,13 @@ export function useSocket(
     localSocket.onerror = (error) => {
       console.log(error);
       setSocketOnline(false);
+      setAllConversationStatuses("");
       setReconnect((prev) => !prev);
     };
 
     localSocket.onclose = () => {
       setSocketOnline(false);
+      setAllConversationStatuses("");
       console.log("Socket closed");
       setReconnect((prev) => !prev);
     };
@@ -74,6 +77,7 @@ export function useSocket(
     conversation_id: string
   ) => {
     //fakeQuery(conversation_id);
+    setConversationStatus("Thinking...", conversation_id);
     socket?.send(JSON.stringify({ user_id, query, conversation_id }));
   };
 

@@ -23,6 +23,7 @@ export type Ticket = {
 export type DecisionPayload = {
   id: string;
   decision: string;
+  reasoning: string;
   instruction: string;
   tree: any[];
 };
@@ -88,6 +89,7 @@ export const DecisionMessage: Message = {
   payload: {
     id: "Node-1",
     decision: "Querying GitHub Collection",
+    reasoning: "User requested to query the GitHub Collection",
     instruction: "Querying GitHub Collection",
     tree: [{ id: "Initial", instruction: "Starting Tree" }],
   },
