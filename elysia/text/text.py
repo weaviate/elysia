@@ -8,19 +8,29 @@ class Summarizer:
     def __init__(self):
         self.summarizer = SummarizingExecutor()
 
-    def summarize(self, user_prompt: str, available_information: Returns, **kwargs) -> str:
-        summary = self.summarizer(user_prompt=user_prompt, available_information=available_information.to_llm_str())
+    def summarize(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs) -> str:
+        summary = self.summarizer(
+            user_prompt=user_prompt, 
+            available_information=available_information.to_llm_str(),
+            previous_reasoning=previous_reasoning,
+            **kwargs
+        )
         output = Text([summary], {})
         return output
     
-    def __call__(self, user_prompt: str, available_information: Returns, **kwargs) -> str:
-        return self.summarize(user_prompt, available_information, **kwargs)
+    def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs) -> str:
+        return self.summarize(user_prompt, available_information, previous_reasoning, **kwargs)
 
 class TextResponse:
 
     def __init__(self):
         self.text_response = TextResponseExecutor()
 
-    def __call__(self, user_prompt: str, available_information: Returns, **kwargs) -> str:
-        output = self.text_response(user_prompt=user_prompt, available_information=available_information.to_llm_str())
+    def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs) -> str:
+        output = self.text_response(
+            user_prompt=user_prompt, 
+            available_information=available_information.to_llm_str(),
+            previous_reasoning=previous_reasoning,
+            **kwargs
+        )
         return Text([output], {})

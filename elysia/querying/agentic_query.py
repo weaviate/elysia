@@ -1,5 +1,6 @@
 import datetime
 
+import dspy
 from weaviate.classes.query import Filter, Sort
 
 from elysia.globals.weaviate_client import client
@@ -17,7 +18,7 @@ class AgenticQuery:
     def __init__(self, collection_name: str, filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json"):
         self.collection_name = collection_name
         self.collection = client.collections.get(collection_name)
-        self.query_creator = QueryCreatorExecutor()
+        self.query_creator = QueryCreatorExecutor().activate_assertions()
         if len(filepath) > 0:
             self.query_creator.load(filepath)
 
@@ -52,6 +53,7 @@ class AgenticQuery:
             previous_queries=previous_queries
         )
 
+
         return query_code
 
     def _execute_code(self, query_code: str) -> dict:
@@ -59,7 +61,11 @@ class AgenticQuery:
             query_code = query_code[8:-3]
         elif query_code.startswith("```") and query_code.endswith("```"):
             query_code = query_code[3:-3]
-        return eval("self." + query_code)
+        try:
+            return eval("self." + query_code)
+        except Exception as e:
+            backend_print(f"Error executing query code: {e}, returning 0 objects")
+            return None
 
     def query(self, user_prompt: str, available_information: Returns):
 
@@ -76,6 +82,7 @@ class AgenticQuery:
 
 
 class MessageQuery(AgenticQuery):
+    
     """
     Applicable to slack conversations and emails.
     """
@@ -108,7 +115,14 @@ class MessageQuery(AgenticQuery):
                 k: v for k, v in item.properties.items()
             } for item in items_in_conversation]
             to_return.sort(key = lambda x: int(x["message_index"]))
-            returned_objects[i] = (to_return, o.properties["message_index"])
+            
+            for item in to_return:
+                if item["message_index"] == o.properties["message_index"]:
+                    item["relevant"] = True
+                else:
+                    item["relevant"] = False
+                
+            returned_objects[i] = to_return
 
         return returned_objects
 
@@ -118,14 +132,21 @@ class MessageQuery(AgenticQuery):
         if self.return_conversation:
             output = self.return_all_messages_in_conversation(response)
         else:
-            output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
+            if response is None:
+                output = []
+            else:
+                output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
 
         return ConversationRetrieval(output, metadata, self.return_conversation)
 
 class GenericQuery(AgenticQuery):
     def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
         response, metadata = self.query(user_prompt, available_information)
-        output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
+
+        if response is None:
+            output = []
+        else:
+            output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
         return GenericRetrieval(output, metadata)
 
 class TicketQuery(GenericQuery):
@@ -134,7 +155,11 @@ class TicketQuery(GenericQuery):
     """
     def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
         response, metadata = self.query(user_prompt, available_information)
-        output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
+
+        if response is None:
+            output = []
+        else:
+            output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
         return TicketRetrieval(output, metadata)
 
 

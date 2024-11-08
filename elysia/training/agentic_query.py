@@ -242,13 +242,13 @@ def train_query_creator_fewshot():
     num_fewshot_demos = 12
     optimizer = LabeledFewShot(k=num_fewshot_demos)
     trained_fewshot = optimizer.compile(
-        QueryCreatorExecutor(), 
+        QueryCreatorExecutor().activate_assertions(), 
         trainset=train
     )
 
     # Create the full directory path
     filepath = os.path.join(
-        "backend",
+        "elysia",
         "training",
         "dspy_models",
         "agentic_query"

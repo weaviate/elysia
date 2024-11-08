@@ -7,8 +7,8 @@
       {
         "user_prompt": "Summarise Sofia's slack messages from the last 2 months.",
         "reference": {
-          "datetime": "2024-11-22T00:00:0Z",
-          "day_of_week": "Friday",
+          "datetime": "2024-11-17T00:00:0Z",
+          "day_of_week": "Sunday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -31,8 +31,8 @@
       {
         "user_prompt": "Alphabetically list the emails from Vin sent in 2024.",
         "reference": {
-          "datetime": "2025-03-25T00:00:0Z",
-          "day_of_week": "Tuesday",
+          "datetime": "2025-03-05T00:00:0Z",
+          "day_of_week": "Wednesday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -55,8 +55,8 @@
       {
         "user_prompt": "List and sort the most common issues from the verba github issues collection from 2024.",
         "reference": {
-          "datetime": "2024-06-20T00:00:0Z",
-          "day_of_week": "Thursday",
+          "datetime": "2024-06-12T00:00:0Z",
+          "day_of_week": "Wednesday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -79,21 +79,21 @@
       {
         "user_prompt": "Write me a summary of the issue with the openAI vectorizer not working in the last year",
         "reference": {
-          "datetime": "2024-10-05T00:00:0Z",
-          "day_of_week": "Saturday",
+          "datetime": "2024-10-03T00:00:0Z",
+          "day_of_week": "Thursday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
           "issue_id",
-          "issue_updated_at",
           "issue_title",
+          "issue_updated_at",
           "issue_content",
           "issue_created_at"
         ],
         "example_field": {
           "issue_id": 2001580387.0,
-          "issue_updated_at": "2023-11-21T09:17:13Z00:00",
           "issue_title": "Added Self Hosted Unstructured Option",
+          "issue_updated_at": "2023-11-21T09:17:13Z00:00",
           "issue_content": "Howdy \ud83d\udc4b\ud83c\udffc\r\nI'd like to use this project with my own [self hosted](https:\/\/github.com\/Unstructured-IO\/unstructured-api#dizzy-instructions-for-using-the-docker-image) instance of Unstructured, and I noticed it wasn't an option. I added it near the code that interfaces with Unstructured and updated the README to include the option. \r\nIt shouldn't break existing deployments, as I kept the canonical unstructured API as the default.\r",
           "issue_created_at": "2023-11-20T07:58:02Z00:00"
         },
@@ -103,8 +103,8 @@
       {
         "user_prompt": "Has Kaladin proposed any new features for verba recently?",
         "reference": {
-          "datetime": "2024-10-17T00:00:0Z",
-          "day_of_week": "Thursday",
+          "datetime": "2024-10-01T00:00:0Z",
+          "day_of_week": "Tuesday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -127,21 +127,21 @@
       {
         "user_prompt": "What are the most recent emails people are writing about verba?",
         "reference": {
-          "datetime": "2024-11-26T00:00:0Z",
-          "day_of_week": "Tuesday",
+          "datetime": "2024-11-07T00:00:0Z",
+          "day_of_week": "Thursday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
           "conversation_id",
-          "message_author",
           "message_content",
+          "message_author",
           "message_index",
           "message_timestamp"
         ],
         "example_field": {
           "conversation_id": 112.0,
-          "message_author": "John",
           "message_content": "Hi Kerrigan,\n\nThank you! I appreciate your assistance in this matter. I\u2019ll gather some examples and questions to make the most of our time. Looking forward to the call!\n\nBest regards,\nJohn",
+          "message_author": "John",
           "message_index": 6.0,
           "message_timestamp": "2023-10-01 14:05:37"
         },
@@ -151,21 +151,21 @@
       {
         "user_prompt": "What are people saying lately about the issue of the bug where you can't open the settings page in verba?",
         "reference": {
-          "datetime": "2023-07-15T00:00:0Z",
-          "day_of_week": "Saturday",
+          "datetime": "2023-07-16T00:00:0Z",
+          "day_of_week": "Sunday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
           "conversation_id",
-          "message_content",
           "message_author",
+          "message_content",
           "message_index",
           "message_timestamp"
         ],
         "example_field": {
           "conversation_id": 57.0,
-          "message_content": "I haven't seen that specific error, but it sounds like a mismatch between server-rendered and client-rendered HTML. Did you check for any console errors?",
           "message_author": "Kaladin",
+          "message_content": "I haven't seen that specific error, but it sounds like a mismatch between server-rendered and client-rendered HTML. Did you check for any console errors?",
           "message_index": 1.0,
           "message_timestamp": "2023-10-01 10:17:30"
         },
@@ -177,8 +177,8 @@
       {
         "user_prompt": "Tell me what people are saying about the issue of the bug where you can't open the settings page in verba.",
         "reference": {
-          "datetime": "2024-04-11T00:00:0Z",
-          "day_of_week": "Thursday",
+          "datetime": "2024-04-22T00:00:0Z",
+          "day_of_week": "Monday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -201,8 +201,8 @@
       {
         "user_prompt": "Summarise the issue of 'PDF being too large' in verba.",
         "reference": {
-          "datetime": "2023-02-25T00:00:0Z",
-          "day_of_week": "Saturday",
+          "datetime": "2023-02-14T00:00:0Z",
+          "day_of_week": "Tuesday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -225,8 +225,8 @@
       {
         "user_prompt": "What kind of marketing emails have been sent to verba users?",
         "reference": {
-          "datetime": "2022-02-03T00:00:0Z",
-          "day_of_week": "Thursday",
+          "datetime": "2022-02-06T00:00:0Z",
+          "day_of_week": "Sunday",
           "time_of_day": "12:00 AM"
         },
         "data_fields": [
@@ -249,7 +249,7 @@
       {
         "user_prompt": "Has Kaladin proposed any new features for verba recently?",
         "reference": {
-          "datetime": "2024-10-02T00:00:0Z",
+          "datetime": "2024-10-23T00:00:0Z",
           "day_of_week": "Wednesday",
           "time_of_day": "12:00 AM"
         },
@@ -272,39 +272,6 @@
       }
     ],
     "signature": {
-      "instructions": "Given a user prompt, create a weaviate function query to retrieve relevant documents.\nYou can use one of the following functions:\n\n- `collection.query.near_text(query, limit)`: this is a semantic search on the text of the documents.\n- `collection.query.hybrid(query, limit)`: this is a hybrid search on the text of the documents.\n- `collection.query.fetch_objects(filters, limit)`: this is a filter search on the documents.\n\nHere are some examples of how this code should be written:\n\n# Basic query\n```\ncollection.query.near_text(\n    query=\"fashion icons\",\n    limit=3\n)\n```\nThe `limit` parameter controls the number of results returned.\n\n# Basic hybrid search\n```\ncollection.query.hybrid(\n    query=\"fashion icons\",\n    limit=3\n)\n```\n\n# Basic filter with one condition\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"round\").equal(\"Double Jeopardy!\"),\n    limit=3\n)\n```\nThe above is used to retrieve objects from the collection _only_ using filters, no searching.\n\n# Filter with multiple conditions\n```\ncollection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"round\").equal(\"Double Jeopardy!\") &\n        Filter.by_property(\"points\").less_than(600)\n    ),\n    limit=3\n)\n```\nThe above is also used to retrieve objects from the collection _only_ using filters, no searching. \nYou can also use `|` for OR.\n\n# Nested filters\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").like(\"*bird*\") &\n            (Filter.by_property(\"points\").greater_than(700) | Filter.by_property(\"points\").less_than(300)),\n    limit=3\n)\n```\nTo create a nested filter, follow these steps.\n- Set the outer operator equal to And or Or.\n- Add operands.\n- Inside an operand expression, set operator equal to And or Or to add the nested group.\n- Add operands to the nested group as needed.\n\n# Combining filters and search\n```\ncollection.query.near_text(\n    query=\"fashion icons\",\n    filters=Filter.by_property(\"points\").greater_than(200),\n    limit=3\n)\n```\nThis performs vector search and also filters the results.\n\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").contains_any([\"australia\", \"india\"]),\n    limit=3\n)\n```\nThis is used to retrieve objects where the `answer` property in the data contains any of the strings in `[\"australia\", \"india\"]`.\n\n```\ncollection.query.hybrid(\n    query=\"shoes\",\n    filters=Filter.by_property(\"answer\").like(\"*inter*\"),\n    limit=3\n)\n```\nIf the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.\n\nYou can also sort the results using the `sort` parameter, but only when using `fetch_objects`.\nSo you CANNOT use it with `near_text` or `hybrid`.\n\nFor example:\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").like(\"*inter*\"),\n    sort = Sort.by_property(\"answer\", ascending=True),\n    limit=3\n)\n```\n\n____\nNow that you have learned how the query function works, your job is to create a query based on the user prompt.\nUse the above examples to guide you, but create your own query that is specific to the user prompt.\nYou should not use one of the above examples directly, but rather use them as a guide to create your own query.\nFilters are optional, and if not specified in the user prompt, you should not use them.\n\nYou have access to a function called `format_datetime(dt)` which formats a datetime object to the ISO format without the timezone offset. \nUse this function to format the datetime objects in the filters.\n\nAssume you have access to the object `collection` which is a Weaviate collection.",
-      "fields": [
-        {
-          "prefix": "User Prompt:",
-          "description": "The user's original query"
-        },
-        {
-          "prefix": "Reference:",
-          "description": "Information about the state of the world NOW such as the date and time, used to frame the query."
-        },
-        {
-          "prefix": "Data Fields:",
-          "description": "A list of fields that are available to search over.\n        [\"field_name\", ...]"
-        },
-        {
-          "prefix": "Example Field:",
-          "description": "An example from the collection of what the fields look like, in the following format:\n        {\n            \"field_name\": \"field_value\",\n            ...\n        }\n        You should use these to understand the format of the data, and to create your query."
-        },
-        {
-          "prefix": "Previous Queries:",
-          "description": "A comma separated list of existing code that has been used to query the collection. \n        This can be used to avoid generating duplicate queries. \n        If this field is an empty list, you are generating the first query."
-        },
-        {
-          "prefix": "Reasoning: Let's think step by step in order to",
-          "description": "${reasoning}"
-        },
-        {
-          "prefix": "Code:",
-          "description": "The generated query code only. Do not enclose it in quotes or in ```. Just the code only."
-        }
-      ]
-    },
-    "extended_signature": {
       "instructions": "Given a user prompt, create a weaviate function query to retrieve relevant documents.\nYou can use one of the following functions:\n\n- `collection.query.near_text(query, limit)`: this is a semantic search on the text of the documents.\n- `collection.query.hybrid(query, limit)`: this is a hybrid search on the text of the documents.\n- `collection.query.fetch_objects(filters, limit)`: this is a filter search on the documents.\n\nHere are some examples of how this code should be written:\n\n# Basic query\n```\ncollection.query.near_text(\n    query=\"fashion icons\",\n    limit=3\n)\n```\nThe `limit` parameter controls the number of results returned.\n\n# Basic hybrid search\n```\ncollection.query.hybrid(\n    query=\"fashion icons\",\n    limit=3\n)\n```\n\n# Basic filter with one condition\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"round\").equal(\"Double Jeopardy!\"),\n    limit=3\n)\n```\nThe above is used to retrieve objects from the collection _only_ using filters, no searching.\n\n# Filter with multiple conditions\n```\ncollection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"round\").equal(\"Double Jeopardy!\") &\n        Filter.by_property(\"points\").less_than(600)\n    ),\n    limit=3\n)\n```\nThe above is also used to retrieve objects from the collection _only_ using filters, no searching. \nYou can also use `|` for OR.\n\n# Nested filters\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").like(\"*bird*\") &\n            (Filter.by_property(\"points\").greater_than(700) | Filter.by_property(\"points\").less_than(300)),\n    limit=3\n)\n```\nTo create a nested filter, follow these steps.\n- Set the outer operator equal to And or Or.\n- Add operands.\n- Inside an operand expression, set operator equal to And or Or to add the nested group.\n- Add operands to the nested group as needed.\n\n# Combining filters and search\n```\ncollection.query.near_text(\n    query=\"fashion icons\",\n    filters=Filter.by_property(\"points\").greater_than(200),\n    limit=3\n)\n```\nThis performs vector search and also filters the results.\n\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").contains_any([\"australia\", \"india\"]),\n    limit=3\n)\n```\nThis is used to retrieve objects where the `answer` property in the data contains any of the strings in `[\"australia\", \"india\"]`.\n\n```\ncollection.query.hybrid(\n    query=\"shoes\",\n    filters=Filter.by_property(\"answer\").like(\"*inter*\"),\n    limit=3\n)\n```\nIf the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.\n\nYou can also sort the results using the `sort` parameter, but only when using `fetch_objects`.\nSo you CANNOT use it with `near_text` or `hybrid`.\n\nFor example:\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").like(\"*inter*\"),\n    sort = Sort.by_property(\"answer\", ascending=True),\n    limit=3\n)\n```\n\n____\nNow that you have learned how the query function works, your job is to create a query based on the user prompt.\nUse the above examples to guide you, but create your own query that is specific to the user prompt.\nYou should not use one of the above examples directly, but rather use them as a guide to create your own query.\nFilters are optional, and if not specified in the user prompt, you should not use them.\n\nYou have access to a function called `format_datetime(dt)` which formats a datetime object to the ISO format without the timezone offset. \nUse this function to format the datetime objects in the filters.\n\nAssume you have access to the object `collection` which is a Weaviate collection.",
       "fields": [
         {
