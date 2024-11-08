@@ -7,6 +7,9 @@ class QueryData(BaseModel):
     conversation_id: str
     query: str
 
+class GetCollectionsData(BaseModel):
+    user_id: str
+
 class GetCollectionData(BaseModel):
     collection_name: str
     page: int
