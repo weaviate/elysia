@@ -32,19 +32,23 @@ const QueryInput: React.FC<QueryInputProps> = ({
       </p>
       <div
         className={`w-full flex gap-2 ${
-          messages.length === 0 ? "rounded-md" : "rounded-full"
-        } p-2 border border-foreground text-primary transition-all ease-in-out duration-300 placeholder:text-secondary`}
+          messages.length === 0 ? "rounded-xl" : "rounded-full"
+        } p-2 border border-foreground text-primary placeholder:text-secondary`}
       >
         <div
-          className={`flex gap-2 w-full items-center bg-background_alt  transition-all ease-in-out duration-300 ${
-            messages.length === 0 ? "rounded-md" : "rounded-full"
+          className={`flex gap-2 w-full items-center bg-background_alt ${
+            messages.length === 0 ? "rounded-xl" : "rounded-full"
           } p-2`}
         >
           <input
             type="textarea"
-            placeholder="Ask a follow up question..."
-            className={`w-full p-2 bg-transparent outline-none text-xs transition-all ease-in-out duration-300 ${
-              messages.length === 0 ? "h-40 rounded-md" : "h-10 rounded-full"
+            placeholder={
+              messages.length != 0
+                ? "Ask a follow up question..."
+                : "Elysia will search through your data..."
+            }
+            className={`w-full p-2 bg-transparent outline-none text-xs ${
+              messages.length === 0 ? "h-40 rounded-xl" : "h-10 rounded-full"
             }`}
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
