@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.websockets import WebSocketDisconnect
 
-from elysia.tree.tree import Tree, lm
+from elysia.tree.tree import Tree, lm, RecursionLimitException
 from elysia.util.logging import backend_print
 from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData
 from elysia.util.collection_metadata import (
@@ -30,10 +30,13 @@ class TreeManager:
     def add_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.trees[user_id] = {}
-        self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id)
+        if conversation_id not in self.trees[user_id]:
+            self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id)
 
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
+            self.add_tree(user_id, conversation_id)
+        elif conversation_id not in self.trees[user_id]:
             self.add_tree(user_id, conversation_id)
         return self.trees[user_id][conversation_id]
 
@@ -84,9 +87,11 @@ async def process(data: QueryData, websocket: WebSocket):
     global tree_manager
     user_prompt = data["query"]
     tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
-    async for yielded_result in tree.process(user_prompt):
-        # print(yielded_result)
-        await websocket.send_json(yielded_result)
+    try:
+        async for yielded_result in tree.process(user_prompt):
+            await websocket.send_json(yielded_result)
+    except RecursionLimitException:
+        await websocket.send_json({"status": "error", "data": "Recursion limit reached!", "type": "ERROR"})
 
 # Process endpoint
 @app.websocket("/ws/query")
