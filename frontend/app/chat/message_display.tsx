@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { Message, ResultPayload } from "../types";
+import { Message, ResultPayload, Ticket } from "../types";
 
 import UserMessageDisplay from "./user_message_display";
 import MarkdownMessageDisplay from "./markdown_display";
@@ -25,7 +25,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     <div
       className={`w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
     >
-      <div className="flex flex-col gap-10 w-full">
+      <div className="flex flex-col gap-6 w-full">
         {messages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
             {message.type === "User" && (
@@ -44,7 +44,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             )}
             {message.type === "result" && (
               <div className="w-full flex flex-col justify-start items-start ">
-                <div className="max-w-3/5">
+                <div className="w-full flex flex-col justify-start items-start gap-2">
                   {(message.payload as ResultPayload).type === "text" &&
                     (message.payload as ResultPayload).objects.map(
                       (text, idx) => (
@@ -59,7 +59,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       (ticket, idx) => (
                         <TicketMessageDisplay
                           key={`${index}-${idx}`}
-                          ticket={ticket}
+                          ticket={ticket as Ticket}
                         />
                       )
                     )}
