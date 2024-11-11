@@ -22,7 +22,8 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   current_status,
   toggleMessageCollapsed,
 }) => {
-  const height_control = messages.length == 0 ? "h-[0px]" : "h-[80vh]";
+  const height_control = messages.length == 0 ? "h-[0px]" : "h-[100vh]";
+  const bottom_control = messages.length == 0 ? "pb-0" : "pb-32";
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -35,7 +36,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
   return (
     <div
-      className={`w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
+      className={`w-[75vw] flex justify-start items-start p-4 overflow-scroll transition-all duration-300 ${height_control} ${bottom_control}`}
     >
       <div className="flex flex-col gap-6 w-full">
         {messages.map((message, index) => (
@@ -67,7 +68,20 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       )
                     )}
                   {(message.payload as ResultPayload).type === "ticket" && (
-                    <>
+                    <div className="w-full flex flex-col justify-start items-start gap-2">
+                      {(message.payload as ResultPayload).metadata[
+                        "collection_name"
+                      ] && (
+                        <div className="w-full flex flex-col justify-start items-start gap-2">
+                          <p className="text-xs transition-all duration-300 cursor-pointer hover:text-primary hover:border-white text-secondary border border-secondary rounded-lg p-2">
+                            {
+                              (message.payload as ResultPayload).metadata[
+                                "collection_name"
+                              ]
+                            }
+                          </p>
+                        </div>
+                      )}
                       {(message.collapsed
                         ? (message.payload as ResultPayload).objects.slice(0, 3)
                         : (message.payload as ResultPayload).objects
@@ -98,7 +112,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                           </button>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>

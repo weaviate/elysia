@@ -19,7 +19,7 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
 
   return (
     <div
-      className="flex flex-col w-full cursor-pointer hover:bg-foreground_alt bg-foreground p-6 rounded-xl flex-grow justify-start items-center gap-2 chat-animation"
+      className="flex flex-col w-full cursor-pointer hover:bg-foreground_alt bg-foreground p-5 rounded-xl flex-grow justify-start items-start gap-2 chat-animation"
       onClick={() => setCollapsed(!collapsed)}
     >
       <div className="flex flex-col gap-2">
@@ -32,8 +32,8 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
           </p>
         </div>
         <div
-          className={`text-primary overflow-scroll text-sm gap-5 w-[55vw] flex flex-col truncate text-wrap ${
-            collapsed ? "max-h-[15vh]" : ""
+          className={`text-primary overflow-scroll text-sm gap-5 max-w-[65vw] flex flex-col text-wrap ${
+            collapsed ? "max-h-[15vh]" : "max-h-[50vh]"
           }`}
         >
           <ReactMarkdown>{ticket.issue_content}</ReactMarkdown>

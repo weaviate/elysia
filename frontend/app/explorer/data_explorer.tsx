@@ -125,14 +125,14 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 w-full">
+          <div className="flex flex-wrap gap-4 w-full">
             {Object.keys(selectedCell).map((key) => (
               <div
-                className="flex flex-col gap-1 bg-background_alt p-5 rounded-lg w-full"
+                className="flex flex-col flex-grow gap-1 bg-background_alt overflow-scroll p-5 rounded-lg text-wrap break-words max-h-[40vh] min-w-[48%] max-w-[100%]"
                 key={key}
               >
                 <p className="text-secondary text-xs font-light">{key}</p>
-                <div className="text-sm text-primary">
+                <div className="text-sm text-primary whitespace-pre-wrap">
                   <ReactMarkdown>{String(selectedCell[key])}</ReactMarkdown>
                 </div>
               </div>

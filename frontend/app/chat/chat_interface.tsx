@@ -53,7 +53,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center flex-grow">
+    <div className="h-screen flex flex-col items-center justify-start flex-grow">
       <MessageDisplay
         messages={messages}
         current_status={current_status}
