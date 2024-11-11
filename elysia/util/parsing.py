@@ -23,3 +23,6 @@ def objects_dict_to_str(objects: list) -> str:
 def format_datetime(dt: datetime.datetime) -> str:
     dt = dt.isoformat("T")
     return dt[:dt.find("+")] + "Z"
+
+def remove_whitespace(text: str) -> str:
+    return " ".join(text.split())

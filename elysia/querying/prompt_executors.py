@@ -1,19 +1,41 @@
 import dspy
-from elysia.querying.prompt_templates import QueryCreatorPrompt
+import datetime
+
+from typing import Callable
+
+from elysia.globals.weaviate_client import client
+from elysia.querying.prompt_templates import construct_query_initialiser_prompt, QueryCreatorPrompt
+
+class QueryInitialiserExecutor(dspy.Module):
+
+    def __init__(self, collection_names: list[str] = None, return_types: list[str] = None):
+        super().__init__()
+        self.query_initialiser_prompt = dspy.ChainOfThought(construct_query_initialiser_prompt(collection_names, return_types))
+
+    def forward(self, user_prompt: str, reference: str, previous_reasoning: dict) -> str:
+        return self.query_initialiser_prompt(
+            user_prompt=user_prompt,
+            reference=reference,
+            previous_reasoning=previous_reasoning
+        )
 
 class QueryCreatorExecutor(dspy.Module):
 
-    def __init__(self):
+    def __init__(self, collection_names: list[str] = None, return_types: list[str] = None):
         super().__init__()
+        self.query_initialiser_prompt = dspy.ChainOfThought(construct_query_initialiser_prompt(collection_names, return_types))
         self.query_creator_prompt = dspy.ChainOfThought(QueryCreatorPrompt)
 
-    def forward(self, user_prompt: str, reference: str, data_fields: list, example_field: dict, previous_queries: list) -> str:
+    def forward(self, user_prompt: str, reference: str, previous_queries: list, data_fields: list, example_field: dict, previous_reasoning: dict) -> str:
+
+        # run query code
         prediction = self.query_creator_prompt(
             user_prompt=user_prompt, 
             reference=reference,
             data_fields=data_fields, 
             example_field=example_field, 
-            previous_queries=previous_queries
+            previous_queries=previous_queries,
+            previous_reasoning=previous_reasoning
         )
 
         dspy.Suggest(
@@ -22,5 +44,4 @@ class QueryCreatorExecutor(dspy.Module):
             target_module=self.query_creator_prompt
         )
 
-        return prediction.code
-
+        return prediction

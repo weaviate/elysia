@@ -9,6 +9,10 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
     class DecisionPrompt(dspy.Signature):
         """
         You are an expert routing agent, who is responsible for routing a user's prompt to the most appropriate task.
+        
+        You are part of an ensemble of routing agents, who each make a decision about which task to complete.
+        Your decision is one of many that will be used to make the final decision.
+
         Given a query (user_prompt) from a user, and a list of possible tasks (available_tasks), decide the task that needs to be completed.
         You should think carefully and logically about the user's input and the tasks that you have available to you (available_tasks), and then decide which task is the most appropriate.
         
@@ -49,7 +53,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             The conversation history between the user and the assistant (you), including all previous messages.
             During this conversation, the assistant has also generated some information, which is also relevant to the decision.
             This information is stored in `available_information` field.
-            If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses can use these as context.
+            If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses should use these as context.
             The history is a list of dictionaries of the format:
             [
                 {

@@ -23,7 +23,7 @@ class DecisionExecutor(dspy.Module):
                 idx: int = 0) -> tuple[dict, bool]:
 
         # convert available_tasks to a string
-        available_tasks_list = list(available_tasks.keys()) # provide the task names 
+        # available_tasks_list = list(available_tasks.keys()) # provide the task names 
         # available_tasks_str = str(available_tasks_list) + "\n" + json.dumps(available_tasks) # append the task descriptions
         available_tasks_str = json.dumps(available_tasks)
 
@@ -48,9 +48,9 @@ class DecisionExecutor(dspy.Module):
         )
 
         # assert that the task name is correct
-        dspy.Assert(decision.task in available_tasks_list, 
+        dspy.Assert(decision.task in available_tasks, 
                     f"""Decision task is not in available tasks: 
-                    {decision.task} not in {available_tasks_list}
+                    {decision.task} not in {available_tasks}
                     Ensure that the task name is correct and that the task exists in the available_tasks field.""")
 
 

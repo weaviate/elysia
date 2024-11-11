@@ -10,7 +10,12 @@ from elysia.tree.tree import lm
 
 if __name__ == "__main__":
 
-    tree = Tree(verbosity=2, break_down_instructions=False, dspy_model="bootstrap_random_fewshot")
+    tree = Tree(
+        collection_names=["example_verba_github_issues", "example_verba_slack_conversations", "example_verba_email_chains"],
+        verbosity=2, 
+        break_down_instructions=False, 
+        dspy_model=None
+    )
 
 
 

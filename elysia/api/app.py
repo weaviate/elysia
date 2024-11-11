@@ -91,6 +91,7 @@ async def process(data: QueryData, websocket: WebSocket):
     global tree_manager
     user_prompt = data["query"]
     tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
+    tree.soft_reset()
     try:
         async for yielded_result in tree.process(user_prompt):
             await websocket.send_json(yielded_result)
