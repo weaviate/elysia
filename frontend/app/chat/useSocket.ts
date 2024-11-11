@@ -6,6 +6,7 @@ import {
   TicketMessage,
   DecisionMessage,
   DecisionPayload,
+  TextPayload,
 } from "../types";
 import { getWebsocketHost } from "../api";
 import { v4 as uuidv4 } from "uuid";
@@ -39,12 +40,15 @@ export function useSocket(
     localSocket.onmessage = (event) => {
       try {
         const message: Message = JSON.parse(event.data);
-        if (message.type === "decision") {
-          const payload = message.payload as DecisionPayload;
-          setConversationStatus(payload.decision, message.conversation_id);
+        if (message.type === "status") {
+          const payload = message.payload as TextPayload;
+          setConversationStatus(payload.text, message.conversation_id);
+        } else if (message.type === "completed") {
+          setConversationStatus("", message.conversation_id);
+        } else {
+          const newMessage = { ...message, collapsed: true, id: uuidv4() };
+          addMessageToConversation([newMessage], newMessage.conversation_id);
         }
-        const newMessage = { ...message, collapsed: true, id: uuidv4() };
-        addMessageToConversation([newMessage], newMessage.conversation_id);
       } catch (error) {
         console.error(error);
       }

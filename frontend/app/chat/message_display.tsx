@@ -37,11 +37,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     <div
       className={`w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
     >
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-6 w-full">
         {messages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
             {message.type === "User" && (
-              <div className="w-full flex flex-col justify-start items-start ">
+              <div className="w-full flex flex-col justify-start items-start mt-8 ">
                 <div className="max-w-3/5">
                   {(message.payload as ResultPayload).objects.map(
                     (text, idx) => (

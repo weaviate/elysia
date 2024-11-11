@@ -1,17 +1,21 @@
 import { v4 as uuidv4 } from "uuid";
 
 export type Message = {
-  type: "result" | "error" | "User" | "decision";
+  type: "result" | "error" | "User" | "decision" | "status" | "completed";
   conversation_id: string;
   id?: string;
   collapsed?: boolean; //added for ticket display
-  payload: ResultPayload | DecisionPayload;
+  payload: ResultPayload | DecisionPayload | TextPayload;
 };
 
 export type ResultPayload = {
   type: "text" | "ticket";
   metadata: any;
   objects: string[] | Ticket[];
+};
+
+export type TextPayload = {
+  text: string;
 };
 
 export type Ticket = {
