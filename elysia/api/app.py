@@ -1,6 +1,7 @@
 import os
 import logging
 from pathlib import Path
+import asyncio
 
 from fastapi import FastAPI, WebSocket, Request, status
 from fastapi.responses import FileResponse, JSONResponse
@@ -93,6 +94,7 @@ async def process(data: QueryData, websocket: WebSocket):
     try:
         async for yielded_result in tree.process(user_prompt):
             await websocket.send_json(yielded_result)
+            await asyncio.sleep(0)
     except RecursionLimitException:
         await websocket.send_json(
             {"status": "error", "data": "Recursion limit reached!", "type": "ERROR"}
