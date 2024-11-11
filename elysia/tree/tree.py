@@ -22,8 +22,8 @@ from dspy.primitives.assertions import assert_transform_module, backtrack_handle
 
 # lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
 
-lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
-# lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
+# lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
 
 dspy.settings.configure(lm=lm)
 
@@ -153,6 +153,7 @@ class Tree:
             Otherwise, if you haven't queried yet, you should query the knowledge base.
             If you don't need to query, i.e. the user is talking to you, choose text_response.
             If you have queried, and there is available information, you should choose summarize to reply this to the user.
+            If the user is just talking to you and requires no information, choose text_response.
             """,
             options = {
                 "query": {

@@ -18,6 +18,7 @@ from elysia.util.collection_metadata import (
 )
 from elysia.globals.weaviate_client import client
 
+collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations"]
 
 class TreeManager:
     """
@@ -30,14 +31,11 @@ class TreeManager:
     def add_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees:
             self.trees[user_id] = {}
-        self.trees[user_id][conversation_id] = Tree(
-            verbosity=2, conversation_id=conversation_id
-        )
         if conversation_id not in self.trees[user_id]:
-            self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id)
+            self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id, collection_names=collection_names)
 
     def get_tree(self, user_id: str, conversation_id: str):
-        if user_id not in self.trees:
+        if user_id not in self.trees :
             self.add_tree(user_id, conversation_id)
         elif conversation_id not in self.trees[user_id]:
             self.add_tree(user_id, conversation_id)
@@ -167,15 +165,11 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/api/collections")
 async def collections():
 
-    # for now, only get collections that are in the tree
+    # hardcoded for now
+
     # conversation_id = list(tree_manager.trees[data.user_id].keys())[0]
     # tree = tree_manager.get_tree(data.user_id, conversation_id)
     # collection_names = list(tree.decision_nodes["collection"].options.keys())
-    collection_names = [
-        "example_verba_github_issues",
-        "example_verba_email_chains",
-        "example_verba_slack_conversations",
-    ]
 
     # get collection metadata
     metadata = []
