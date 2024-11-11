@@ -5,6 +5,8 @@ from elysia.util.parsing import format_datetime
 from elysia.tree.objects import Objects
 from weaviate.classes.query import Filter, Sort
 
+from elysia.globals.weaviate_client import client
+
 class GenericRetrieval(Objects):
     def __init__(self, output, metadata):
         self.type = "generic"
@@ -19,28 +21,28 @@ class GenericRetrieval(Objects):
     
 class MessageRetrieval(GenericRetrieval):
     def __init__(self, response, metadata):
-        self.type = "message"
         if response is None:
             output = []
         else:
             output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
         super().__init__(output, metadata)
+        self.type = "message"
 
 class ConversationRetrieval(GenericRetrieval):
     def __init__(self, response, metadata):
-        self.type = "conversation"
         if response is None:
             output = []
         else:
             output = self._return_all_messages_in_conversation(response)
         super().__init__(output, metadata)
+        self.type = "conversation"
 
     def _fetch_items_in_conversation(self, conversation_id: str):
         """
         Use Weaviate to fetch all messages in a conversation based on the conversation ID.
         """
-
-        items_in_conversation = self.collection.query.fetch_objects(
+        collection = client.collections.get(self.metadata["collection_name"])
+        items_in_conversation = collection.query.fetch_objects(
             filters=Filter.by_property("conversation_id").equal(conversation_id)
         )
         items_in_conversation = [obj for obj in items_in_conversation.objects]
@@ -54,7 +56,7 @@ class ConversationRetrieval(GenericRetrieval):
 
         returned_objects = [None] * len(response.objects)
         for i, o in enumerate(response.objects):
-            items_in_conversation = self.fetch_items_in_conversation(o.properties["conversation_id"])
+            items_in_conversation = self._fetch_items_in_conversation(o.properties["conversation_id"])
             to_return = [{
                 k: v for k, v in item.properties.items()
             } for item in items_in_conversation]
@@ -112,9 +114,9 @@ class ConversationRetrieval(GenericRetrieval):
     
 class TicketRetrieval(GenericRetrieval):
     def __init__(self, response, metadata):
-        self.type = "ticket"
         if response is None:
             output = []
         else:
             output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
         super().__init__(output, metadata)
+        self.type = "ticket"

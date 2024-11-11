@@ -38,3 +38,5 @@ class fake_websocket:
         print(data)
 
 await process(query_payload.dict(), fake_websocket())
+
+tree_manager.get_tree(conversation_id="1", user_id="2").returns

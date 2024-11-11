@@ -3,6 +3,19 @@ import datetime
 from rich import print
 from elysia.util.parsing import objects_dict_to_str, format_datetime
 
+class Status:
+    def __init__(self, status: str):
+        self.status = status
+
+    def to_json(self, conversation_id: str):
+        return {
+            "type": "status",
+            "conversation_id": conversation_id,
+            "payload": {
+                "text": self.status
+            }
+        }
+
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):
         self.objects = objects

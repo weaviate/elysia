@@ -13,7 +13,7 @@ from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace
 from elysia.util.logging import backend_print
 from elysia.util.api import parse_decision, parse_result, parse_finished
-from elysia.tree.objects import Text, Returns, Objects
+from elysia.tree.objects import Text, Returns, Objects, Status
 from elysia.querying.objects import GenericRetrieval
 
 import dspy
@@ -22,8 +22,8 @@ from dspy.primitives.assertions import assert_transform_module, backtrack_handle
 
 # lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
 
-# lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
-lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
+lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+# lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
 
 dspy.settings.configure(lm=lm)
 
@@ -159,6 +159,7 @@ class Tree:
                 "query": {
                     "description": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
                     "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
+                    "status": "Deciding which collection to query",
                     "action": self.querier,
                     "returns": None,
                     "next": None,
@@ -166,6 +167,7 @@ class Tree:
                 "summarize": {
                     "description": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
                     "future_options": [],
+                    "status": "Summarizing information",
                     "action": Summarizer(), 
                     "returns": "text",
                     "next": None    # next=None represents the end of the tree
@@ -173,6 +175,7 @@ class Tree:
                 "text_response": {
                     "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
                     "future_options": [],
+                    "status": "Crafting response",
                     "action": TextResponse(),
                     "returns": "text",
                     "next": None
@@ -244,15 +247,23 @@ class Tree:
             self.returns.add_text(objects=action_result)
             self._update_conversation_history(user_prompt, action_result.objects[0])
 
-    def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
-        result = action_fn(
+    async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
+
+        async for result in action_fn(
             user_prompt=user_prompt, 
             available_information=self.returns, 
             previous_reasoning=self.previous_reasoning,
             **kwargs
-        )
-        self._update_returns(result, user_prompt)
-        return result
+        ):
+            if isinstance(result, Status):
+                yield self._parse_status(result)
+
+            if isinstance(result, Objects):
+                self._update_returns(result, user_prompt)
+                yield self._parse_result(result)
+    
+    def _parse_status(self, status: Status):
+        return status.to_json(self.conversation_id)
     
     def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
         return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
@@ -317,14 +328,15 @@ class Tree:
             )
 
             yield self._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
+            yield self._parse_status(Status(current_decision_node.options[decision]["status"]))
 
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = reasoning
             self.decision_history.append(decision)
             self.previous_info.append(current_decision_node.construct_as_previous_info())
 
             if action_fn is not None:
-                result = self._evaluate_action(action_fn, user_prompt, **kwargs)
-                yield self._parse_result(result)           
+                async for result in self._evaluate_action(action_fn, user_prompt, **kwargs):
+                    yield result
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")

@@ -21,9 +21,8 @@ class QueryInitialiserExecutor(dspy.Module):
 
 class QueryCreatorExecutor(dspy.Module):
 
-    def __init__(self, collection_names: list[str] = None, return_types: list[str] = None):
+    def __init__(self):
         super().__init__()
-        self.query_initialiser_prompt = dspy.ChainOfThought(construct_query_initialiser_prompt(collection_names, return_types))
         self.query_creator_prompt = dspy.ChainOfThought(QueryCreatorPrompt)
 
     def forward(self, user_prompt: str, reference: str, previous_queries: list, data_fields: list, example_field: dict, previous_reasoning: dict) -> str:

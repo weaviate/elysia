@@ -13,7 +13,6 @@ def parse_decision(decision: str, reasoning: str, conversation_id: str, id: str,
         }
     }
 
-
 def parse_result(result: Objects, conversation_id: str):
     return {
         "type": "result",
