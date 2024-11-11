@@ -29,3 +29,17 @@ def parse_finished(conversation_id: str):
         "conversation_id": conversation_id,
         "payload": {}
     }
+
+def parse_error(error: str, conversation_id: str):
+    return {
+        "type": "error",
+        "conversation_id": conversation_id,
+        "payload": {"error": error}
+    }
+
+def parse_warning(warning: str, conversation_id: str):
+    return {
+        "type": "warning",
+        "conversation_id": conversation_id,
+        "payload": {"warning": warning}
+    }

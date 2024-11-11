@@ -12,7 +12,7 @@ from elysia.querying.agentic_query import AgenticQuery
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace
 from elysia.util.logging import backend_print
-from elysia.util.api import parse_decision, parse_result, parse_finished
+from elysia.util.api import parse_decision, parse_result, parse_finished, parse_error, parse_warning
 from elysia.tree.objects import Text, Returns, Objects, Status
 from elysia.querying.objects import GenericRetrieval
 
@@ -262,6 +262,12 @@ class Tree:
                 self._update_returns(result, user_prompt)
                 yield self._parse_result(result)
     
+    def _parse_error(self, error: str):
+        return parse_error(error, self.conversation_id)
+    
+    def _parse_warning(self, warning: str):
+        return parse_warning(warning, self.conversation_id)
+
     def _parse_status(self, status: Status):
         return status.to_json(self.conversation_id)
     

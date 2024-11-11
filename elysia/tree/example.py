@@ -17,8 +17,6 @@ if __name__ == "__main__":
         dspy_model=None
     )
 
-
-
     # tree.process(
     #     "List the most common issues from the verba github issues collection from 2024, sort by the most recent."
     # )
@@ -26,7 +24,7 @@ if __name__ == "__main__":
     # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
 
     tree.process_sync(
-        "tell me what kaladin has been talking about in slack recently"
+        "What is Elysia?"
     )
 
     tree.returns
