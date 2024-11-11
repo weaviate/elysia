@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Webkit browsers (Chrome, Safari, newer versions of Opera) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.35); /* Light color for visibility against dark backgrounds */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* Fix the white blocks in the scrollbar corner */
+::-webkit-scrollbar-corner {
+  background-color: transparent; /* Matches the track or background */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+/* Ensure the overall dark mode aesthetics for the scrollbars */
+body {
+  background-color: #121212; /* Optional: ensure the rest of the page is dark-themed */
+  color: #ffffff; /* Optional: set text color for dark mode */
+}
 
 .btn {
   @apply flex items-center gap-2 hover:bg-foreground_alt hover:text-primary hover:scale-105 active:scale-95 transition-all duration-300 p-3 rounded-lg;

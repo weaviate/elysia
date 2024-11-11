@@ -45,7 +45,7 @@ export function useSocket(
           setConversationStatus(payload.text, message.conversation_id);
         } else if (message.type === "completed") {
           setConversationStatus("", message.conversation_id);
-        } else {
+        } else if (message.type === "result") {
           const newMessage = { ...message, collapsed: true, id: uuidv4() };
           addMessageToConversation([newMessage], newMessage.conversation_id);
         }
