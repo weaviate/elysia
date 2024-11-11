@@ -1,8 +1,76 @@
 import dspy
 
+from typing import Literal, get_args, Union
+
+def construct_query_initialiser_prompt(collection_names: list[str] = None, return_types: list[str] = None) -> dspy.Signature:
+
+    # Create dynamic Literal type from the list, or use str if None
+    CollectionLiteral = (Literal[tuple(collection_names)] if collection_names is not None  # type: ignore
+                  else str)
+    
+    ReturnTypeLiteral = (Literal[tuple(return_types)] if return_types is not None  # type: ignore
+                  else str)
+    
+    class QueryInitialiserPrompt(dspy.Signature):
+        f"""
+        Given a user prompt, create a query to retrieve relevant documents.
+
+        # Collection instructions
+        You have access to the following collections:
+        {collection_names}
+
+        Pick one that best represents the user prompt. If multiple collections are relevant, pick one.
+
+        # Return type instructions
+        You have access to the following return types:
+        {return_types}
+
+        Pick one that best represents the user prompt. You may only choose one, so pick the best one, most relevant to the user prompt.
+        This information will be displayed to the user in a dynamic way, so pick the one that will be most useful.
+        """
+
+        user_prompt = dspy.InputField(desc="The user's original query")
+        reference = dspy.InputField(desc="Information about the state of the world NOW such as the date and time, used to frame the query.")
+        previous_reasoning = dspy.InputField(
+            desc="""
+            Your reasoning that you have output from previous decisions.
+            This is so you can use the information from previous decisions to help you decide which collection and return type to choose.
+
+            This is a dictionary of the form:
+            {
+                "tree_1": 
+                {
+                    "decision_1": "Your reasoning for the decision 1",
+                    "decision_2": "Your reasoning for the decision 2",
+                    ...
+                },
+                "tree_2": {
+                    "decision_1": "Your reasoning for the decision 1",
+                    "decision_2": "Your reasoning for the decision 2",
+                    ...
+                }
+            }
+            where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+            
+            Use this to base your current action from previous reasoning.
+            """.strip()
+        )
+        
+        collection_name: CollectionLiteral = dspy.OutputField(
+            desc="The name of the collection to query. Only provide the name exactly as it appears.",
+            format = str
+        )
+        return_type: ReturnTypeLiteral = dspy.OutputField(
+            desc="The type of objects to return. Only provide the type name exactly as it appears.",
+            format = str
+        )
+
+    return QueryInitialiserPrompt
+
 class QueryCreatorPrompt(dspy.Signature):
     """
-    Given a user prompt, create a weaviate function query to retrieve relevant documents.
+    You must write code to retrieve the objects from the collection.
+
     You can use one of the following functions:
 
     - `collection.query.near_text(query, limit)`: this is a semantic search on the text of the documents.
@@ -103,8 +171,6 @@ class QueryCreatorPrompt(dspy.Signature):
     )
     ```
 
-    ____
-    Now that you have learned how the query function works, your job is to create a query based on the user prompt.
     Use the above examples to guide you, but create your own query that is specific to the user prompt.
     You should not use one of the above examples directly, but rather use them as a guide to create your own query.
     Filters are optional, and if not specified in the user prompt, you should not use them.
@@ -112,11 +178,36 @@ class QueryCreatorPrompt(dspy.Signature):
     You have access to a function called `format_datetime(dt)` which formats a datetime object to the ISO format without the timezone offset. 
     Use this function to format the datetime objects in the filters.
 
-    Assume you have access to the object `collection` which is a Weaviate collection.
+    Assume you have access to the object `collection` which is a Weaviate collection.  
     """
     user_prompt = dspy.InputField(desc="The user's original query")
     reference = dspy.InputField(desc="""
         Information about the state of the world NOW such as the date and time, used to frame the query.
+        """.strip(), 
+        format = str
+    )
+    previous_reasoning = dspy.InputField(
+        desc="""
+        Your reasoning that you have output from previous decisions.
+        This is so you can use the information from previous decisions to help you decide what type of query to create.
+
+        This is a dictionary of the form:
+        {
+            "tree_1": 
+            {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            },
+            "tree_2": {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            }
+        }
+        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+        
+        Use this to base your current action from previous reasoning.
         """.strip(), 
         format = str
     )

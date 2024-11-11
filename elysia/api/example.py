@@ -13,7 +13,7 @@ import json
 get_collections_payload = GetCollectionsData(
     user_id="1"
 )
-collection_names = await collections(get_collections_payload)
+collection_names = await collections()
 collection_names = json.loads(collection_names.body)["collections"]
 
 # get collection properties
@@ -38,3 +38,5 @@ class fake_websocket:
         print(data)
 
 await process(query_payload.dict(), fake_websocket())
+
+tree_manager.get_tree(conversation_id="1", user_id="2").returns

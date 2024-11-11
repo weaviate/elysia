@@ -8,20 +8,22 @@ import nest_asyncio
 
 # from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
 from elysia.text.text import Summarizer, TextResponse
-from elysia.querying.agentic_query import QueryOptions
+from elysia.querying.agentic_query import AgenticQuery
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
+from elysia.util.parsing import remove_whitespace
 from elysia.util.logging import backend_print
 from elysia.util.api import parse_decision, parse_result, parse_finished
-from elysia.tree.objects import Text, Returns, GenericRetrieval, Objects
+from elysia.tree.objects import Text, Returns, Objects, Status
+from elysia.querying.objects import GenericRetrieval
 
 import dspy
 from dspy.primitives.assertions import assert_transform_module, backtrack_handler
 
 
-lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
+# lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
 
-# lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
-# lm = dspy.LM("groq/llama-3.2-1b-preview", max_tokens=8192)
+lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+# lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
 
 dspy.settings.configure(lm=lm)
 
@@ -47,6 +49,12 @@ class DecisionNode:
         if dspy_model is not None:
             self.decision_executor.load(os.path.join("elysia", "training", "dspy_models", "decision", dspy_model + ".json"))
 
+    def _options_to_json(self):
+        out = {}
+        for node in self.options:
+            out[node] = {key: value for key, value in self.options[node].items() if key not in ["action", "returns", "next"]}
+        return out
+
     def decide(self, 
                user_prompt: str, 
                completed_tasks: list[dict], 
@@ -61,7 +69,7 @@ class DecisionNode:
         output, self.completed = self.decision_executor(
             user_prompt = user_prompt, 
             instruction = self.instruction, 
-            available_tasks = self.options, 
+            available_tasks = self._options_to_json(), 
             available_information = available_information.to_llm_str(),
             completed_tasks = completed_tasks,
             conversation_history = conversation_history,
@@ -75,7 +83,7 @@ class DecisionNode:
         self.reasoning = output.reasoning
 
         if self.options[self.decision]['action'] is not None:
-            action_fn = eval(self.options[self.decision]['action'])
+            action_fn = self.options[self.decision]['action']
         else:
             action_fn = None
 
@@ -99,6 +107,7 @@ class Tree:
 
     def __init__(self, 
                  conversation_id: str = "1", 
+                 collection_names: list[str] = [],
                  verbosity: int = 1, 
                  break_down_instructions: bool = False,
                  run_num_trees: int = None,
@@ -109,6 +118,8 @@ class Tree:
         self.verbosity = verbosity
         self.break_down_instructions = break_down_instructions
         self.dspy_model = dspy_model
+        self.collection_names = collection_names
+        self.querier = AgenticQuery(collection_names=collection_names, return_types=["conversation", "message", "ticket", "generic"])
 
         # for training purposes, we may want to run the tree until a certain node and a certain number of times
         self.run_until_node_id = run_until_node_id
@@ -142,75 +153,35 @@ class Tree:
             Otherwise, if you haven't queried yet, you should query the knowledge base.
             If you don't need to query, i.e. the user is talking to you, choose text_response.
             If you have queried, and there is available information, you should choose summarize to reply this to the user.
+            If the user is just talking to you and requires no information, choose text_response.
             """,
             options = {
                 "query": {
                     "description": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "action": None,
+                    "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
+                    "status": "Deciding which collection to query",
+                    "action": self.querier,
                     "returns": None,
-                    "next": "collection",
+                    "next": None,
                 },
                 "summarize": {
                     "description": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
-                    "action": 'Summarizer()', 
+                    "future_options": [],
+                    "status": "Summarizing information",
+                    "action": Summarizer(), 
                     "returns": "text",
                     "next": None    # next=None represents the end of the tree
                 },
                 "text_response": {
                     "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
-                    "action": 'TextResponse()',
+                    "future_options": [],
+                    "status": "Crafting response",
+                    "action": TextResponse(),
                     "returns": "text",
                     "next": None
                 }
             },
             root = True
-        )
-
-        self.add_decision_node(
-            id = "collection",
-            instruction = """
-            You have decided to query, now choose a collection to query.
-            """,
-            options = {
-                "example_verba_email_chains": {
-                    "description": "email correspondence within the company that is loosely related to verba",
-                    "action": None,
-                    "returns": None,
-                    "next": "conversation_choice"
-                },
-                "example_verba_slack_conversations": {
-                    "description": "slack chats in the company that is loosely related to verba",
-                    "action": None,
-                    "returns": None,
-                    "next": "conversation_choice"
-                },
-                "example_verba_github_issues": {
-                    "description": "github issues for the verba app",
-                    "action": 'QueryOptions["ticket"](collection_name = "example_verba_github_issues")',
-                    "returns": "TicketRetrieval",
-                    "next": None
-                }
-            },
-            root = False
-        )
-
-        self.add_decision_node(
-            id = "conversation_choice",
-            instruction = "Should the full conversation attached to the retrieved object be shown to the user or just the message?",
-            options = {
-                "full_conversation": {
-                    "description": "show the full conversation",
-                    "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains", return_conversation = True)',
-                    "returns": "ConversationRetrieval",
-                    "next": None
-                },
-                "message_only": {
-                    "description": "show only the message",
-                    "action": 'QueryOptions["message"](collection_name = "example_verba_email_chains", return_conversation = False)',
-                    "returns": "ConversationRetrieval",
-                    "next": None
-                }
-            },
         )
 
         self._get_root()
@@ -276,15 +247,23 @@ class Tree:
             self.returns.add_text(objects=action_result)
             self._update_conversation_history(user_prompt, action_result.objects[0])
 
-    def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
-        result = action_fn(
+    async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
+
+        async for result in action_fn(
             user_prompt=user_prompt, 
             available_information=self.returns, 
             previous_reasoning=self.previous_reasoning,
             **kwargs
-        )
-        self._update_returns(result, user_prompt)
-        return result
+        ):
+            if isinstance(result, Status):
+                yield self._parse_status(result)
+
+            if isinstance(result, Objects):
+                self._update_returns(result, user_prompt)
+                yield self._parse_result(result)
+    
+    def _parse_status(self, status: Status):
+        return status.to_json(self.conversation_id)
     
     def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
         return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
@@ -349,14 +328,15 @@ class Tree:
             )
 
             yield self._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
+            yield self._parse_status(Status(current_decision_node.options[decision]["status"]))
 
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = reasoning
             self.decision_history.append(decision)
             self.previous_info.append(current_decision_node.construct_as_previous_info())
 
             if action_fn is not None:
-                result = self._evaluate_action(action_fn, user_prompt, **kwargs)
-                yield self._parse_result(result)           
+                async for result in self._evaluate_action(action_fn, user_prompt, **kwargs):
+                    yield result
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")

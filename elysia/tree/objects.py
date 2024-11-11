@@ -3,6 +3,19 @@ import datetime
 from rich import print
 from elysia.util.parsing import objects_dict_to_str, format_datetime
 
+class Status:
+    def __init__(self, status: str):
+        self.status = status
+
+    def to_json(self, conversation_id: str):
+        return {
+            "type": "status",
+            "conversation_id": conversation_id,
+            "payload": {
+                "text": self.status
+            }
+        }
+
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):
         self.objects = objects
@@ -36,82 +49,6 @@ class Objects:
     
     def return_value(self, idx: int):
         return self.objects[idx]
-
-
-class GenericRetrieval(Objects):
-    def __init__(self, objects: list[dict], metadata: dict = {}):
-        super().__init__(objects, metadata)
-        self.type = "retrieval"
-
-    def to_json(self):
-        for object in self.objects:
-            for key, value in object.items():
-                if isinstance(value, datetime.datetime):
-                    object[key] = format_datetime(value)
-        return super().to_json()
-
-class ConversationRetrieval(GenericRetrieval):
-    def __init__(self, objects: list[dict], metadata: dict = {}, return_conversation: bool = False):
-        super().__init__(objects, metadata)
-        self.type = "conversation"
-        self.return_conversation = return_conversation   
-
-    def to_json(self):
-        if self.return_conversation:
-            for conversation in self.objects:
-                for message in conversation:
-                    for key, value in message.items():
-                        if isinstance(value, datetime.datetime):
-                            message[key] = format_datetime(value)
-            return {
-                "metadata": self.metadata,
-                "objects": self.objects
-            }
-        else:
-            return super().to_json()
-
-        
-
-    def to_str(self):
-        return json.dumps(self.objects)
-    
-    def to_llm_str(self):
-        if self.return_conversation:
-            out = "{'objects': \n"
-            for i, conversation in enumerate(self.objects):
-                out += "{'conversation_" + str(i+1) + "': "
-                out += json.dumps(conversation) + "}, \n"
-            
-            out += "'metadata': " + json.dumps(self.metadata) + "\n"
-            out += "}"
-        else:
-            out = super().to_llm_str()
-        
-        return out
-        
-    def __repr__(self):
-        if self.return_conversation:
-            for i, conversation in enumerate(self.objects):
-                print(f"[bold green]Conversation {i+1}[/bold green]")
-                for j, message in enumerate(conversation):
-                    if message["relevant"]:
-                        print(f"[bold green]Message {j+1}[/bold green]:", end="")
-                        print(f"[italic green]{message}[/italic green]")
-                    else:
-                        print(f"[bold]Message {j+1}[/bold]:", end="")
-                        print(f"[italic indigo]{message}[/italic indigo]")
-                    print("\n")
-                print("-"*100)
-                print("\n\n")
-        else:
-            super().__repr__()
-        return ""
-    
-class TicketRetrieval(GenericRetrieval):
-    def __init__(self, objects: list[dict], metadata: dict = {}):
-        super().__init__(objects, metadata)
-        self.type = "ticket"
-
 
 class Text(Objects):
     def __init__(self, objects: list[str], metadata: dict = {}):

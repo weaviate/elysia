@@ -10,7 +10,12 @@ from elysia.tree.tree import lm
 
 if __name__ == "__main__":
 
-    tree = Tree(verbosity=2, break_down_instructions=False, dspy_model="bootstrap_random_fewshot")
+    tree = Tree(
+        collection_names=["example_verba_github_issues", "example_verba_slack_conversations", "example_verba_email_chains"],
+        verbosity=2, 
+        break_down_instructions=False, 
+        dspy_model=None
+    )
 
 
 
@@ -21,7 +26,7 @@ if __name__ == "__main__":
     # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
 
     tree.process_sync(
-        "What was the last email sent by Danny?"
+        "tell me what kaladin has been talking about in slack recently"
     )
 
     tree.returns
