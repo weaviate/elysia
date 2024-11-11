@@ -16,7 +16,12 @@ class GenericRetrieval(Retrieval):
         if response is None:
             output = []
         else:
-            output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
+            output = []
+            for obj in response.objects:
+                appender = {k: v for k, v in obj.properties.items()}
+                appender["uuid"] = obj.uuid.hex
+                output.append(appender)
+
         super().__init__(output, metadata)
         self.type = "generic"
 
@@ -66,17 +71,21 @@ class ConversationRetrieval(Retrieval):
         returned_objects = [None] * len(response.objects)
         for i, o in enumerate(response.objects):
             items_in_conversation = self._fetch_items_in_conversation(o.properties["conversation_id"], metadata)
-            to_return = [{
-                k: v for k, v in item.properties.items()
-            } for item in items_in_conversation]
+
+            to_return = []
+            for item in items_in_conversation:
+                appender = {k: v for k, v in item.properties.items()}
+                appender["uuid"] = item.uuid.hex
+
+                if appender["message_index"] == o.properties["message_index"]:
+                    appender["relevant"] = True
+                else:
+                    appender["relevant"] = False
+
+                to_return.append(appender)
+
             to_return.sort(key = lambda x: int(x["message_index"]))
             
-            for item in to_return:
-                if item["message_index"] == o.properties["message_index"]:
-                    item["relevant"] = True
-                else:
-                    item["relevant"] = False
-                
             returned_objects[i] = to_return
 
         return returned_objects
