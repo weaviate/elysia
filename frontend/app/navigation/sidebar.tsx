@@ -12,8 +12,8 @@ import { Collection, Conversation } from "../types";
 import SidebarButton from "./sidebar_button";
 
 interface SidebarProps {
-  page: "home" | "data-explorer";
-  handlePageChange: (p: "home" | "data-explorer") => void;
+  mode: "home" | "data-explorer";
+  handleModeChange: (p: "home" | "data-explorer") => void;
   addConversation: () => void;
   removeConversation: (id: string) => void;
   selectConversation: (id: string) => void;
@@ -27,8 +27,8 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-  handlePageChange,
-  page,
+  handleModeChange,
+  mode,
   addConversation,
   conversations,
   removeConversation,
@@ -84,20 +84,20 @@ const Sidebar: React.FC<SidebarProps> = ({
           <SidebarButton
             icon={<AiFillHome />}
             label="Home"
-            isActive={page === "home"}
+            isActive={mode === "home"}
             isCollapsed={collapsed}
-            onClick={() => handlePageChange("home")}
+            onClick={() => handleModeChange("home")}
           />
           <SidebarButton
             icon={<FaDatabase />}
             label="Data Explorer"
-            isActive={page === "data-explorer"}
+            isActive={mode === "data-explorer"}
             isCollapsed={collapsed}
-            onClick={() => handlePageChange("data-explorer")}
+            onClick={() => handleModeChange("data-explorer")}
           />
         </div>
         <div className="border-t border-secondary"></div>
-        {page === "home" && (
+        {mode === "home" && (
           <div className="flex flex-col gap-6">
             <SidebarButton
               icon={<IoMdAddCircle />}
@@ -121,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         )}
-        {page === "data-explorer" && (
+        {mode === "data-explorer" && (
           <div className="flex flex-col gap-6">
             <SidebarButton
               icon={<LuRefreshCw />}

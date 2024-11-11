@@ -13,7 +13,7 @@ import { useCollections } from "./explorer/useCollections";
 import DataExplorer from "./explorer/data_explorer";
 
 export default function Home() {
-  const [page, setPage] = useState<"home" | "data-explorer">("home");
+  const [mode, setMode] = useState<"home" | "data-explorer">("home");
   const [id, setId] = useState<string>();
 
   const {
@@ -44,6 +44,13 @@ export default function Home() {
     collectionData,
     loadingCollection,
     loadingCollections,
+    pageUp,
+    pageDown,
+    pageUpMax,
+    pageSize,
+    pageDownMax,
+    maxPage,
+    page,
   } = useCollections();
 
   useEffect(() => {
@@ -52,8 +59,8 @@ export default function Home() {
     generateIdFromIp().then((id) => setId(id));
   }, []);
 
-  const handlePageChange = (_p: "home" | "data-explorer") => {
-    setPage(_p);
+  const handleModeChange = (_p: "home" | "data-explorer") => {
+    setMode(_p);
   };
 
   const handleQuery = (query: string, conversationId: string) => {
@@ -64,8 +71,8 @@ export default function Home() {
   return (
     <div className="w-full flex">
       <Sidebar
-        handlePageChange={handlePageChange}
-        page={page}
+        handleModeChange={handleModeChange}
+        mode={mode}
         fetchCollections={fetchCollections}
         selectCollection={selectCollection}
         selectedCollection={selectedCollection}
@@ -77,7 +84,7 @@ export default function Home() {
         removeConversation={removeConversation}
         selectConversation={selectConversation}
       />
-      {page === "home" && currentConversation && (
+      {mode === "home" && currentConversation && (
         <ChatInterface
           currentConversation={currentConversation || ""}
           conversations={conversations}
@@ -85,7 +92,7 @@ export default function Home() {
           handleQuery={handleQuery}
         />
       )}
-      {page === "data-explorer" && (
+      {mode === "data-explorer" && (
         <DataExplorer
           collectionData={collectionData}
           collectionLoading={loadingCollection}
@@ -94,6 +101,13 @@ export default function Home() {
             collections[0]
           }
           collectionName={selectedCollection || ""}
+          page={page}
+          pageUp={pageUp}
+          pageDown={pageDown}
+          pageUpMax={pageUpMax}
+          pageDownMax={pageDownMax}
+          maxPage={maxPage}
+          pageSize={pageSize}
         />
       )}
     </div>
