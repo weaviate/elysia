@@ -22,7 +22,9 @@ const QueryInput: React.FC<QueryInputProps> = ({
 
   return (
     <div
-      className={`gap-4 flex items-center justify-center flex-col transition-all duration-300 ${width_control}`}
+      className={`fixed shadow-xl ${
+        messages.length === 0 ? "top-1/2 -translate-y-1/2" : "bottom-8"
+      } gap-4 flex items-center justify-center flex-col transition-all duration-300 ${width_control}`}
     >
       <p
         className={`text-2xl ${
@@ -34,7 +36,7 @@ const QueryInput: React.FC<QueryInputProps> = ({
       <div
         className={`w-full flex gap-2 ${
           messages.length === 0 ? "rounded-xl" : "rounded-full"
-        } p-2 border border-foreground text-primary placeholder:text-secondary`}
+        } p-2 border border-foreground bg-background text-primary placeholder:text-secondary`}
       >
         <div
           className={`flex gap-2 w-full bg-background_alt ${

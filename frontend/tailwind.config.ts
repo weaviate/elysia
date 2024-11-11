@@ -17,6 +17,7 @@ const config: Config = {
         secondary: "#464C5F",
         accent: "#5AFF83",
         error: "#FF5D70",
+        highlight: "#FF72FF",
       },
     },
   },

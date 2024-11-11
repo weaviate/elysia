@@ -35,7 +35,7 @@ const MarkdownMessageDisplay: React.FC<MarkdownMessageDisplayProps> = ({
   }, [markdown_message]);
 
   return (
-    <div className="flex gap-8 flex-col flex-grow justify-start items-start chat-animation text-white text-wrap">
+    <div className="flex gap-8 flex-col flex-grow justify-start text-sm items-start chat-animation text-white text-wrap">
       <ReactMarkdown>{markdown_message}</ReactMarkdown>
     </div>
   );
