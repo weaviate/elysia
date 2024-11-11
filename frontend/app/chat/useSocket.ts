@@ -8,6 +8,7 @@ import {
   DecisionPayload,
 } from "../types";
 import { getWebsocketHost } from "../api";
+import { v4 as uuidv4 } from "uuid";
 
 export function useSocket(
   addMessageToConversation: (
@@ -40,9 +41,10 @@ export function useSocket(
         const message: Message = JSON.parse(event.data);
         if (message.type === "decision") {
           const payload = message.payload as DecisionPayload;
-          setConversationStatus(payload.instruction, message.conversation_id);
+          setConversationStatus(payload.decision, message.conversation_id);
         }
-        addMessageToConversation([message], message.conversation_id);
+        const newMessage = { ...message, collapsed: true, id: uuidv4() };
+        addMessageToConversation([newMessage], newMessage.conversation_id);
       } catch (error) {
         console.error(error);
       }

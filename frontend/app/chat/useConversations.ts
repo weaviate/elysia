@@ -67,6 +67,25 @@ export function useConversations(id: string) {
     );
   };
 
+  const toggleMessageCollapsed = (
+    conversationId: string,
+    message_id: string
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            messages: c.messages.map((m) =>
+              m.id === message_id ? { ...m, collapsed: !m.collapsed } : m
+            ),
+          };
+        }
+        return c;
+      })
+    );
+  };
+
   return {
     setConversations,
     setCurrentConversation,
@@ -78,6 +97,7 @@ export function useConversations(id: string) {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
+    toggleMessageCollapsed,
     setConversationTitle,
   };
 }

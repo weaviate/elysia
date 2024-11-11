@@ -37,6 +37,9 @@ export function useCollections() {
   }, [collections, pageSize, selectedCollection]);
 
   const fetchCollections = async () => {
+    setSelectedCollection(null);
+    setCollections([]);
+    setCollectionData(null);
     setLoadingCollections(true);
     const collections = await getCollections();
     setCollections(collections);

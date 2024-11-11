@@ -27,6 +27,7 @@ export default function Home() {
     setAllConversationStatuses,
     selectConversation,
     setConversationTitle,
+    toggleMessageCollapsed,
     addMessageToConversation,
   } = useConversations(id || "");
 
@@ -90,6 +91,7 @@ export default function Home() {
           conversations={conversations}
           addMessageToConversation={addMessageToConversation}
           handleQuery={handleQuery}
+          toggleMessageCollapsed={toggleMessageCollapsed}
         />
       )}
       {mode === "data-explorer" && (
@@ -97,8 +99,7 @@ export default function Home() {
           collectionData={collectionData}
           collectionLoading={loadingCollection}
           collection={
-            collections.find((c) => c.name === selectedCollection) ||
-            collections[0]
+            collections.find((c) => c.name === selectedCollection) || null
           }
           collectionName={selectedCollection || ""}
           page={page}

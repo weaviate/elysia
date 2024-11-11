@@ -16,7 +16,7 @@ const MarkdownMessageDisplay: React.FC<MarkdownMessageDisplayProps> = ({
   useEffect(() => {
     let currentIndex = 0;
     const messageLength = markdown_message.length;
-    const interval = 30; // Adjust typing speed (milliseconds per character)
+    const interval = 4; // Adjust typing speed (milliseconds per character)
     let timeoutId: NodeJS.Timeout;
 
     const typeWriter = () => {
@@ -35,8 +35,8 @@ const MarkdownMessageDisplay: React.FC<MarkdownMessageDisplayProps> = ({
   }, [markdown_message]);
 
   return (
-    <div className="flex flex-grow justify-start items-start chat-animation text-white">
-      <ReactMarkdown>{displayedText}</ReactMarkdown>
+    <div className="flex gap-8 flex-col flex-grow justify-start items-start chat-animation text-white text-wrap">
+      <ReactMarkdown>{markdown_message}</ReactMarkdown>
     </div>
   );
 };

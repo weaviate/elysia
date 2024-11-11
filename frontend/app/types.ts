@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 export type Message = {
   type: "result" | "error" | "User" | "decision";
   conversation_id: string;
+  id?: string;
+  collapsed?: boolean; //added for ticket display
   payload: ResultPayload | DecisionPayload;
 };
 

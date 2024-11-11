@@ -10,6 +10,7 @@ import MessageDisplay from "./message_display";
 
 interface ChatInterfaceProps {
   currentConversation: string;
+  toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
   conversations: Conversation[];
   addMessageToConversation: (
     message: Message[],
@@ -21,6 +22,7 @@ interface ChatInterfaceProps {
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentConversation,
   conversations,
+  toggleMessageCollapsed,
   addMessageToConversation,
   handleQuery,
 }) => {
@@ -52,7 +54,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="h-screen flex flex-col items-center justify-center flex-grow">
-      <MessageDisplay messages={messages} current_status={current_status} />
+      <MessageDisplay
+        messages={messages}
+        current_status={current_status}
+        toggleMessageCollapsed={toggleMessageCollapsed}
+      />
       <QueryInput messages={messages} handleSendQuery={handleSendQuery} />
     </div>
   );

@@ -13,7 +13,7 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
 }) => {
   return (
     <div className="flex flex-grow justify-start items-start chat-animation">
-      <p className="text-primary text-2xl">{user_message}</p>
+      <p className="text-primary text-2xl font-bold">{user_message}</p>
     </div>
   );
 };

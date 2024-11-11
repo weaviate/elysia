@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import { Message, ResultPayload, Ticket } from "../types";
 
@@ -9,23 +9,35 @@ import MarkdownMessageDisplay from "./markdown_display";
 import ErrorMessageDisplay from "./error_message_display";
 import TicketMessageDisplay from "./ticket_display";
 import { FaCircle } from "react-icons/fa6";
+import { TfiMoreAlt } from "react-icons/tfi";
 
 interface MessageDisplayProps {
   messages: Message[];
   current_status: string;
+  toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
 }
 
 const MessageDisplay: React.FC<MessageDisplayProps> = ({
   messages,
   current_status,
+  toggleMessageCollapsed,
 }) => {
   const height_control = messages.length == 0 ? "h-[0px]" : "h-[80vh]";
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, current_status]);
 
   return (
     <div
       className={`w-[60vw] flex justify-start items-start mt-10 p-4 overflow-scroll transition-all duration-300 ${height_control}`}
     >
-      <div className="flex flex-col gap-6 w-full">
+      <div className="flex flex-col gap-4 w-full">
         {messages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
             {message.type === "User" && (
@@ -54,15 +66,40 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         />
                       )
                     )}
-                  {(message.payload as ResultPayload).type === "ticket" &&
-                    (message.payload as ResultPayload).objects.map(
-                      (ticket, idx) => (
+                  {(message.payload as ResultPayload).type === "ticket" && (
+                    <>
+                      {(message.collapsed
+                        ? (message.payload as ResultPayload).objects.slice(0, 3)
+                        : (message.payload as ResultPayload).objects
+                      ).map((ticket, idx) => (
                         <TicketMessageDisplay
                           key={`${index}-${idx}`}
                           ticket={ticket as Ticket}
                         />
-                      )
-                    )}
+                      ))}
+                      {(message.payload as ResultPayload).objects.length >
+                        3 && (
+                        <div className="flex w-full justify-center items-center">
+                          <button
+                            className="btn w-1/5 bg-background text-primary text-xs items-center justify-center"
+                            onClick={() => {
+                              toggleMessageCollapsed(
+                                message.conversation_id,
+                                message.id || ""
+                              );
+                            }}
+                          >
+                            <TfiMoreAlt className="text-primary text-xs" />
+                            {message.collapsed
+                              ? "Show All " +
+                                (message.payload as ResultPayload).objects
+                                  .length
+                              : "Show Less"}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -88,6 +125,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             <p className="text-sm shine">{current_status}</p>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
     </div>
   );

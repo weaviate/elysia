@@ -15,7 +15,7 @@ interface DataExplorerProps {
   collectionData: CollectionData | null;
   collectionLoading: boolean;
   collectionName: string;
-  collection: Collection;
+  collection: Collection | null;
   pageDownMax: () => void;
   pageDown: () => void;
   pageUpMax: () => void;
@@ -45,6 +45,8 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
   useEffect(() => {
     setSelectedCell(null);
   }, [collectionName]);
+
+  if (!collection) return null;
 
   return (
     <div
