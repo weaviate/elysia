@@ -14,3 +14,6 @@ class GetCollectionData(BaseModel):
     collection_name: str
     page: int
     pageSize: int
+
+class NERData(BaseModel):
+    text: str

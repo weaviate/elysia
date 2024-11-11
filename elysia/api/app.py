@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 import asyncio
 
+import spacy
+
 from fastapi import FastAPI, WebSocket, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,12 +14,15 @@ from starlette.websockets import WebSocketDisconnect
 
 from elysia.tree.tree import Tree, lm, RecursionLimitException
 from elysia.util.logging import backend_print
-from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData
+from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData
 from elysia.util.collection_metadata import (
     get_collection_data_types,
     get_collection_data,
 )
 from elysia.globals.weaviate_client import client
+
+# Load the English language model
+nlp = spacy.load("en_core_web_sm")
 
 collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations"]
 
@@ -205,3 +210,30 @@ async def get_collection(data: GetCollectionData):
     return JSONResponse(
         content={"properties": data_types, "items": items, "error": ""}, status_code=200
     )
+
+@app.post("/api/ner")
+def named_entity_recognition(data: NERData):
+    """
+    Performs Named Entity Recognition using spaCy.
+    Returns a list of entities with their labels, start and end positions.
+    """
+    doc = nlp(data.text)
+    
+    out = {
+        "text": data.text,  # Use original text instead of rebuilding
+        "entity_spans": [],
+        "noun_spans": []
+    }
+    
+    # Get entity spans
+    for ent in doc.ents:
+        out["entity_spans"].append((ent.start_char, ent.end_char))
+    
+    # Get noun spans
+    for token in doc:
+        if token.pos_ == "NOUN":
+            span = doc[token.i:token.i + 1]  # Create a span from the token
+            out["noun_spans"].append((span.start_char, span.end_char))
+    
+    return JSONResponse(content=out, status_code=200)
+
