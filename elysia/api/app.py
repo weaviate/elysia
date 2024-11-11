@@ -96,7 +96,9 @@ async def process(data: QueryData, websocket: WebSocket):
         async for yielded_result in tree.process(user_prompt):
             await websocket.send_json(yielded_result)
     except RecursionLimitException:
-        await websocket.send_json({"status": "error", "data": "Recursion limit reached!", "type": "ERROR"})
+        await websocket.send_json(
+            {"status": "error", "data": "Recursion limit reached!", "type": "ERROR"}
+        )
 
 # Process endpoint
 @app.websocket("/ws/query")

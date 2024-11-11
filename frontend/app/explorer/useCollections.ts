@@ -16,7 +16,8 @@ export function useCollections() {
   const [loadingCollection, setLoadingCollection] = useState(false);
 
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(100);
+  const [pageSize, setPageSize] = useState(25);
+  const [maxPage, setMaxPage] = useState(0);
 
   useEffect(() => {
     fetchCollections();
@@ -25,7 +26,15 @@ export function useCollections() {
   useEffect(() => {
     if (!selectedCollection) return;
     fetchCollectionData();
-  }, [selectedCollection]);
+  }, [selectedCollection, page]);
+
+  useEffect(() => {
+    const currentCollection = collections.find(
+      (c) => c.name === selectedCollection
+    );
+    if (!currentCollection) return;
+    setMaxPage(Math.ceil(currentCollection.total / pageSize) - 1);
+  }, [collections, pageSize, selectedCollection]);
 
   const fetchCollections = async () => {
     setLoadingCollections(true);
@@ -48,19 +57,28 @@ export function useCollections() {
 
   const selectCollection = async (collection: string) => {
     setSelectedCollection(collection);
+    setPage(0);
   };
 
   const pageUp = () => {
     if (!selectedCollection) return;
     const collection = collections.find((c) => c.name === selectedCollection);
     if (!collection) return;
-    if ((page + 1) * pageSize >= collection.total) return;
+    if (page + 1 > maxPage) return;
     setPage((prev) => prev + 1);
+  };
+
+  const pageUpMax = () => {
+    setPage(maxPage);
   };
 
   const pageDown = () => {
     if (page === 0) return;
     setPage((prev) => prev - 1);
+  };
+
+  const pageDownMax = () => {
+    setPage(0);
   };
 
   return {
@@ -77,5 +95,8 @@ export function useCollections() {
     setPageSize,
     pageUp,
     pageDown,
+    pageUpMax,
+    pageDownMax,
+    maxPage,
   };
 }
