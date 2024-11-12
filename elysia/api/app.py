@@ -211,7 +211,7 @@ async def get_collection(data: GetCollectionData):
     )
 
 @app.post("/api/ner")
-def named_entity_recognition(data: NERData):
+async def named_entity_recognition(data: NERData):
     """
     Performs Named Entity Recognition using spaCy.
     Returns a list of entities with their labels, start and end positions.
@@ -241,7 +241,7 @@ def named_entity_recognition(data: NERData):
     return JSONResponse(content=out, status_code=200)
 
 @app.post("/api/title")
-def title(data: TitleData):
+async def title(data: TitleData):
     try:
         title_creator = TitleCreatorExecutor()
         title = title_creator(data.text)
