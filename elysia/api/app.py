@@ -270,8 +270,13 @@ async def title(data: TitleData):
 async def set_collections(data: SetCollectionsData):
     
     global tree_manager
+    if len(data.collection_names) == 0:
+        collection_names = await collections()
+        collection_names = [collection["name"] for collection in collection_names["collections"]]
+    else:
+        collection_names = data.collection_names
 
     tree = tree_manager.get_tree(data.user_id, data.conversation_id)
-    tree.set_collection_names(data.collection_names, remove_data=data.remove_data)
+    tree.set_collection_names(collection_names, remove_data=data.remove_data)
 
     return JSONResponse(content={"error": ""}, status_code=200)
