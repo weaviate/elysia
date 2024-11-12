@@ -9,7 +9,7 @@ import { IoChatbubble } from "react-icons/io5";
 import { ImShrink2 } from "react-icons/im";
 
 import { Collection, Conversation } from "../types";
-import SidebarButton from "./sidebar_button";
+import SidebarButton from "@/app/navigation/sidebar-button";
 
 interface SidebarProps {
   mode: "home" | "data-explorer";

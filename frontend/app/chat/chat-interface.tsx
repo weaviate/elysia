@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { RiSendPlane2Fill } from "react-icons/ri";
+import React, { useEffect, useState } from "react";
 
 import { Conversation, Message } from "../types";
 
-import QueryInput from "./query_input";
-import MessageDisplay from "./message_display";
+import { v4 as uuidv4 } from "uuid";
+
+import QueryInput from "./user-input";
+import MessageDisplay from "./message-display";
 
 interface ChatInterfaceProps {
   currentConversation: string;
@@ -26,21 +27,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   addMessageToConversation,
   handleQuery,
 }) => {
-  const messages =
-    currentConversation && conversations.length > 0
-      ? conversations.find((c) => c.id === currentConversation)?.messages || []
-      : [];
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentStatus, setCurrentStatus] = useState<string>("");
 
-  const current_status =
-    currentConversation && conversations.length > 0
-      ? conversations.find((c) => c.id === currentConversation)?.current || ""
-      : "";
+  useEffect(() => {
+    console.log(currentConversation, conversations);
+    setMessages(
+      currentConversation && conversations.length > 0
+        ? conversations.find((c) => c.id === currentConversation)?.messages ||
+            []
+        : []
+    );
+    setCurrentStatus(
+      currentConversation && conversations.length > 0
+        ? conversations.find((c) => c.id === currentConversation)?.current || ""
+        : ""
+    );
+  }, [currentConversation, conversations]);
 
   const handleSendQuery = (query: string) => {
     if (query.trim() === "") return;
     const trimmedQuery = query.trim();
     const newMessage: Message = {
       type: "User",
+      id: uuidv4(),
+      collapsed: false,
       conversation_id: currentConversation,
       payload: {
         type: "text",
@@ -56,7 +67,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className="h-screen flex flex-col items-center justify-start flex-grow">
       <MessageDisplay
         messages={messages}
-        current_status={current_status}
+        current_status={currentStatus}
         toggleMessageCollapsed={toggleMessageCollapsed}
       />
       <QueryInput messages={messages} handleSendQuery={handleSendQuery} />

@@ -1,7 +1,7 @@
 "use client";
 
-import Sidebar from "./navigation/sidebar";
-import ChatInterface from "./chat/chat_interface";
+import Sidebar from "@/app/navigation/sidebar";
+import ChatInterface from "@/app/chat/chat-interface";
 import { useEffect, useState } from "react";
 
 import { generateIdFromIp } from "./util";
@@ -10,7 +10,7 @@ import { initialConversation } from "./types";
 import { useConversations } from "./chat/useConversations";
 import { useSocket } from "./chat/useSocket";
 import { useCollections } from "./explorer/useCollections";
-import DataExplorer from "./explorer/data_explorer";
+import DataExplorer from "./explorer/data-explorer";
 
 export default function Home() {
   const [mode, setMode] = useState<"home" | "data-explorer">("home");
