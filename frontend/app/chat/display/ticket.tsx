@@ -29,7 +29,7 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
 
   return (
     <div
-      className="flex flex-col w-full cursor-pointer transition-all duration-300 hover:bg-foreground_alt bg-foreground p-5 rounded-xl flex-grow justify-start items-start gap-2 chat-animation"
+      className="flex flex-col flex-grow max-w-full cursor-pointer transition-all duration-300 hover:bg-foreground_alt bg-background_alt p-5 rounded-xl justify-start items-start gap-2 chat-animation"
       onClick={() => setTicketCollapsed((prev) => !prev)}
     >
       <div className="flex flex-col gap-2 w-full">
@@ -55,13 +55,14 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
             </button>
           )}
         </div>
-        <div
-          className={`text-primary overflow-scroll text-sm gap-5 mt-2 max-w-[70vw] flex flex-col text-wrap ${
-            ticketCollapsed ? "max-h-[10vh]" : "max-h-[32vh]"
-          }`}
-        >
-          <MarkdownMessageDisplay text={ticket.issue_content} />
-        </div>
+        {!ticketCollapsed && (
+          <div
+            className={`text-primary overflow-scroll text-sm gap-5 mt-2 flex max-h-[50vh] flex-col text-wrap 
+            }`}
+          >
+            <MarkdownMessageDisplay text={ticket.issue_content} />
+          </div>
+        )}
       </div>
     </div>
   );

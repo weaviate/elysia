@@ -8,6 +8,13 @@ interface ConversationMessageProps {
   payload: ConversationMessage[];
 }
 
+const AUTHOR_COLORS = [
+  "text-accent",
+  "text-highlight",
+  "text-warning",
+  "text-error",
+];
+
 const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
   payload,
 }) => {
@@ -17,13 +24,37 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
       year: "numeric",
       month: "long",
       day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
     });
   };
 
   const [messageCollapsed, setMessageCollapsed] = useState(false);
+  const [authorColors, setAuthorColors] = useState<Record<string, string>>({});
+  const [authorPositions, setAuthorPositions] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     payload.length > 2 && setMessageCollapsed(true);
+
+    // Get unique authors
+    const uniqueAuthors = Array.from(
+      new Set(payload.map((msg) => msg.message_author))
+    );
+
+    // Create color and position assignments
+    const colorMap: Record<string, string> = {};
+    const positionMap: Record<string, number> = {};
+    uniqueAuthors.forEach((author, index) => {
+      const colorIndex = index % AUTHOR_COLORS.length;
+      colorMap[author] = AUTHOR_COLORS[colorIndex];
+      positionMap[author] = index;
+    });
+
+    setAuthorColors(colorMap);
+    setAuthorPositions(positionMap);
   }, [payload]);
 
   return (
@@ -33,15 +64,19 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
           <div
             key={`${idx}-${message.conversation_id}`}
             className={`flex w-full ${
-              idx % 2 === 0
+              authorPositions[message.message_author] % 2 === 0
                 ? "justify-start items-start"
                 : "justify-end items-end"
             }`}
           >
             <div className="flex flex-col w-full max-w-[35vw] shadow-lg gap-3 bg-background_alt p-4 rounded-lg chat-animation text-primary">
               <p
-                className={`text-secondary text-xs font-bold ${
-                  idx % 2 === 0 ? "text-left" : "text-right w-full"
+                className={`${
+                  authorColors[message.message_author]
+                } text-xs font-bold ${
+                  authorPositions[message.message_author] % 2 === 0
+                    ? "text-left"
+                    : "text-right w-full"
                 }`}
               >
                 {message.message_author}
@@ -49,7 +84,7 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
               <MarkdownMessageDisplay text={message.message_content} />
               <div
                 className={`flex w-full gap-2 ${
-                  idx % 2 === 0
+                  authorPositions[message.message_author] % 2 === 0
                     ? "justify-end items-end"
                     : "justify-start items-start"
                 }`}

@@ -39,6 +39,8 @@ export function useConversations(id: string) {
   };
 
   const setConversationTitle = (title: string, conversationId: string) => {
+    const conversation = conversations.find((c) => c.id === conversationId);
+    if (!conversation || conversation.name !== "New Conversation") return;
     handleConversationTitleGeneration(title).then((data) => {
       setConversations((prevConversations) =>
         prevConversations.map((c) => {
