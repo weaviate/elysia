@@ -110,6 +110,8 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
     else:
         collection = soft_create_collection(client, collection_name, "issue_content")
 
+    usernames = [d[len("'login': '")+1:d[len("'login': '")+1:].find("'")+len("'login': '")+1] for d in df.user]
+
     # add data to collection
     for i, row in tqdm(df.iterrows(), total=len(df), desc=f"Adding {collection_name} to Weaviate"):
 
@@ -121,6 +123,8 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
                 "issue_content": row["body"],
                 "issue_created_at": row["created_at"],
                 "issue_updated_at": row["updated_at"],
+                "issue_url": row["html_url"],
+                "issue_author": usernames[i]
             }
 
             # weaviate metadata
@@ -131,6 +135,7 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
                     properties = data_object,
                     uuid = uuid
                 )
+
         except Exception as e:
             print(f"Error adding issue {i}: {e}, continuing...")
 
@@ -145,12 +150,12 @@ if __name__ == "__main__":
 
     # read data frames
     github_issues_df  = pd.read_csv("../verba_github_issues.csv")
-    slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
-    email_chains_df   = pd.read_csv("../verba_email_chains.csv")
+    # slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
+    # email_chains_df   = pd.read_csv("../verba_email_chains.csv")
 
     # add github issues data to weaviate collection
     add_issues_to_weaviate(client, github_issues_df, "example_verba_github_issues", force=True)
     
     # # add email and slack data to weaviate collections
-    add_conversations_to_weaviate(client, email_chains_df, "example_verba_email_chains", force=True)
-    add_conversations_to_weaviate(client, slack_messages_df, "example_verba_slack_conversations", force=True)
+    # add_conversations_to_weaviate(client, email_chains_df, "example_verba_email_chains", force=True)
+    # add_conversations_to_weaviate(client, slack_messages_df, "example_verba_slack_conversations", force=True)

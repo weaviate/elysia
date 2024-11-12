@@ -27,7 +27,7 @@ class QueryCreatorExecutor(dspy.Module):
 
     def forward(self, user_prompt: str, reference: str, previous_queries: list, data_fields: list, example_field: dict, previous_reasoning: dict) -> str:
 
-        # run query code
+        # run query code generation
         prediction = self.query_creator_prompt(
             user_prompt=user_prompt, 
             reference=reference,

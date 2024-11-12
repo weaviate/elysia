@@ -7,9 +7,8 @@ from weaviate.classes.query import Filter, Sort
 
 from elysia.globals.weaviate_client import client
 
-class GenericRetrieval(Objects):
+class Retrieval(Objects):
     def __init__(self, output, metadata):
-        self.type = "generic"
         super().__init__(output, metadata)
 
     def to_json(self):
@@ -19,29 +18,55 @@ class GenericRetrieval(Objects):
                     object[key] = format_datetime(value)
         return super().to_json()
     
-class MessageRetrieval(GenericRetrieval):
+class GenericRetrieval(Retrieval):
     def __init__(self, response, metadata):
         if response is None:
             output = []
         else:
-            output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
+            output = []
+            for obj in response.objects:
+                appender = {k: v for k, v in obj.properties.items()}
+                appender["uuid"] = obj.uuid.hex
+                output.append(appender)
+
+        super().__init__(output, metadata)
+        self.type = "generic"
+
+    
+class MessageRetrieval(Retrieval):
+    def __init__(self, response, metadata):
+        if response is None:
+            output = []
+        else:
+            output = []
+            for obj in response.objects:
+                appender = {k: v for k, v in obj.properties.items()}
+                appender["uuid"] = obj.uuid.hex
+                appender["relevant"] = False
+                output.append(appender)
+                
         super().__init__(output, metadata)
         self.type = "message"
 
-class ConversationRetrieval(GenericRetrieval):
+class TicketRetrieval(GenericRetrieval):
+    def __init__(self, response, metadata):
+        super().__init__(response, metadata)
+        self.type = "ticket"
+
+class ConversationRetrieval(Retrieval):
     def __init__(self, response, metadata):
         if response is None:
             output = []
         else:
-            output = self._return_all_messages_in_conversation(response)
+            output = self._return_all_messages_in_conversation(response, metadata)
         super().__init__(output, metadata)
         self.type = "conversation"
 
-    def _fetch_items_in_conversation(self, conversation_id: str):
+    def _fetch_items_in_conversation(self, conversation_id: str, metadata: dict):
         """
         Use Weaviate to fetch all messages in a conversation based on the conversation ID.
         """
-        collection = client.collections.get(self.metadata["collection_name"])
+        collection = client.collections.get(metadata["collection_name"])
         items_in_conversation = collection.query.fetch_objects(
             filters=Filter.by_property("conversation_id").equal(conversation_id)
         )
@@ -49,25 +74,29 @@ class ConversationRetrieval(GenericRetrieval):
 
         return items_in_conversation
 
-    def _return_all_messages_in_conversation(self, response):
+    def _return_all_messages_in_conversation(self, response, metadata: dict):
         """
         Return all messages in a conversation based on the response from Weaviate.
         """
 
         returned_objects = [None] * len(response.objects)
         for i, o in enumerate(response.objects):
-            items_in_conversation = self._fetch_items_in_conversation(o.properties["conversation_id"])
-            to_return = [{
-                k: v for k, v in item.properties.items()
-            } for item in items_in_conversation]
+            items_in_conversation = self._fetch_items_in_conversation(o.properties["conversation_id"], metadata)
+
+            to_return = []
+            for item in items_in_conversation:
+                appender = {k: v for k, v in item.properties.items()}
+                appender["uuid"] = item.uuid.hex
+
+                if appender["message_index"] == o.properties["message_index"]:
+                    appender["relevant"] = True
+                else:
+                    appender["relevant"] = False
+
+                to_return.append(appender)
+
             to_return.sort(key = lambda x: int(x["message_index"]))
             
-            for item in to_return:
-                if item["message_index"] == o.properties["message_index"]:
-                    item["relevant"] = True
-                else:
-                    item["relevant"] = False
-                
             returned_objects[i] = to_return
 
         return returned_objects
@@ -112,11 +141,3 @@ class ConversationRetrieval(GenericRetrieval):
             print("\n\n")
         return ""
     
-class TicketRetrieval(GenericRetrieval):
-    def __init__(self, response, metadata):
-        if response is None:
-            output = []
-        else:
-            output = [{k: v for k, v in obj.properties.items()} for obj in response.objects]
-        super().__init__(output, metadata)
-        self.type = "ticket"

@@ -12,9 +12,9 @@ from elysia.querying.agentic_query import AgenticQuery
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace
 from elysia.util.logging import backend_print
-from elysia.util.api import parse_decision, parse_result, parse_finished
+from elysia.util.api import parse_decision, parse_result, parse_finished, parse_error, parse_warning
 from elysia.tree.objects import Text, Returns, Objects, Status
-from elysia.querying.objects import GenericRetrieval
+from elysia.querying.objects import Retrieval
 
 import dspy
 from dspy.primitives.assertions import assert_transform_module, backtrack_handler
@@ -235,7 +235,7 @@ class Tree:
 
     def _update_returns(self, action_result: str | list, user_prompt: str):
 
-        if isinstance(action_result, GenericRetrieval): 
+        if isinstance(action_result, Retrieval): 
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
 
             if action_result.metadata["collection_name"] not in self.data_queried:
@@ -262,6 +262,12 @@ class Tree:
                 self._update_returns(result, user_prompt)
                 yield self._parse_result(result)
     
+    def _parse_error(self, error: str):
+        return parse_error(error, self.conversation_id)
+    
+    def _parse_warning(self, warning: str):
+        return parse_warning(warning, self.conversation_id)
+
     def _parse_status(self, status: Status):
         return status.to_json(self.conversation_id)
     

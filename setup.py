@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 def read_requirements():
     with open("requirements.txt") as req:
         return [
-            line.strip() for line in req if line.strip() and not line.startswith("#")
+            line.strip() for line in req if line.strip() and not line.startswith("#") and not line.startswith("https")
         ]
 
 

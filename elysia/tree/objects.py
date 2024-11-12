@@ -1,4 +1,5 @@
 import json
+import uuid
 import datetime
 from rich import print
 from elysia.util.parsing import objects_dict_to_str, format_datetime
@@ -11,6 +12,7 @@ class Status:
         return {
             "type": "status",
             "conversation_id": conversation_id,
+            "id": "sta-" + str(uuid.uuid4()),
             "payload": {
                 "text": self.status
             }
