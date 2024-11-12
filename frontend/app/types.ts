@@ -89,7 +89,7 @@ export type CollectionData = {
 
 export type NERResponse = {
   text: string;
-  entity_spans: any;
+  entity_spans: [number, number][];
   noun_spans: [number, number][];
 };
 

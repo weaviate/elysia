@@ -31,7 +31,7 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
           </p>
         </div>
       )}
-      <div className="flex flex-col w-full justify-start items-start gap-2">
+      <div className="flex flex-wrap w-full justify-start items-start gap-3">
         {(ticketCollapsed ? tickets.slice(0, 3) : tickets).map(
           (ticket, idx) => (
             <TicketMessageDisplay
@@ -41,7 +41,7 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
           )
         )}
       </div>
-      {tickets.length > 2 && (
+      {tickets.length > 3 && (
         <div className="flex w-full justify-center items-center">
           <button
             className="btn w-1/5 bg-background text-primary text-xs items-center justify-center"
