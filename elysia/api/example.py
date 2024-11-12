@@ -28,7 +28,7 @@ items = json.loads(collection.body)["items"]
 
 
 query_payload = QueryData(
-    query="retrieve the most recent conversation edward had",
+    query="retrieve the most recent conversation bobbbbbb had",
     user_id="2",
     conversation_id="1"
 )

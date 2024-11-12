@@ -205,10 +205,10 @@ class Tree:
         if "root" not in dir(self):
             raise ValueError("No root decision node found")
 
-    def _update_conversation_history(self, user_prompt: str, assistant_response: str):
+    def _update_conversation_history(self, role: str, message: str):
         self.conversation_history.append({
-            "user": user_prompt,
-            "assistant": assistant_response
+            "role": role,
+            "content": message
         })
 
     def _construct_tree(self, node_id: str, tree: dict):
@@ -245,7 +245,7 @@ class Tree:
 
         if isinstance(action_result, Text):
             self.returns.add_text(objects=action_result)
-            self._update_conversation_history(user_prompt, action_result.objects[0])
+            self._update_conversation_history("assistant", action_result.objects[0])
 
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
 
@@ -311,6 +311,8 @@ class Tree:
 
             if self.break_down_instructions:
                 user_prompt = self.input_executor(user_prompt)
+
+            self._update_conversation_history("user", user_prompt)
 
             if self.verbosity >= 1:
                 print(f"[bold yellow]User prompt:[/bold yellow][yellow]\n{user_prompt}[/yellow]")

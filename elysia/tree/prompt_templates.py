@@ -63,10 +63,11 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             The history is a list of dictionaries of the format:
             [
                 {
-                    "user": The user's message
-                    "assistant": The assistant's response
+                    "role": "user" or "assistant",
+                    "content": The message
                 }
             ]
+            In the order which the messages were sent.
             """.strip(),
             format = str
         )

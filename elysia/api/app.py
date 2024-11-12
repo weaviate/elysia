@@ -189,6 +189,8 @@ async def collections():
             }
         )
 
+    logger.info(f"Returning collections: {metadata}")
+
     return JSONResponse(content={"collections": metadata, "error": ""}, status_code=200)
 
 
@@ -206,6 +208,7 @@ async def get_collection(data: GetCollectionData):
         upper_bound=(data.page + 1) * data.pageSize,
     )
 
+    logger.info(f"Returning collection info for {data.collection_name}")
     return JSONResponse(
         content={"properties": data_types, "items": items, "error": ""}, status_code=200
     )
@@ -235,7 +238,10 @@ async def named_entity_recognition(data: NERData):
             if token.pos_ == "NOUN":
                 span = doc[token.i:token.i + 1]  
                 out["noun_spans"].append((span.start_char, span.end_char))
+        
+        logger.info(f"Returning NER results: {out}")
     except Exception as e:
+        logger.error(f"Error in NER: {str(e)}")
         out["error"] = str(e)
     
     return JSONResponse(content=out, status_code=200)
@@ -245,7 +251,9 @@ async def title(data: TitleData):
     try:
         title_creator = TitleCreatorExecutor()
         title = title_creator(data.text)
+        logger.info(f"Returning title: {title}")
     except Exception as e:
+        logger.error(f"Error in title: {str(e)}")
         out = {
             "title": "",
             "error": str(e)
