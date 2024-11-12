@@ -14,6 +14,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from elysia.tree.tree import Tree, lm, RecursionLimitException
 from elysia.util.logging import backend_print
+from elysia.util.api import parse_error
 from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData, TitleData
 from elysia.util.collection_metadata import (
     get_collection_data_types,
@@ -148,13 +149,10 @@ async def websocket_endpoint(websocket: WebSocket):
             except Exception as e:
                 logger.error(f"Error in WebSocket: {str(e)}")
                 try:
-                    await websocket.send_json(
-                        {
-                            "status": "error",
-                            "data": f"Error while processing query: {str(e)}",
-                            "type": "ERROR",
-                        },
-                    )
+                    if data and "conversation_id" in data:
+                        await websocket.send_json(parse_error(str(e), data["conversation_id"]))
+                    else:
+                        await websocket.send_json(parse_error(str(e), ""))
                 except RuntimeError:
                     logger.warning(
                         "Failed to send error message, WebSocket might be closed"
@@ -246,6 +244,7 @@ def named_entity_recognition(data: NERData):
 def title(data: TitleData):
     try:
         title_creator = TitleCreatorExecutor()
+        title = title_creator(data.text)
     except Exception as e:
         out = {
             "title": "",
@@ -254,7 +253,7 @@ def title(data: TitleData):
         return JSONResponse(content=out, status_code=200)
 
     out = {
-        "title": title_creator(data.text),
+        "title": title.title,
         "error": ""
     }
     return JSONResponse(content=out, status_code=200)
