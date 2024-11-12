@@ -15,16 +15,20 @@ from elysia.util.parsing import format_datetime
 
 class QueryInitialiserExecutor(dspy.Module):
 
-    def __init__(self, collection_names: list[str] = None, return_types: list[str] = None):
+    def __init__(self, collection_names: list[str] = None, return_types: dict[str, str] = None):
         super().__init__()
         self.query_initialiser_prompt = dspy.ChainOfThought(construct_query_initialiser_prompt(collection_names, return_types))
+        self.available_collections = collection_names
+        self.available_return_types = return_types
 
     def forward(self, user_prompt: str, reference: str, previous_reasoning: dict, data_queried: list[str]) -> str:
         return self.query_initialiser_prompt(
             user_prompt=user_prompt,
             reference=reference,
             previous_reasoning=previous_reasoning,
-            data_queried=data_queried
+            data_queried=data_queried,
+            available_collections=self.available_collections,
+            available_return_types=self.available_return_types
         )
 
 class QueryExecutor(dspy.Module):

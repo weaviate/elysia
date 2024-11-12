@@ -2,35 +2,27 @@ import dspy
 
 from typing import Literal, get_args, Union
 
-def construct_query_initialiser_prompt(collection_names: list[str] = None, return_types: list[str] = None) -> dspy.Signature:
+def construct_query_initialiser_prompt(collection_names: list[str] = None, return_types: dict[str, str] = None) -> dspy.Signature:
 
     # Create dynamic Literal type from the list, or use str if None
     CollectionLiteral = (Literal[tuple(collection_names)] if collection_names is not None  # type: ignore
                   else str)
     
-    ReturnTypeLiteral = (Literal[tuple(return_types)] if return_types is not None  # type: ignore
+    ReturnTypeLiteral = (Literal[tuple(return_types.keys())] if return_types is not None  # type: ignore
                   else str)
     
     class QueryInitialiserPrompt(dspy.Signature):
-        f"""
-        Given a user prompt, create a query to retrieve relevant documents.
+        """
+        Given a user prompt, choose the most appropriate collection and return type for a later query.
 
-        # Collection instructions
-        You have access to the following collections:
-        {collection_names}
-
-        Pick one that best represents the user prompt. If multiple collections are relevant, pick one.
-
-        # Return type instructions
-        You have access to the following return types:
-        {return_types}
-
-        Pick one that best represents the user prompt. You may only choose one, so pick the best one, most relevant to the user prompt.
+        Pick ones that best represents the user prompt. You may only choose one of each, so pick the best one, most relevant to the user prompt.
         This information will be displayed to the user in a dynamic way, so pick the one that will be most useful.
         """
 
         user_prompt = dspy.InputField(desc="The user's original query")
+        
         reference = dspy.InputField(desc="Information about the state of the world NOW such as the date and time, used to frame the query.")
+        
         previous_reasoning = dspy.InputField(
             desc="""
             Your reasoning that you have output from previous decisions.
@@ -55,6 +47,7 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             Use this to base your current action from previous reasoning.
             """.strip()
         )
+        
         data_queried = dspy.InputField(
             description="""
             A list of items, showing whether a query has been completed or not.
@@ -62,6 +55,16 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.
             """.strip(),
             format = str
+        )
+
+        available_collections = dspy.InputField(
+            description="A list of the collections that you have access to.",
+            format = str
+        )
+
+        available_return_types = dspy.InputField(
+            description="A list of the return types that you have access to, with corresponding descriptions of each one.",
+            format = dict
         )
         
         collection_name: CollectionLiteral = dspy.OutputField(

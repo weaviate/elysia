@@ -11,7 +11,7 @@ from elysia.querying.objects import GenericRetrieval, MessageRetrieval, Conversa
 
 class AgenticQuery:
 
-    def __init__(self, filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json", collection_names: list[str] = None, return_types: list[str] = None): 
+    def __init__(self, filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json", collection_names: list[str] = None, return_types: dict[str, str] = None): 
 
         self.query_initialiser = QueryInitialiserExecutor(collection_names, return_types).activate_assertions()        
         self.querier = QueryExecutor().activate_assertions()

@@ -119,7 +119,15 @@ class Tree:
         self.break_down_instructions = break_down_instructions
         self.dspy_model = dspy_model
         self.collection_names = collection_names
-        self.querier = AgenticQuery(collection_names=collection_names, return_types=["conversation", "message", "ticket", "generic"])
+        self.querier = AgenticQuery(
+            collection_names=collection_names, 
+            return_types={
+                "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+                "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+                "ticket": "retrieve a single ticket, including all fields of the ticket.",
+                "generic": "retrieve any other type of information that does not fit into the other categories."
+            }
+        )
 
         # for training purposes, we may want to run the tree until a certain node and a certain number of times
         self.run_until_node_id = run_until_node_id

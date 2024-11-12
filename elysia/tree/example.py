@@ -24,13 +24,7 @@ if __name__ == "__main__":
     # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
 
     tree.process_sync(
-       "hi my name is danny"
+       "to whom did edward last message?"
     )
 
-    tree.process_sync(
-       "what is my name?"
-    )
-
-
-    tree.returns.retrieved["example_verba_email_chains"].objects[0]
-    tree.returns.retrieved["example_verba_slack_conversations"].objects[0]
+    tree.returns
