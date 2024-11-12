@@ -1,43 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import React from "react";
 import { MdError } from "react-icons/md";
+import MarkdownMessageDisplay from "./markdown";
 
 interface ErrorMessageDisplayProps {
-  error_message: string;
+  payload: string[];
 }
 
 const ErrorMessageDisplay: React.FC<ErrorMessageDisplayProps> = ({
-  error_message,
+  payload,
 }) => {
-  const [displayedText, setDisplayedText] = useState("");
-
-  useEffect(() => {
-    let currentIndex = 0;
-    const messageLength = error_message.length;
-    const interval = 30; // Adjust typing speed (milliseconds per character)
-    let timeoutId: NodeJS.Timeout;
-
-    const typeWriter = () => {
-      if (currentIndex <= messageLength) {
-        setDisplayedText(error_message.slice(0, currentIndex));
-        currentIndex++;
-        timeoutId = setTimeout(typeWriter, interval);
-      }
-    };
-
-    typeWriter();
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [error_message]);
-
   return (
-    <div className="flex flex-grow justify-start items-center gap-2 chat-animation text-error ">
-      <MdError className="" />
-      <ReactMarkdown>{displayedText}</ReactMarkdown>
+    <div className="w-full flex flex-col justify-start items-start ">
+      <div className="max-w-3/5">
+        {payload.map((error, idx) => (
+          <div
+            key={`${idx}-${error}`}
+            className="flex flex-grow justify-start items-center gap-2 chat-animation text-error "
+          >
+            <MdError />
+            <MarkdownMessageDisplay text={error} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

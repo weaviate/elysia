@@ -18,9 +18,10 @@ const config: Config = {
         accent: "#5AFF83",
         error: "#FF5D70",
         highlight: "#FF72FF",
+        warning: "#FFBB46",
       },
     },
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/typography")],
 };
 export default config;

@@ -9,6 +9,7 @@ import ErrorMessageDisplay from "./display/error";
 import TextDisplay from "./display/text";
 import { FaCircle } from "react-icons/fa6";
 import TicketsDisplay from "./display/tickets";
+import WarningDisplay from "./display/warning";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -65,20 +66,17 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                 )}
               </div>
             )}
-
             {message.type === "error" && (
-              <div className="w-full flex flex-col justify-start items-start ">
-                <div className="max-w-3/5">
-                  {((message.payload as ResultPayload).objects as string[]).map(
-                    (error, idx) => (
-                      <ErrorMessageDisplay
-                        key={`${index}-${idx}`}
-                        error_message={error as string}
-                      />
-                    )
-                  )}
-                </div>
-              </div>
+              <ErrorMessageDisplay
+                key={`${index}-${message.id}`}
+                payload={(message.payload as ResultPayload).objects as string[]}
+              />
+            )}
+            {message.type === "warning" && (
+              <WarningDisplay
+                key={`${index}-${message.id}`}
+                payload={(message.payload as ResultPayload).objects as string[]}
+              />
             )}
           </div>
         ))}

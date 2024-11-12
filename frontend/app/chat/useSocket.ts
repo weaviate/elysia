@@ -1,15 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Message,
   TextMessage,
   ErrorMessage,
   TicketMessage,
   DecisionMessage,
-  DecisionPayload,
   TextPayload,
 } from "../types";
 import { getWebsocketHost } from "../api";
-import { v4 as uuidv4 } from "uuid";
 
 export function useSocket(
   addMessageToConversation: (
@@ -40,12 +38,14 @@ export function useSocket(
     localSocket.onmessage = (event) => {
       try {
         const message: Message = JSON.parse(event.data);
+        console.log("Received message", message.type);
         if (message.type === "status") {
           const payload = message.payload as TextPayload;
           setConversationStatus(payload.text, message.conversation_id);
         } else if (message.type === "completed") {
           setConversationStatus("", message.conversation_id);
-        } else if (message.type === "result") {
+        } else if (message.type != "decision") {
+          console.log(message);
           const newMessage = { ...message, collapsed: true };
           addMessageToConversation([newMessage], newMessage.conversation_id);
         }

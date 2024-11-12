@@ -31,7 +31,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [currentStatus, setCurrentStatus] = useState<string>("");
 
   useEffect(() => {
-    console.log(currentConversation, conversations);
     setMessages(
       currentConversation && conversations.length > 0
         ? conversations.find((c) => c.id === currentConversation)?.messages ||

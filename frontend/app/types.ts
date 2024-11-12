@@ -18,7 +18,11 @@ export type Message = {
 export type ResultPayload = {
   type: "text" | "ticket" | "message" | "conversation";
   metadata: any;
-  objects: string[] | Ticket[] | ConversationMessage[] | ConversationPayload;
+  objects:
+    | string[]
+    | Ticket[]
+    | ConversationMessage[]
+    | ConversationMessage[][]; // A list of lists of ConversationMessages
 };
 
 export type TextPayload = {
@@ -32,22 +36,18 @@ export type Ticket = {
   issue_title: string;
   issue_content: string;
   issue_created_at: string;
-  issue_username: string;
+  issue_author: string;
   issue_url: string;
 };
 
 export type ConversationMessage = {
   uuid: string;
+  relevant: boolean;
   conversation_id: number;
   message_index: number;
   message_author: string;
   message_content: string;
   message_timestamp: string;
-};
-
-export type ConversationPayload = {
-  messages: ConversationMessage[];
-  relevant: boolean;
 };
 
 export type DecisionPayload = {
@@ -126,7 +126,7 @@ export const TicketMessage: Message = {
       {
         issue_id: "2377991602",
         uuid: uuidv4(),
-        issue_username: "username",
+        issue_author: "username",
         issue_url: "https://github.com/username/repo/issues/2377991602",
         issue_updated_at: "2024-07-02T10:48:53Z",
         issue_title: "Addition of ability to read .docx files",

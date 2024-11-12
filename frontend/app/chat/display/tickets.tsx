@@ -19,6 +19,8 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
   const payload = message.payload as ResultPayload;
   const tickets = payload.objects as Ticket[];
 
+  if (tickets.length === 0) return null;
+
   return (
     <div className="w-full flex flex-col justify-start items-start gap-3">
       {payload.metadata["collection_name"] && (
@@ -28,11 +30,16 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
           </p>
         </div>
       )}
-      {(message.collapsed ? tickets.slice(0, 3) : tickets).map(
-        (ticket, idx) => (
-          <TicketMessageDisplay key={`${idx}-${message.id}`} ticket={ticket} />
-        )
-      )}
+      <div className="flex flex-col w-full justify-start items-start gap-2">
+        {(message.collapsed ? tickets.slice(0, 3) : tickets).map(
+          (ticket, idx) => (
+            <TicketMessageDisplay
+              key={`${idx}-${message.id}`}
+              ticket={ticket}
+            />
+          )
+        )}
+      </div>
       {tickets.length > 3 && (
         <div className="flex w-full justify-center items-center">
           <button
