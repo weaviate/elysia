@@ -9,7 +9,7 @@ from typing import Callable
 from elysia.tree.objects import Returns
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import reference
-from elysia.querying.prompt_templates import construct_query_initialiser_prompt, QueryCreatorPrompt
+from elysia.querying.prompt_templates import construct_query_initialiser_prompt, QueryCreatorPrompt, ObjectSummaryPrompt
 from elysia.util.logging import backend_print
 from elysia.util.parsing import format_datetime
 
@@ -118,7 +118,23 @@ class QueryExecutor(dspy.Module):
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing query code: {e}")
-                return QueryReturn(objects=[])
+                return QueryReturn(objects=[]), None
 
 
         return response, prediction.code
+
+class ObjectSummaryExecutor(dspy.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.object_summary_prompt = dspy.ChainOfThought(ObjectSummaryPrompt)
+
+    def forward(self, objects: list[dict]) -> list[str]:
+        summaries = self.object_summary_prompt(objects=objects).summaries
+
+        try:
+            summary_list = eval(summaries)
+        except Exception as e:
+            dspy.Assert(False, f"Error converting summaries to list: {e}", target_module=self.object_summary_prompt)
+
+        return summary_list

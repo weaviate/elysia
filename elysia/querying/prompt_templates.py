@@ -13,7 +13,7 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
     
     class QueryInitialiserPrompt(dspy.Signature):
         """
-        Given a user prompt, choose the most appropriate collection and return type for a later query.
+        Given a user prompt, choose the most appropriate collection, return type and output type for a later query.
 
         Pick ones that best represents the user prompt. You may only choose one of each, so pick the best one, most relevant to the user prompt.
         This information will be displayed to the user in a dynamic way, so pick the one that will be most useful.
@@ -73,6 +73,16 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
         )
         return_type: ReturnTypeLiteral = dspy.OutputField(
             desc="The type of objects to return. Only provide the type name exactly as it appears.",
+            format = str
+        )
+        output_type = dspy.OutputField(
+            desc="""
+            One of: 'original' or 'summary'. Output the name exactly as it appears.
+            'original' means the user wants the original objects returned, 
+            'summary' means the user wants an individual itemised summary of each of the objects returned.
+            You should only choose 'summary' if the user has specifically asked for individual summaries of the objects in the user_prompt.
+            Most of the time, you should choose 'original', which will return the objects normally.
+            """.strip(),
             format = str
         )
 
@@ -248,4 +258,21 @@ class QueryCreatorPrompt(dspy.Signature):
     code = dspy.OutputField(
         desc="The generated query code only. Do not enclose it in quotes or in ```. Just the code only.",
         format = str
+    )
+
+class ObjectSummaryPrompt(dspy.Signature):
+    """
+    You must write code to summarise the objects.
+
+    Given a list of objects (a list of dictionaries, where each item in the dictionary is a field from the object), 
+    you must provide a list of strings, where each string is a summary of the object.
+
+    These objects can be of any type, and you should summarise them in a way that is useful to the user.
+    """
+    objects = dspy.InputField(desc="The objects to summarise.", format = list[dict])
+    summaries = dspy.OutputField(desc="""
+        The summaries of each individaual object, in a list of strings.
+        Your output should be a list of strings in Python format, e.g. `["summary_1", "summary_2", ...]`.
+        """.strip(), 
+        format = list[str]
     )
