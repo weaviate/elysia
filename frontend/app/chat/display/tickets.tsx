@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Message, ResultPayload, Ticket } from "../../types";
 import { TbDots } from "react-icons/tb";
@@ -8,16 +8,17 @@ import TicketMessageDisplay from "./ticket";
 
 interface TicketsDisplayProps {
   message: Message;
-  toggleMessageCollapsed: (conversation_id: string, message_id: string) => void;
 }
 
-const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
-  message,
-  toggleMessageCollapsed,
-}) => {
-  const [ticketCollapsed, setTicketCollapsed] = useState(true);
+const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
   const payload = message.payload as ResultPayload;
   const tickets = payload.objects as Ticket[];
+
+  const [ticketCollapsed, setTicketCollapsed] = useState(false);
+
+  useEffect(() => {
+    tickets.length > 3 && setTicketCollapsed(true);
+  }, [tickets]);
 
   if (tickets.length === 0) return null;
 
@@ -31,7 +32,7 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
         </div>
       )}
       <div className="flex flex-col w-full justify-start items-start gap-2">
-        {(message.collapsed ? tickets.slice(0, 3) : tickets).map(
+        {(ticketCollapsed ? tickets.slice(0, 3) : tickets).map(
           (ticket, idx) => (
             <TicketMessageDisplay
               key={`${idx}-${message.id}`}
@@ -40,16 +41,17 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
           )
         )}
       </div>
-      {tickets.length > 3 && (
+      {tickets.length > 2 && (
         <div className="flex w-full justify-center items-center">
           <button
             className="btn w-1/5 bg-background text-primary text-xs items-center justify-center"
             onClick={() => {
-              toggleMessageCollapsed(message.conversation_id, message.id || "");
+              setTicketCollapsed((prev) => !prev);
             }}
           >
-            <TbDots className="text-primary text-xs" />
-            {message.collapsed ? "Show All " + tickets.length : "Show Less"}
+            {ticketCollapsed
+              ? "Show All " + tickets.length + " Tickets"
+              : "Show Less"}
           </button>
         </div>
       )}

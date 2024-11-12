@@ -2,7 +2,12 @@
 
 import React, { useEffect, useRef } from "react";
 
-import { Message, ResultPayload } from "../types";
+import {
+  ConversationMessage,
+  ErrorPayload,
+  Message,
+  ResultPayload,
+} from "../types";
 
 import UserMessageDisplay from "./display/user";
 import ErrorMessageDisplay from "./display/error";
@@ -10,6 +15,8 @@ import TextDisplay from "./display/text";
 import { FaCircle } from "react-icons/fa6";
 import TicketsDisplay from "./display/tickets";
 import WarningDisplay from "./display/warning";
+import ConversationsDisplay from "./display/conversations";
+import ConversationMessageDisplay from "./display/conversation-message";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -61,7 +68,24 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                   <TicketsDisplay
                     key={`${index}-${message.id}`}
                     message={message}
-                    toggleMessageCollapsed={toggleMessageCollapsed}
+                  />
+                )}
+                {(message.payload as ResultPayload).type === "message" && (
+                  <ConversationMessageDisplay
+                    key={`${index}-${message.id}`}
+                    payload={
+                      (message.payload as ResultPayload)
+                        .objects as ConversationMessage[]
+                    }
+                  />
+                )}
+                {(message.payload as ResultPayload).type === "conversation" && (
+                  <ConversationsDisplay
+                    key={`${index}-${message.id}`}
+                    payload={
+                      (message.payload as ResultPayload)
+                        .objects as ConversationMessage[][]
+                    }
                   />
                 )}
               </div>
@@ -69,7 +93,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             {message.type === "error" && (
               <ErrorMessageDisplay
                 key={`${index}-${message.id}`}
-                payload={(message.payload as ResultPayload).objects as string[]}
+                error={(message.payload as ErrorPayload).error}
               />
             )}
             {message.type === "warning" && (

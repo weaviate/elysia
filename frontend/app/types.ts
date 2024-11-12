@@ -12,7 +12,7 @@ export type Message = {
   conversation_id: string;
   id: string;
   collapsed?: boolean; //added for ticket display
-  payload: ResultPayload | DecisionPayload | TextPayload;
+  payload: ResultPayload | DecisionPayload | TextPayload | ErrorPayload;
 };
 
 export type ResultPayload = {
@@ -27,6 +27,10 @@ export type ResultPayload = {
 
 export type TextPayload = {
   text: string;
+};
+
+export type ErrorPayload = {
+  error: string;
 };
 
 export type Ticket = {
@@ -80,6 +84,17 @@ export type Collection = {
 export type CollectionData = {
   properties: { [key: string]: string };
   items: { [key: string]: any }[];
+  error: string;
+};
+
+export type NERResponse = {
+  text: string;
+  entity_spans: any;
+  noun_spans: [number, number][];
+};
+
+export type TitleResponse = {
+  title: string;
   error: string;
 };
 

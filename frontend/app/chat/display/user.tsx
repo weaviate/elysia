@@ -1,38 +1,62 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+
+import { handleNamedEntityRecognition } from "../api";
 
 interface UserMessageDisplayProps {
   payload: string[];
 }
 
 const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({ payload }) => {
-  const splitText = (text: string) => {
-    const words = text.split(" ");
-    const firstWord = words[0];
-    const remainingWords = words.slice(1).join(" ");
-    return { firstWord, remainingWords };
-  };
+  const [nounSpans, setNounSpans] = useState<[number, number][]>([]);
 
-  // TODO: Replace hardcoded text-highlight with API call
+  const text = payload && payload[0];
+
+  useEffect(() => {
+    handleNamedEntityRecognition(payload[0]).then((data) => {
+      setNounSpans(data.noun_spans);
+    });
+  }, []);
+
+  const renderTextWithHighlights = (text: string) => {
+    if (!text || nounSpans.length === 0) return text;
+
+    const segments: JSX.Element[] = [];
+    let lastIndex = 0;
+
+    nounSpans.forEach(([start, end], i) => {
+      // Add non-highlighted text before the span
+      if (start > lastIndex) {
+        segments.push(
+          <span key={`text-${i}`}>{text.slice(lastIndex, start)}</span>
+        );
+      }
+      // Add highlighted span
+      segments.push(
+        <span key={`highlight-${i}`} className="font-bold text-highlight">
+          {text.slice(start, end)}
+        </span>
+      );
+      lastIndex = end;
+    });
+
+    // Add remaining text after last span
+    if (lastIndex < text.length) {
+      segments.push(<span key="text-end">{text.slice(lastIndex)}</span>);
+    }
+
+    return segments;
+  };
 
   return (
     <div className="w-full flex flex-col justify-start items-start mt-8 ">
       <div className="max-w-3/5">
-        {payload.map((text, idx) => (
-          <div
-            key={idx}
-            className="flex flex-grow justify-start items-start chat-animation"
-          >
-            <p className="text-primary text-2xl font-bold">
-              <span className="text-highlight">
-                {splitText(text).firstWord}
-              </span>
-              {splitText(text).remainingWords &&
-                " " + splitText(text).remainingWords}
-            </p>
-          </div>
-        ))}
+        <div className="flex flex-grow justify-start items-start chat-animation">
+          <p className="text-primary text-2xl font-bold">
+            {renderTextWithHighlights(text)}
+          </p>
+        </div>
       </div>
     </div>
   );
