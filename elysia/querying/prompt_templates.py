@@ -55,6 +55,14 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             Use this to base your current action from previous reasoning.
             """.strip()
         )
+        data_queried = dspy.InputField(
+            description="""
+            A list of items, showing whether a query has been completed or not.
+            This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.
+            If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.
+            """.strip(),
+            format = str
+        )
         
         collection_name: CollectionLiteral = dspy.OutputField(
             desc="The name of the collection to query. Only provide the name exactly as it appears.",

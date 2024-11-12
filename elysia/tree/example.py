@@ -24,7 +24,9 @@ if __name__ == "__main__":
     # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
 
     tree.process_sync(
-       "retrieve the most recent conversation edward had"
+       "summarise kaladins last email and last slack message"
     )
 
-    tree.returns.retrieved["example_verba_slack_conversations"].objects[0].to_json()
+
+    tree.returns.retrieved["example_verba_email_chains"].objects[0]
+    tree.returns.retrieved["example_verba_slack_conversations"].objects[0]

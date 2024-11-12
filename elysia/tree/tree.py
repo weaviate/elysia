@@ -191,7 +191,7 @@ class Tree:
         if verbosity > 1:
             backend_print("Initialised tree with the following decision nodes:")
             for decision_node in self.decision_nodes.values():
-                backend_print(f"  - [magenta]{decision_node.id}[/magenta]: [italic]{decision_node.instruction}[/italic]")
+                backend_print(f"  - [magenta]{decision_node.id}[/magenta]: {list(decision_node.options.keys())}")
 
     def _get_root(self):
         for decision_node in self.decision_nodes.values():            
@@ -250,9 +250,10 @@ class Tree:
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
 
         async for result in action_fn(
-            user_prompt=user_prompt, 
-            available_information=self.returns, 
-            previous_reasoning=self.previous_reasoning,
+            user_prompt, 
+            self.returns, 
+            self.previous_reasoning,
+            data_queried=self.data_queried,
             **kwargs
         ):
             if isinstance(result, Status):
@@ -260,7 +261,9 @@ class Tree:
 
             if isinstance(result, Objects):
                 self._update_returns(result, user_prompt)
-                yield self._parse_result(result)
+
+                if len(result.objects) > 0:
+                    yield self._parse_result(result)
     
     def _parse_error(self, error: str):
         return parse_error(error, self.conversation_id)
@@ -329,8 +332,7 @@ class Tree:
                 data_queried=self.data_queried,
                 decision_tree=self.tree,
                 previous_reasoning=self.previous_reasoning,
-                idx=self.num_trees_completed,
-                **kwargs
+                idx=self.num_trees_completed
             )
 
             yield self._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
