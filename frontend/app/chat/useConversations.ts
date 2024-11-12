@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Conversation, initialConversation, Message } from "../types";
 import { v4 as uuidv4 } from "uuid";
 
+import { handleConversationTitleGeneration } from "./api";
+
 export function useConversations(id: string) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<string | null>(
@@ -37,14 +39,16 @@ export function useConversations(id: string) {
   };
 
   const setConversationTitle = (title: string, conversationId: string) => {
-    setConversations((prevConversations) =>
-      prevConversations.map((c) => {
-        if (c.id === conversationId && c.name === "New Conversation") {
-          return { ...c, name: title };
-        }
-        return c;
-      })
-    );
+    handleConversationTitleGeneration(title).then((data) => {
+      setConversations((prevConversations) =>
+        prevConversations.map((c) => {
+          if (c.id === conversationId && c.name === "New Conversation") {
+            return { ...c, name: data.title };
+          }
+          return c;
+        })
+      );
+    });
   };
 
   const setAllConversationStatuses = (status: string) => {

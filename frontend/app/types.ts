@@ -1,29 +1,57 @@
 import { v4 as uuidv4 } from "uuid";
 
 export type Message = {
-  type: "result" | "error" | "User" | "decision" | "status" | "completed";
+  type:
+    | "result"
+    | "error"
+    | "User"
+    | "decision"
+    | "status"
+    | "completed"
+    | "warning";
   conversation_id: string;
-  id?: string;
+  id: string;
   collapsed?: boolean; //added for ticket display
-  payload: ResultPayload | DecisionPayload | TextPayload;
+  payload: ResultPayload | DecisionPayload | TextPayload | ErrorPayload;
 };
 
 export type ResultPayload = {
-  type: "text" | "ticket";
+  type: "text" | "ticket" | "message" | "conversation";
   metadata: any;
-  objects: string[] | Ticket[];
+  objects:
+    | string[]
+    | Ticket[]
+    | ConversationMessage[]
+    | ConversationMessage[][]; // A list of lists of ConversationMessages
 };
 
 export type TextPayload = {
   text: string;
 };
 
+export type ErrorPayload = {
+  error: string;
+};
+
 export type Ticket = {
+  uuid: string;
   issue_id: string;
   issue_updated_at: string;
   issue_title: string;
   issue_content: string;
   issue_created_at: string;
+  issue_author: string;
+  issue_url: string;
+};
+
+export type ConversationMessage = {
+  uuid: string;
+  relevant: boolean;
+  conversation_id: number;
+  message_index: number;
+  message_author: string;
+  message_content: string;
+  message_timestamp: string;
 };
 
 export type DecisionPayload = {
@@ -59,6 +87,17 @@ export type CollectionData = {
   error: string;
 };
 
+export type NERResponse = {
+  text: string;
+  entity_spans: any;
+  noun_spans: [number, number][];
+};
+
+export type TitleResponse = {
+  title: string;
+  error: string;
+};
+
 // Example Objects
 
 export const initialConversation: Conversation = {
@@ -72,6 +111,7 @@ export const initialConversation: Conversation = {
 export const ErrorMessage: Message = {
   type: "error",
   conversation_id: "",
+  id: uuidv4(),
   payload: {
     type: "text",
     metadata: {},
@@ -82,6 +122,7 @@ export const ErrorMessage: Message = {
 export const TextMessage: Message = {
   type: "result",
   conversation_id: "",
+  id: uuidv4(),
   payload: {
     type: "text",
     metadata: {},
@@ -92,12 +133,16 @@ export const TextMessage: Message = {
 export const TicketMessage: Message = {
   type: "result",
   conversation_id: "",
+  id: uuidv4(),
   payload: {
     type: "ticket",
     metadata: {},
     objects: [
       {
         issue_id: "2377991602",
+        uuid: uuidv4(),
+        issue_author: "username",
+        issue_url: "https://github.com/username/repo/issues/2377991602",
         issue_updated_at: "2024-07-02T10:48:53Z",
         issue_title: "Addition of ability to read .docx files",
         issue_content:
@@ -111,6 +156,7 @@ export const TicketMessage: Message = {
 export const DecisionMessage: Message = {
   type: "decision",
   conversation_id: "",
+  id: uuidv4(),
   payload: {
     id: "Node-1",
     decision: "Querying GitHub Collection",

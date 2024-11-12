@@ -6,6 +6,7 @@ import { IoArrowUpCircleSharp } from "react-icons/io5";
 import { Message } from "../types";
 import { IoDocumentText } from "react-icons/io5";
 import { FaGithub } from "react-icons/fa";
+import { IoChatbubble } from "react-icons/io5";
 
 interface QueryInputProps {
   handleSendQuery: (query: string) => void;
@@ -113,6 +114,24 @@ const QueryInput: React.FC<QueryInputProps> = ({
           >
             <FaGithub size={16} />
             <p>Return all GitHub Tickets</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("What was Edward's last conversation?");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <IoChatbubble size={16} />
+            <p>What was Edward's last conversation?</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("To whom did Edward last message?");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <IoChatbubble size={16} />
+            <p>To whom did Edward last message?</p>
           </button>
         </div>
       )}

@@ -16,11 +16,12 @@ const config: Config = {
         primary: "#ffffff",
         secondary: "#464C5F",
         accent: "#5AFF83",
-        error: "#FF5D70",
+        error: "#BA2B2B",
         highlight: "#FF72FF",
+        warning: "#FFBB46",
       },
     },
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/typography")],
 };
 export default config;
