@@ -14,12 +14,13 @@ from starlette.websockets import WebSocketDisconnect
 
 from elysia.tree.tree import Tree, lm, RecursionLimitException
 from elysia.util.logging import backend_print
-from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData
+from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData, TitleData
 from elysia.util.collection_metadata import (
     get_collection_data_types,
     get_collection_data,
 )
 from elysia.globals.weaviate_client import client
+from elysia.api.prompt_executors import TitleCreatorExecutor
 
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
@@ -220,20 +221,40 @@ def named_entity_recognition(data: NERData):
     doc = nlp(data.text)
     
     out = {
-        "text": data.text,  # Use original text instead of rebuilding
+        "text": data.text,  
         "entity_spans": [],
-        "noun_spans": []
+        "noun_spans": [],
+        "error": ""
     }
     
-    # Get entity spans
-    for ent in doc.ents:
-        out["entity_spans"].append((ent.start_char, ent.end_char))
-    
-    # Get noun spans
-    for token in doc:
-        if token.pos_ == "NOUN":
-            span = doc[token.i:token.i + 1]  # Create a span from the token
-            out["noun_spans"].append((span.start_char, span.end_char))
+    try:
+        # Get entity spans
+        for ent in doc.ents:
+            out["entity_spans"].append((ent.start_char, ent.end_char))
+        
+        # Get noun spans
+        for token in doc:
+            if token.pos_ == "NOUN":
+                span = doc[token.i:token.i + 1]  
+                out["noun_spans"].append((span.start_char, span.end_char))
+    except Exception as e:
+        out["error"] = str(e)
     
     return JSONResponse(content=out, status_code=200)
 
+@app.post("/api/title")
+def title(data: TitleData):
+    try:
+        title_creator = TitleCreatorExecutor()
+    except Exception as e:
+        out = {
+            "title": "",
+            "error": str(e)
+        }
+        return JSONResponse(content=out, status_code=200)
+
+    out = {
+        "title": title_creator(data.text),
+        "error": ""
+    }
+    return JSONResponse(content=out, status_code=200)

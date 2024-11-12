@@ -33,6 +33,11 @@ class GenericRetrieval(Retrieval):
         self.type = "generic"
 
     
+class TicketRetrieval(GenericRetrieval):
+    def __init__(self, response, metadata):
+        super().__init__(response, metadata)
+        self.type = "ticket"
+
 class MessageRetrieval(Retrieval):
     def __init__(self, response, metadata):
         if response is None:
@@ -44,14 +49,9 @@ class MessageRetrieval(Retrieval):
                 appender["uuid"] = obj.uuid.hex
                 appender["relevant"] = False
                 output.append(appender)
-                
+
         super().__init__(output, metadata)
         self.type = "message"
-
-class TicketRetrieval(GenericRetrieval):
-    def __init__(self, response, metadata):
-        super().__init__(response, metadata)
-        self.type = "ticket"
 
 class ConversationRetrieval(Retrieval):
     def __init__(self, response, metadata):

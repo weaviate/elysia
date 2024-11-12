@@ -17,3 +17,6 @@ class GetCollectionData(BaseModel):
 
 class NERData(BaseModel):
     text: str
+
+class TitleData(BaseModel):
+    text: str

@@ -30,17 +30,17 @@ class AgenticQuery:
             if "previous_queries" in metadata:
                 self.previous_queries.extend(metadata["previous_queries"])
 
-    def _initialise_query(self, user_prompt: str, previous_reasoning: dict):
+    def _initialise_query(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str]):
 
         # run initialiser to get collection name and return type
         initialiser = self.query_initialiser(
             user_prompt=user_prompt,
             reference=reference,
-            previous_reasoning=previous_reasoning
+            previous_reasoning=previous_reasoning,
+            data_queried=data_queried
         )
 
-
-        return initialiser.collection_name, initialiser.return_type
+        return initialiser.collection_name, initialiser.return_type, initialiser.reasoning
 
     def _create_query(
         self, 
@@ -90,8 +90,13 @@ class AgenticQuery:
 
     async def query(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
 
-        collection_name, return_type = self._initialise_query(user_prompt, previous_reasoning)
+        data_queried = kwargs.get("data_queried", [])
+
+        collection_name, return_type, reasoning = self._initialise_query(user_prompt, previous_reasoning, data_queried)
         yield Status(f"Writing query for collection: {collection_name}")
+
+        # add reasoning from initialiser to previous reasoning
+        previous_reasoning["query_initialiser"] = reasoning
 
         query_output = self._create_query(user_prompt, collection_name, previous_reasoning, available_information)
         yield Status(f"Querying {collection_name}")

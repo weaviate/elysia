@@ -12,11 +12,12 @@ class QueryInitialiserExecutor(dspy.Module):
         super().__init__()
         self.query_initialiser_prompt = dspy.ChainOfThought(construct_query_initialiser_prompt(collection_names, return_types))
 
-    def forward(self, user_prompt: str, reference: str, previous_reasoning: dict) -> str:
+    def forward(self, user_prompt: str, reference: str, previous_reasoning: dict, data_queried: list[str]) -> str:
         return self.query_initialiser_prompt(
             user_prompt=user_prompt,
             reference=reference,
-            previous_reasoning=previous_reasoning
+            previous_reasoning=previous_reasoning,
+            data_queried=data_queried
         )
 
 class QueryCreatorExecutor(dspy.Module):
