@@ -191,14 +191,13 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             Break down all the requests in the user_prompt, and evaluate whether all the possible actions that can be taken to answer the user have been taken.
             To answer this, you should look at the previous_reasoning field, to see if everything that can be done has been done.
             You should also see if there are any other actions that could have been taken in the past that need to be completed.
-            Output a single boolean value, indicating whether all necessary actions have been completed.
             """.strip()
         )
         all_actions_completed = dspy.OutputField(
             description="""
-            _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), will all actions that can be taken to answer the user have been taken?
+            _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), 
+            will all actions that can be taken to answer the user have been taken?
             Base this on the {{user_prompt}}, the {{instruction}} for the task decided on, and the history of completed tasks.
-            You should also base your decision on the available options that were in the previous tasks, if an option is available that should be explored, then the overall goal is not completed.
             It is possible that the task is impossible, in which case you have done all actions possible, so you should return True, as all actions are completed.
             If you identify a task that is in the previous options that hasn't been completed yet, but should be based on the user prompt, then you should return False.
             Otherwise, you should return True.

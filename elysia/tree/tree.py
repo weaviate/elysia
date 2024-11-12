@@ -261,7 +261,9 @@ class Tree:
 
             if isinstance(result, Objects):
                 self._update_returns(result, user_prompt)
-                yield self._parse_result(result)
+
+                if len(result.objects) > 0:
+                    yield self._parse_result(result)
     
     def _parse_error(self, error: str):
         return parse_error(error, self.conversation_id)
