@@ -28,6 +28,9 @@ class AgenticQuery:
             self.query_initialiser.load(query_initialiser_filepath)
             backend_print(f"[green]Loaded query initialiser[/green] model at [italic magenta]{query_initialiser_filepath}[/italic magenta]")
 
+    def set_collection_names(self, collection_names: list[str]):
+        self.collection_names = collection_names
+
     def _find_previous_queries(self, collection_name: str, available_information: Returns):
 
         self.previous_queries = []
@@ -53,7 +56,6 @@ class AgenticQuery:
 
         data_queried = kwargs.get("data_queried", [])
 
-        yield Status(f"Determining which collection to query")
         initialiser = self._initialise_query(user_prompt, previous_reasoning, data_queried)
 
         reasoning = initialiser.reasoning

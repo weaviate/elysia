@@ -62,16 +62,16 @@ class ConversationRetrieval(Retrieval):
             filters=Filter.by_property("conversation_id").equal(conversation_id)
         )
 
-        items_in_conversation = []
+        output = []
         for obj in items_in_conversation.objects:
-            items_in_conversation.append({k: v for k, v in obj.properties.items()})
-            items_in_conversation[-1]["uuid"] = obj.uuid.hex
-            if items_in_conversation[-1]["message_index"] == message_index:
-                items_in_conversation[-1]["relevant"] = True
+            output.append({k: v for k, v in obj.properties.items()})
+            output[-1]["uuid"] = obj.uuid.hex
+            if output[-1]["message_index"] == message_index:
+                output[-1]["relevant"] = True
             else:
-                items_in_conversation[-1]["relevant"] = False
+                output[-1]["relevant"] = False
 
-        return items_in_conversation
+        return output
 
     def _return_all_messages_in_conversation(self, objects: list[dict], metadata: dict):
         """

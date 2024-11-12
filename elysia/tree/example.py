@@ -18,7 +18,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "What did Edward say in his last slack message and email?"
+        "retrieve the most recent conversation edward had"
     )
 
 

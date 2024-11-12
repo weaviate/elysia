@@ -272,6 +272,13 @@ class Tree:
 
                 if len(result.objects) > 0:
                     yield self._parse_result(result)
+
+    def _remove_collection_from_data(self, collection_name: str):
+        if collection_name in self.data_queried:
+            del self.data_queried[collection_name]
+        
+        if collection_name in self.returns.retrieved:
+            del self.returns.retrieved[collection_name]
     
     def _parse_error(self, error: str):
         return parse_error(error, self.conversation_id)
@@ -290,6 +297,17 @@ class Tree:
     
     def _parse_finished(self):
         return parse_finished(self.conversation_id)
+
+    def set_collection_names(self, collection_names: list[str], remove_data: bool = False):
+        
+        collection_names_to_remove = [name for name in self.collection_names if name not in collection_names]
+
+        self.collection_names = collection_names
+        self.querier.set_collection_names(collection_names)
+
+        if remove_data:
+            for collection_name in collection_names_to_remove:
+                self._remove_collection_from_data(collection_name)
 
     def hard_reset(self):
         self = Tree(verbosity=self.verbosity)

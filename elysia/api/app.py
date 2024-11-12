@@ -15,7 +15,7 @@ from starlette.websockets import WebSocketDisconnect
 from elysia.tree.tree import Tree, lm, RecursionLimitException
 from elysia.util.logging import backend_print
 from elysia.util.api import parse_error
-from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData, TitleData
+from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData, TitleData, SetCollectionsData
 from elysia.util.collection_metadata import (
     get_collection_data_types,
     get_collection_data,
@@ -265,3 +265,13 @@ async def title(data: TitleData):
         "error": ""
     }
     return JSONResponse(content=out, status_code=200)
+
+@app.post("/api/set_collections")
+async def set_collections(data: SetCollectionsData):
+    
+    global tree_manager
+
+    tree = tree_manager.get_tree(data.user_id, data.conversation_id)
+    tree.set_collection_names(data.collection_names, remove_data=data.remove_data)
+
+    return JSONResponse(content={"error": ""}, status_code=200)

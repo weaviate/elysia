@@ -191,6 +191,12 @@ class QueryCreatorPrompt(dspy.Signature):
         limit=3
     )
     ```
+    
+    Remember the most important distinction between the three types of queries:
+    - `near_text` and `hybrid` have the `query` argument, which you use for _searching_ the database. These _can_ use `filters` but they CANNOT use `sort`.
+    - `fetch_objects` is for retrieving objects that does not need and sort of search (and only using filters/sorting). This has the `filters` argument, and `sort` argument.
+
+    So, if the user prompt requires a search, you should use `near_text` or `hybrid`. But if it is only asking for objects based on certain properties, you should use `fetch_objects`.
 
     Use the above examples to guide you, but create your own query that is specific to the user prompt.
     You should not use one of the above examples directly, but rather use them as a guide to create your own query.

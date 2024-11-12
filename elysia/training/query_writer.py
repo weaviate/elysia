@@ -11,7 +11,7 @@ from dspy.teleprompt import LabeledFewShot
 
 from weaviate.classes.query import Filter, MetadataQuery, Sort
 
-from elysia.querying.prompt_executors import QueryCreatorExecutor
+from elysia.querying.prompt_executors import QueryExecutor
 from elysia.globals.weaviate_client import client
 
 def remove_whitespace(code: str) -> str:
@@ -251,7 +251,7 @@ def train_query_creator_fewshot():
         "elysia",
         "training",
         "dspy_models",
-        "agentic_query"
+        "query_writer"
     )
     os.makedirs(filepath, exist_ok=True)  # This creates the directory if it doesn't exist
 
