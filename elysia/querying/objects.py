@@ -11,6 +11,13 @@ class Retrieval(Objects):
     def __init__(self, output, metadata):
         super().__init__(output, metadata)
 
+    def to_json(self):
+        for object in self.objects:
+            for key, value in object.items():
+                if isinstance(value, datetime.datetime):
+                    object[key] = format_datetime(value)
+        return super().to_json()
+    
 class GenericRetrieval(Retrieval):
     def __init__(self, response, metadata):
         if response is None:
@@ -25,16 +32,20 @@ class GenericRetrieval(Retrieval):
         super().__init__(output, metadata)
         self.type = "generic"
 
-    def to_json(self):
-        for object in self.objects:
-            for key, value in object.items():
-                if isinstance(value, datetime.datetime):
-                    object[key] = format_datetime(value)
-        return super().to_json()
     
-class MessageRetrieval(GenericRetrieval):
+class MessageRetrieval(Retrieval):
     def __init__(self, response, metadata):
-        super().__init__(response, metadata)
+        if response is None:
+            output = []
+        else:
+            output = []
+            for obj in response.objects:
+                appender = {k: v for k, v in obj.properties.items()}
+                appender["uuid"] = obj.uuid.hex
+                appender["relevant"] = False
+                output.append(appender)
+                
+        super().__init__(output, metadata)
         self.type = "message"
 
 class TicketRetrieval(GenericRetrieval):
