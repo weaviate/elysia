@@ -1,12 +1,19 @@
 import datetime
-
 import dspy
+
+from weaviate.classes.aggregate import GroupByAggregate
 
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import reference
 from elysia.util.logging import backend_print
-from elysia.querying.prompt_executors import QueryExecutor, QueryInitialiserExecutor, ObjectSummaryExecutor
+from elysia.querying.prompt_executors import (
+    QueryExecutor, 
+    QueryInitialiserExecutor, 
+    PropertyGroupingExecutor, 
+    ObjectSummaryExecutor
+)
 from elysia.tree.objects import Returns, Objects, Status, Text
+
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval
 
 class AgenticQuery:
@@ -20,8 +27,12 @@ class AgenticQuery:
         self.collection_names = collection_names
 
         self.query_initialiser = QueryInitialiserExecutor(self.collection_names, return_types).activate_assertions()        
+        self.property_grouper = PropertyGroupingExecutor()
         self.querier = QueryExecutor().activate_assertions(max_backtracks=3)
+        # self.aggregator = AggregateCollectionExecutor().activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions()
+        
+
         if len(query_creator_filepath) > 0:
             self.querier.load(query_creator_filepath)
             backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_creator_filepath}[/italic magenta]")
@@ -54,11 +65,27 @@ class AgenticQuery:
 
         return initialiser
 
-    
+    def _aggregate(self, collection_name: str, property_name: str):
+        collection = client.collections.get(collection_name)
+        aggregation = collection.aggregate.over_all(
+            total_count=True,
+            group_by=GroupByAggregate(prop=property_name)
+        )
+
+        out = {}
+        for result in aggregation.groups:
+            if result.grouped_by.prop in out:
+                out[result.grouped_by.prop][result.grouped_by.value] = result.total_count
+            else:
+                out[result.grouped_by.prop] = {result.grouped_by.value: result.total_count}
+
+        return out
+        
     async def query(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
 
         data_queried = kwargs.get("data_queried", [])
 
+        # -- Step 1: Determine collection and other fields
         initialiser = self._initialise_query(user_prompt, previous_reasoning, data_queried)
 
         reasoning = initialiser.reasoning
@@ -66,8 +93,14 @@ class AgenticQuery:
         return_type = initialiser.return_type
         output_type = initialiser.output_type
 
-        yield Text([initialiser.text_return], {})
-        
+        if initialiser.text_return is not None:
+            yield Text([initialiser.text_return], {})
+
+        self._find_previous_queries(collection_name, available_information)
+
+        # add reasoning from initialiser to previous reasoning just for query step
+        previous_reasoning["query_initialiser"] = reasoning
+
         # get example fields from collection
         example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
         for key in example_field:
@@ -76,56 +109,73 @@ class AgenticQuery:
 
         data_fields = list(example_field.keys())
 
-        self._find_previous_queries(collection_name, available_information)
+        # -- Step 2: Determine property to group by and aggregate to get information (TODO: somehow cache this)
+        property_grouper = self.property_grouper(user_prompt, reference, previous_reasoning, data_fields, example_field)
+        property_name = property_grouper.property_name
+        
+        yield Text([property_grouper.text_return], {})
 
-        # add reasoning from initialiser to previous reasoning just for query step
-        previous_reasoning["query_initialiser"] = reasoning
+        aggregation = self._aggregate(collection_name, property_name)
 
+        # -- Step 3: Query the collection
         yield Status(f"Querying {collection_name}")
-        response, code, text_return = self.querier(
-            user_prompt, 
-            reference, 
-            self.previous_queries, 
-            data_fields, 
-            example_field, 
-            previous_reasoning,
-            collection_name
+        response, code, text_return, is_query_possible = self.querier(
+            user_prompt = user_prompt, 
+            reference = reference, 
+            previous_queries = self.previous_queries, 
+            data_fields = data_fields, 
+            example_field = example_field, 
+            collection_metadata = aggregation,
+            previous_reasoning = previous_reasoning,
+            collection_name = collection_name
         )
         yield Text([text_return], {})
-        yield Status(f"Retrieved {len(response.objects)} objects from {collection_name}")
 
-        if code is not None:
-            self.previous_queries.append(code)
+        if is_query_possible:
 
-        objects = []
-        for obj in response.objects:
-            objects.append({k: v for k, v in obj.properties.items()})
-            objects[-1]["uuid"] = obj.uuid.hex
+            yield Status(f"Retrieved {len(response.objects)} objects from {collection_name}")
 
-        if output_type == "summary":
-            yield Status(f"Generating summaries of the retrieved objects")
-            object_summaries = self.object_summariser(objects)
-            yield Status(f"Summarised {len(object_summaries)} objects")
+            if code is not None:
+                self.previous_queries.append(code)
 
-            # attach summaries to objects
-            for i, obj in enumerate(objects):
-                if i < len(object_summaries):
-                    obj["summary"] = object_summaries[i]
-                else:
+            objects = []
+            for obj in response.objects:
+                objects.append({k: v for k, v in obj.properties.items()})
+                objects[-1]["uuid"] = obj.uuid.hex
+
+            if output_type == "summary":
+                yield Status(f"Generating summaries of the retrieved objects")
+                object_summaries = self.object_summariser(objects)
+                yield Status(f"Summarised {len(object_summaries)} objects")
+
+                # attach summaries to objects
+                for i, obj in enumerate(objects):
+                    if i < len(object_summaries):
+                        obj["summary"] = object_summaries[i]
+                    else:
+                        obj["summary"] = ""
+
+            else:
+                for obj in objects:
                     obj["summary"] = ""
 
-        else:
-            for obj in objects:
-                obj["summary"] = ""
+            metadata = {
+                "previous_queries": self.previous_queries, 
+                "collection_name": collection_name,
+                "collection_metadata": aggregation
+            }
 
-        if return_type == "conversation":
-            yield ConversationRetrieval(objects, {"previous_queries": self.previous_queries, "collection_name": collection_name})
-        elif return_type == "message":
-            yield MessageRetrieval(objects, {"previous_queries": self.previous_queries, "collection_name": collection_name})
-        elif return_type == "ticket":
-            yield TicketRetrieval(objects, {"previous_queries": self.previous_queries, "collection_name": collection_name})
+            if return_type == "conversation":
+                yield ConversationRetrieval(objects, metadata)
+            elif return_type == "message":
+                yield MessageRetrieval(objects, metadata)
+            elif return_type == "ticket":
+                yield TicketRetrieval(objects, metadata)
+            else:
+                yield GenericRetrieval(objects, metadata)
+        
         else:
-            yield GenericRetrieval(objects, {"previous_queries": self.previous_queries, "collection_name": collection_name})
+            yield GenericRetrieval([], {"collection_name": collection_name, "impossible_prompts": [user_prompt]})
 
     def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
         return self.query(user_prompt, available_information, previous_reasoning, **kwargs)

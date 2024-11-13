@@ -3,13 +3,20 @@ import datetime
 
 from weaviate.classes.query import Filter, Sort
 from weaviate.collections.classes.internal import QueryReturn
+from weaviate.collections.classes.aggregate import AggregateGroupByReturn, AggregateReturn
 
 from typing import Callable
 
 from elysia.tree.objects import Returns
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import reference
-from elysia.querying.prompt_templates import construct_query_initialiser_prompt, QueryCreatorPrompt, ObjectSummaryPrompt
+from elysia.querying.prompt_templates import (
+    construct_query_initialiser_prompt, 
+    QueryCreatorPrompt, 
+    ObjectSummaryPrompt, 
+    AggregateCollectionPrompt, 
+    PropertyGroupingPrompt
+)
 from elysia.util.logging import backend_print
 from elysia.util.parsing import format_datetime
 
@@ -30,44 +37,34 @@ class QueryInitialiserExecutor(dspy.Module):
             available_collections=self.available_collections,
             available_return_types=self.available_return_types
         )
+    
+class PropertyGroupingExecutor(dspy.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.property_grouping_prompt = dspy.ChainOfThought(PropertyGroupingPrompt)
+
+    def forward(
+        self, 
+        user_prompt: str, 
+        reference: str, 
+        previous_reasoning: dict, 
+        data_fields: list[str], 
+        example_field: dict
+    ) -> str:
+        return self.property_grouping_prompt(
+            user_prompt=user_prompt,
+            reference=reference,
+            previous_reasoning=previous_reasoning,
+            data_fields=data_fields,
+            example_field=example_field
+        )
 
 class QueryExecutor(dspy.Module):
 
     def __init__(self):
         super().__init__()
         self.query_creator_prompt = dspy.ChainOfThought(QueryCreatorPrompt)
-
-    def _create_query(
-        self, 
-        user_prompt: str, 
-        collection_name: str,
-        previous_reasoning: dict,
-        available_information: Returns
-    ):
-
-        collection = client.collections.get(collection_name)
-
-        # get example fields from collection
-        example_field = collection.query.fetch_objects(limit=1).objects[0].properties
-        for key in example_field:
-            if isinstance(example_field[key], datetime.datetime):
-                example_field[key] = example_field[key].isoformat()
-
-        data_fields = list(example_field.keys())
-
-        self._find_previous_queries(collection_name, available_information)
-
-        # run creator to get query code
-        query_output = self.query_creator(
-            user_prompt=user_prompt,
-            reference=reference,
-            previous_queries=self.previous_queries,
-            data_fields=data_fields,
-            example_field=example_field,
-            previous_reasoning=previous_reasoning
-        )
-
-        return query_output
 
     def _execute_code(self, query_code: str, collection_name: str) -> dict:
 
@@ -88,8 +85,9 @@ class QueryExecutor(dspy.Module):
         data_fields: list, 
         example_field: dict, 
         previous_reasoning: dict,
-        collection_name: str
-    ) -> str:
+        collection_name: str,
+        collection_metadata: dict
+    ) -> tuple[dict, str, str, bool]:
 
         # run query code generation
         prediction = self.query_creator_prompt(
@@ -98,7 +96,8 @@ class QueryExecutor(dspy.Module):
             data_fields=data_fields, 
             example_field=example_field, 
             previous_queries=previous_queries,
-            previous_reasoning=previous_reasoning
+            previous_reasoning=previous_reasoning,
+            collection_metadata=collection_metadata
         )
 
         dspy.Suggest(
@@ -106,6 +105,18 @@ class QueryExecutor(dspy.Module):
             f"The query code you have produced: {prediction.code} has already been used. Please produce a new query code.",
             target_module=self.query_creator_prompt
         )
+
+        try:
+            is_query_possible = bool(prediction.is_query_possible)
+        except Exception as e:
+            try:
+                dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_creator_prompt)
+            except Exception as e:
+                backend_print(f"Error getting is_query_possible: {e}")
+                is_query_possible = True
+
+        if not is_query_possible:
+            return QueryReturn(objects=[]), None, None, False
 
         # catch any errors in query execution for dspy assert
         try:
@@ -118,9 +129,59 @@ class QueryExecutor(dspy.Module):
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing query code: {e}")
-                return QueryReturn(objects=[]), None, "Sorry, that query failed to run. Would you mind asking again?"
+                return QueryReturn(objects=[]), None, None, False
 
 
+        return response, prediction.code, prediction.text_return, is_query_possible
+
+class AggregateCollectionExecutor(dspy.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.aggregate_collection_prompt = dspy.ChainOfThought(AggregateCollectionPrompt)
+
+    def _execute_code(self, aggregation_code: str, collection_name: str) -> dict:
+
+        collection = client.collections.get(collection_name)
+
+        if aggregation_code.startswith("```python") and aggregation_code.endswith("```"):
+            aggregation_code = aggregation_code[8:-3]
+        elif aggregation_code.startswith("```") and aggregation_code.endswith("```"):
+            aggregation_code = aggregation_code[3:-3]
+   
+        return eval(aggregation_code)
+
+    def forward(
+        self, 
+        user_prompt: str, 
+        reference: str, 
+        data_fields: list, 
+        example_field: dict, 
+        previous_reasoning: dict, 
+        collection_name: str
+    ) -> str:
+        
+        prediction = self.aggregate_collection_prompt(
+            user_prompt=user_prompt, 
+            reference=reference, 
+            previous_reasoning=previous_reasoning,
+            data_fields=data_fields, 
+            example_field=example_field, 
+        )
+
+        # catch any errors in query execution for dspy assert
+        try:
+            response = self._execute_code(prediction.code, collection_name)
+        except Exception as e:
+
+            try:
+                # assert will raise an error if its failed multiple times
+                dspy.Assert(False, f"Error executing aggregation code:\n{prediction.code}\nERROR: {e}", target_module=self.aggregate_collection_prompt)
+            except Exception as e:
+                # in which case we just print the error and return 0 objects
+                backend_print(f"Error executing aggregation code: {e}")
+                return AggregateReturn(properties={}, total_count=0), None, None
+            
         return response, prediction.code, prediction.text_return
 
 class ObjectSummaryExecutor(dspy.Module):

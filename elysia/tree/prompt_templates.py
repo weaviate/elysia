@@ -109,6 +109,14 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         #     """.strip(),
         #     format = str
         # )
+        collection_names = dspy.InputField(
+            description="""
+            A list of the names of the collections that exist to be queried. 
+            Use this to determine if all (necessary) collections have been queried, combined with the data_queried field.
+            This should inform your decision on whether to query another collection or not.
+            """.strip(),
+            format = str
+        )
         data_queried = dspy.InputField(
             description="""
             A list of items, showing whether a query has been completed or not.

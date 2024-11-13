@@ -21,7 +21,7 @@ from dspy.primitives.assertions import assert_transform_module, backtrack_handle
 
 
 # lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
-
+global lm
 lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
 # lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
 
@@ -64,6 +64,7 @@ class DecisionNode:
                previous_reasoning: dict,
                idx: int,
                data_queried: dict,
+               collection_names: list[str],
                **kwargs):
         
         output, self.completed = self.decision_executor(
@@ -76,6 +77,7 @@ class DecisionNode:
             data_queried = data_queried,
             decision_tree = decision_tree,
             previous_reasoning = previous_reasoning,
+            collection_names = collection_names,
             idx = idx
         )
 
@@ -159,9 +161,9 @@ class Tree:
             If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), 
             you should assume that the task is impossible, hence choose text_response to reply this to the user.
             Otherwise, if you haven't queried yet, you should query the knowledge base.
-            If you don't need to query, i.e. the user is talking to you, choose text_response.
+            If you don't need to query, i.e. the user is talking to you, or you have already queried and there is no new information, choose text_response.
             If you have queried, and there is available information, you should choose summarize to reply this to the user.
-            If the user is just talking to you and requires no information, choose text_response.
+            If you choose summarize, you should set all_actions_completed to True, since this is the last decision to make.
             """,
             options = {
                 "query": {
@@ -241,7 +243,7 @@ class Tree:
         
         return tree
 
-    def _update_returns(self, action_result: str | list, user_prompt: str):
+    def _update_returns(self, action_result: Retrieval | Text, user_prompt: str):
 
         if isinstance(action_result, Retrieval): 
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
@@ -322,6 +324,7 @@ class Tree:
         self.decision_history = []
         self.previous_reasoning = {}
         self.num_trees_completed = 0
+        self.data_queried = {}
 
     def add_decision_node(self, id: str, instruction: str, options: dict[str, dict[str, str]], root: bool = False):
         decision_node = DecisionNode(id, instruction, options, root, dspy_model = self.dspy_model)
@@ -362,6 +365,7 @@ class Tree:
                 data_queried=self.data_queried,
                 decision_tree=self.tree,
                 previous_reasoning=self.previous_reasoning,
+                collection_names=self.collection_names,
                 idx=self.num_trees_completed
             )
 
