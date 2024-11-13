@@ -34,7 +34,7 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
 
   return (
     <div
-      className="flex flex-col flex-grow w-full cursor-pointer transition-all duration-300 hover:bg-foreground_alt bg-background_alt p-5 rounded-xl justify-start items-start gap-2 chat-animation"
+      className="flex flex-col flex-grow w-full cursor-pointer transition-all duration-300 hover:bg-foreground_alt bg-foreground p-5 shadow-lg rounded-xl justify-start items-start gap-2 chat-animation"
       onClick={() => setTicketCollapsed((prev) => !prev)}
     >
       <div className="flex flex-col gap-2 w-full">
