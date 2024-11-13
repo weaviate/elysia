@@ -12,11 +12,16 @@ import { BsChatFill } from "react-icons/bs";
 import { RiFlowChart } from "react-icons/ri";
 import FlowDisplay from "./flow-display";
 import { ReactFlow, ReactFlowProvider } from "@xyflow/react";
+import SelectDropdown from "../navigation/select-dropdown";
 
 interface ChatInterfaceProps {
   currentConversation: string;
   toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
   conversations: Conversation[];
+  toggleCollectionEnabled: (
+    collection_id: string,
+    conversationId: string
+  ) => void;
   addMessageToConversation: (
     message: Message[],
     conversationId: string
@@ -28,6 +33,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentConversation,
   conversations,
   toggleMessageCollapsed,
+  toggleCollectionEnabled,
   addMessageToConversation,
   handleQuery,
 }) => {
@@ -77,7 +83,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="h-screen flex flex-col items-center justify-start flex-grow">
-      <div className="flex w-full justify-end items-end p-6">
+      <div className="flex w-full justify-between items-center p-6">
+        <div className="flex flex-col gap-2">
+          <SelectDropdown
+            title="Collections"
+            selections={
+              conversations.find((c) => c.id === currentConversation)
+                ?.enabled_collections || {}
+            }
+            toggleOption={toggleCollectionEnabled}
+            currentConversation={currentConversation}
+          />
+        </div>
         <div className="flex gap">
           <button
             className={`btn btn-round ${

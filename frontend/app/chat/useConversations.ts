@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Collection,
   Conversation,
   DecisionPayload,
   initialConversation,
@@ -7,16 +8,23 @@ import {
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 
-import { handleConversationTitleGeneration } from "./api";
+import { handleConversationTitleGeneration, setCollectionEnabled } from "./api";
 
-export function useConversations(id: string) {
+export function useConversations(id: string, collections: Collection[]) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<string | null>(
     null
   );
 
   const addConversation = () => {
-    const newConversation = { ...initialConversation, id: uuidv4() };
+    const newConversation = {
+      ...initialConversation,
+      id: uuidv4(),
+      enabled_collections: collections.reduce(
+        (acc, c) => ({ ...acc, [c.name]: true }),
+        {}
+      ),
+    };
     setConversations([...(conversations || []), newConversation]);
     setCurrentConversation(newConversation.id);
   };
@@ -111,6 +119,66 @@ export function useConversations(id: string) {
     );
   };
 
+  const initializeEnabledCollections = (
+    collections: { [key: string]: boolean },
+    collection_id: string
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === collection_id) {
+          return { ...c, enabled_collections: collections };
+        }
+        return c;
+      })
+    );
+  };
+
+  const toggleCollectionEnabled = (
+    collection_id: string,
+    conversationId: string
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === conversationId) {
+          const new_enabled_collections = {
+            ...c.enabled_collections,
+            [collection_id]: !c.enabled_collections[collection_id],
+          };
+          const active_collections = Object.keys(
+            new_enabled_collections
+          ).filter((c) => new_enabled_collections[c]);
+          setCollectionEnabled(active_collections, false, conversationId, id);
+          return {
+            ...c,
+            enabled_collections: new_enabled_collections,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  useEffect(() => {
+    if (!collections) return;
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (
+          !c.enabled_collections ||
+          Object.keys(c.enabled_collections).length === 0
+        ) {
+          return {
+            ...c,
+            enabled_collections: collections.reduce(
+              (acc, c) => ({ ...acc, [c.name]: true }),
+              {}
+            ),
+          };
+        }
+        return c;
+      })
+    );
+  }, [collections]);
+
   return {
     setConversations,
     setCurrentConversation,
@@ -125,5 +193,7 @@ export function useConversations(id: string) {
     toggleMessageCollapsed,
     addDecisionToConversation,
     setConversationTitle,
+    initializeEnabledCollections,
+    toggleCollectionEnabled,
   };
 }

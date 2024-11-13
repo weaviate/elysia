@@ -17,6 +17,22 @@ export default function Home() {
   const [id, setId] = useState<string>();
 
   const {
+    collections,
+    fetchCollections,
+    selectedCollection,
+    selectCollection,
+    collectionData,
+    loadingCollection,
+    pageUp,
+    pageDown,
+    pageUpMax,
+    pageSize,
+    pageDownMax,
+    maxPage,
+    page,
+  } = useCollections();
+
+  const {
     setConversations,
     setCurrentConversation,
     conversations,
@@ -29,8 +45,9 @@ export default function Home() {
     setConversationTitle,
     addDecisionToConversation,
     toggleMessageCollapsed,
+    toggleCollectionEnabled,
     addMessageToConversation,
-  } = useConversations(id || "");
+  } = useConversations(id || "", collections);
 
   const { socketOnline, sendQuery } = useSocket(
     addMessageToConversation,
@@ -38,23 +55,6 @@ export default function Home() {
     setAllConversationStatuses,
     addDecisionToConversation
   );
-
-  const {
-    collections,
-    fetchCollections,
-    selectedCollection,
-    selectCollection,
-    collectionData,
-    loadingCollection,
-    loadingCollections,
-    pageUp,
-    pageDown,
-    pageUpMax,
-    pageSize,
-    pageDownMax,
-    maxPage,
-    page,
-  } = useCollections();
 
   useEffect(() => {
     setConversations([initialConversation]);
@@ -91,6 +91,7 @@ export default function Home() {
         <ChatInterface
           currentConversation={currentConversation || ""}
           conversations={conversations}
+          toggleCollectionEnabled={toggleCollectionEnabled}
           addMessageToConversation={addMessageToConversation}
           handleQuery={handleQuery}
           toggleMessageCollapsed={toggleMessageCollapsed}

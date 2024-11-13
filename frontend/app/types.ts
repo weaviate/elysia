@@ -66,6 +66,7 @@ export type DecisionPayload = {
 export type Conversation = {
   messages: Message[];
   decisions: DecisionPayload[];
+  enabled_collections: { [key: string]: boolean };
   id: string;
   name: string;
   tree: any[];
@@ -100,6 +101,10 @@ export type TitleResponse = {
   error: string;
 };
 
+export type ErrorResponse = {
+  error: string;
+};
+
 // Example Objects
 
 export const initialConversation: Conversation = {
@@ -107,6 +112,7 @@ export const initialConversation: Conversation = {
   id: uuidv4(),
   decisions: [],
   name: "New Conversation",
+  enabled_collections: {},
   tree: [],
   current: "",
 };

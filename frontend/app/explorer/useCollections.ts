@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Collection, CollectionData } from "../types";
 import { getCollection, getCollections } from "./api";
+
 export function useCollections() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loadingCollections, setLoadingCollections] = useState(false);
