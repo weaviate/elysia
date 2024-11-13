@@ -1,9 +1,10 @@
 import os
 import logging
-from pathlib import Path
 import asyncio
-
+import json
 import spacy
+
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, Request, status
 from fastapi.responses import FileResponse, JSONResponse
@@ -251,7 +252,7 @@ async def title(data: TitleData):
     try:
         title_creator = TitleCreatorExecutor()
         title = title_creator(data.text)
-        logger.info(f"Returning title: {title}")
+        logger.info(f"Returning title: {title.title}")
     except Exception as e:
         logger.error(f"Error in title: {str(e)}")
         out = {
@@ -268,15 +269,6 @@ async def title(data: TitleData):
 
 @app.post("/api/set_collections")
 async def set_collections(data: SetCollectionsData):
-    
     global tree_manager
-    if len(data.collection_names) == 0:
-        collection_names = await collections()
-        collection_names = [collection["name"] for collection in collection_names["collections"]]
-    else:
-        collection_names = data.collection_names
-
-    tree = tree_manager.get_tree(data.user_id, data.conversation_id)
-    tree.set_collection_names(collection_names, remove_data=data.remove_data)
-
+    tree_manager.get_tree(data.user_id, data.conversation_id).set_collection_names(data.collection_names, remove_data=data.remove_data)
     return JSONResponse(content={"error": ""}, status_code=200)

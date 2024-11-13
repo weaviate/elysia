@@ -78,10 +78,22 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
         output_type = dspy.OutputField(
             desc="""
             One of: 'original' or 'summary'. Output the name exactly as it appears.
-            'original' means the user wants the original objects returned, 
-            'summary' means the user wants an individual itemised summary of each of the objects returned.
+            'original' means you will return the original objects returned. Use this most of the time, unless the user has specifically asked for summaries.
+            'summary' means you will return an itemised summary of each of the objects returned.
             You should only choose 'summary' if the user has specifically asked for individual summaries of the objects in the user_prompt.
-            Most of the time, you should choose 'original', which will return the objects normally.
+            I.e., in the user prompt, they have directly asked for summaries of the objects.
+            Otherwise, you should choose 'original'.
+            Be _very_ sparing with 'summary', as it is more expensive to compute.
+            """.strip(),
+            format = str
+        )
+        text_return = dspy.OutputField(
+            desc="""
+            A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
+            Do not include many technical details e.g. variable names, 
+            just a brief explanation in plain English, in a chat message format, 
+            so you should use markdown and respond to the user in a friendly way.
+            Do not use emojis, and do not ask the user to confirm or approve of your actions.
             """.strip(),
             format = str
         )
@@ -263,6 +275,16 @@ class QueryCreatorPrompt(dspy.Signature):
     )
     code = dspy.OutputField(
         desc="The generated query code only. Do not enclose it in quotes or in ```. Just the code only.",
+        format = str
+    )
+    text_return = dspy.OutputField(
+        desc="""
+        A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
+        Do not include many technical details e.g. variable names, 
+        just a brief explanation in plain English, in a chat message format, 
+        so you should use markdown and respond to the user in a friendly way.
+        Do not use emojis, and do not ask the user to confirm or approve of your actions.
+        """.strip(),
         format = str
     )
 
