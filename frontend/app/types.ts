@@ -35,6 +35,7 @@ export type ErrorPayload = {
 
 export type Ticket = {
   uuid: string;
+  summary?: string;
   issue_id: string;
   issue_updated_at: string;
   issue_title: string;

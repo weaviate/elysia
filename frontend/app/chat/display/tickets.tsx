@@ -31,7 +31,7 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
           </p>
         </div>
       )}
-      <div className="flex flex-wrap w-full justify-start items-start gap-3">
+      <div className="flex flex-col w-full justify-start items-start gap-3">
         {(ticketCollapsed ? tickets.slice(0, 3) : tickets).map(
           (ticket, idx) => (
             <TicketMessageDisplay

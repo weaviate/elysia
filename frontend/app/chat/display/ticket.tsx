@@ -13,6 +13,7 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
   ticket,
 }) => {
   const [ticketCollapsed, setTicketCollapsed] = useState(true);
+  const [showSummary, setShowSummary] = useState(ticket.summary ? true : false);
 
   const formatDate = (date: string) => {
     const dateObj = new Date(date);
@@ -27,9 +28,13 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
     window.open(ticket.issue_url, "_blank");
   };
 
+  const toggleSummary = () => {
+    setShowSummary((prev) => !prev);
+  };
+
   return (
     <div
-      className="flex flex-col flex-grow max-w-full cursor-pointer transition-all duration-300 hover:bg-foreground_alt bg-background_alt p-5 rounded-xl justify-start items-start gap-2 chat-animation"
+      className="flex flex-col flex-grow w-full cursor-pointer transition-all duration-300 hover:bg-foreground_alt bg-background_alt p-5 rounded-xl justify-start items-start gap-2 chat-animation"
       onClick={() => setTicketCollapsed((prev) => !prev)}
     >
       <div className="flex flex-col gap-2 w-full">
@@ -43,24 +48,44 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
               this on {formatDate(ticket.issue_created_at)}
             </p>
           </div>
-          {ticket.issue_url && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openLink();
-              }}
-              className="text-secondary btn btn-round"
-            >
-              <FaExternalLinkAlt size={12} />
-            </button>
-          )}
+          <div className="flex gap-2">
+            {ticket.summary && (
+              <button
+                className="btn-static text-xs text-secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSummary();
+                }}
+              >
+                <p>
+                  {ticket.summary && showSummary
+                    ? "Show Original"
+                    : "Show Summary"}
+                </p>
+              </button>
+            )}
+            {ticket.issue_url && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openLink();
+                }}
+                className="text-secondary btn btn-round"
+              >
+                <FaExternalLinkAlt size={12} />
+              </button>
+            )}
+          </div>
         </div>
-        {!ticketCollapsed && (
-          <div
-            className={`text-primary overflow-scroll text-sm gap-5 mt-2 flex max-h-[50vh] flex-col text-wrap 
-            }`}
-          >
+        {((!ticketCollapsed && !ticket.summary) ||
+          (!showSummary && ticket.summary)) && (
+          <div className="text-primary overflow-scroll text-sm gap-5 mt-2 flex max-h-[50vh] flex-col text-wrap">
             <MarkdownMessageDisplay text={ticket.issue_content} />
+          </div>
+        )}
+        {showSummary && ticket.summary && (
+          <div className="text-primary overflow-scroll text-sm gap-5 mt-2 flex flex-col text-wrap">
+            <MarkdownMessageDisplay text={ticket.summary} />
           </div>
         )}
       </div>

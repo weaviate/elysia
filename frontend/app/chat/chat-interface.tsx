@@ -78,14 +78,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="h-screen flex flex-col items-center justify-start flex-grow">
       <div className="flex w-full justify-end items-end p-6">
-        <div className="flex gap-2">
+        <div className="flex gap">
           <button
             className={`btn btn-round ${
               mode === "chat" ? "text-primary" : "text-secondary"
             }`}
             onClick={() => setMode("chat")}
           >
-            <BsChatFill />
+            <BsChatFill size={14} />
           </button>
           <button
             className={`btn btn-round ${
@@ -93,7 +93,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             }`}
             onClick={() => setMode("flow")}
           >
-            <RiFlowChart />
+            <RiFlowChart size={14} />
           </button>
         </div>
       </div>
