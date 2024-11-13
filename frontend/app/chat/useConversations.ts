@@ -144,10 +144,6 @@ export function useConversations(id: string, collections: Collection[]) {
             ...c.enabled_collections,
             [collection_id]: !c.enabled_collections[collection_id],
           };
-          const active_collections = Object.keys(
-            new_enabled_collections
-          ).filter((c) => new_enabled_collections[c]);
-          setCollectionEnabled(active_collections, false, conversationId, id);
           return {
             ...c,
             enabled_collections: new_enabled_collections,
@@ -177,6 +173,13 @@ export function useConversations(id: string, collections: Collection[]) {
         return c;
       })
     );
+
+    conversations.map((c) => {
+      const active_collections = Object.entries(c.enabled_collections || [])
+        .filter(([_, enabled]) => enabled)
+        .map(([name]) => name);
+      setCollectionEnabled(active_collections, false, c.id, id);
+    });
   }, [collections]);
 
   return {
