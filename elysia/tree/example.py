@@ -18,7 +18,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "retrieve the most recent conversation edward had"
+        "List the most common issues from the verba github issues collection from 2024, sort by the most recent"
     )
 
 

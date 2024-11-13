@@ -118,10 +118,10 @@ class QueryExecutor(dspy.Module):
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing query code: {e}")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, "Sorry, that query failed to run. Would you mind asking again?"
 
 
-        return response, prediction.code
+        return response, prediction.code, prediction.text_return
 
 class ObjectSummaryExecutor(dspy.Module):
 

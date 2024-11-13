@@ -299,12 +299,15 @@ class Tree:
         return parse_finished(self.conversation_id)
 
     def set_collection_names(self, collection_names: list[str], remove_data: bool = False):
-        
         collection_names_to_remove = [name for name in self.collection_names if name not in collection_names]
+
+        if self.verbosity >= 1:
+            backend_print(f"Setting collection names to: {collection_names}")
+            backend_print(f"Collection names to remove: {collection_names_to_remove}")
 
         self.collection_names = collection_names
         self.querier.set_collection_names(collection_names)
-
+        
         if remove_data:
             for collection_name in collection_names_to_remove:
                 self._remove_collection_from_data(collection_name)
@@ -345,7 +348,6 @@ class Tree:
 
         current_decision_node = self.decision_nodes[self.root]
         
-
         while True:
 
             if self.run_until_node_id is not None and current_decision_node.id == self.run_until_node_id:

@@ -6,7 +6,7 @@ from elysia.globals.weaviate_client import client
 from elysia.globals.reference import reference
 from elysia.util.logging import backend_print
 from elysia.querying.prompt_executors import QueryExecutor, QueryInitialiserExecutor, ObjectSummaryExecutor
-from elysia.tree.objects import Returns, Objects, Status
+from elysia.tree.objects import Returns, Objects, Status, Text
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval
 
 class AgenticQuery:
@@ -16,8 +16,10 @@ class AgenticQuery:
                  query_creator_filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json", 
                  collection_names: list[str] = None, 
                  return_types: dict[str, str] = None): 
+        
+        self.collection_names = collection_names
 
-        self.query_initialiser = QueryInitialiserExecutor(collection_names, return_types).activate_assertions()        
+        self.query_initialiser = QueryInitialiserExecutor(self.collection_names, return_types).activate_assertions()        
         self.querier = QueryExecutor().activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions()
         if len(query_creator_filepath) > 0:
@@ -30,6 +32,7 @@ class AgenticQuery:
 
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names
+        self.query_initialiser.available_collections = collection_names
 
     def _find_previous_queries(self, collection_name: str, available_information: Returns):
 
@@ -62,6 +65,8 @@ class AgenticQuery:
         collection_name = initialiser.collection_name
         return_type = initialiser.return_type
         output_type = initialiser.output_type
+
+        yield Text([initialiser.text_return], {})
         
         # get example fields from collection
         example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
@@ -77,7 +82,7 @@ class AgenticQuery:
         previous_reasoning["query_initialiser"] = reasoning
 
         yield Status(f"Querying {collection_name}")
-        response, code = self.querier(
+        response, code, text_return = self.querier(
             user_prompt, 
             reference, 
             self.previous_queries, 
@@ -86,6 +91,7 @@ class AgenticQuery:
             previous_reasoning,
             collection_name
         )
+        yield Text([text_return], {})
         yield Status(f"Retrieved {len(response.objects)} objects from {collection_name}")
 
         if code is not None:
