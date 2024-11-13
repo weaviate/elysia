@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Conversation, initialConversation, Message } from "../types";
+import {
+  Conversation,
+  DecisionPayload,
+  initialConversation,
+  Message,
+} from "../types";
 import { v4 as uuidv4 } from "uuid";
 
 import { handleConversationTitleGeneration } from "./api";
@@ -25,6 +30,20 @@ export function useConversations(id: string) {
 
   const selectConversation = (id: string) => {
     setCurrentConversation(id);
+  };
+
+  const addDecisionToConversation = (
+    decision: DecisionPayload,
+    conversationId: string
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === conversationId) {
+          return { ...c, decisions: [...(c.decisions || []), decision] };
+        }
+        return c;
+      })
+    );
   };
 
   const setConversationStatus = (status: string, conversationId: string) => {
@@ -104,6 +123,7 @@ export function useConversations(id: string) {
     setConversationStatus,
     setAllConversationStatuses,
     toggleMessageCollapsed,
+    addDecisionToConversation,
     setConversationTitle,
   };
 }

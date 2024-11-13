@@ -73,6 +73,24 @@ body {
   animation: shine 4s ease-in-out infinite;
 }
 
+.shine-highlight {
+  background: linear-gradient(90deg, #FF72FF 35%, #fff 50%, #FF72FF 65%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 4s ease-in-out infinite;
+}
+
+.shine-accent {
+  background: linear-gradient(90deg, #5AFF83 35%, #fff 50%, #5AFF83 65%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 4s ease-in-out infinite;
+}
+
 @keyframes shine {
   0% {
     background-position-x: -50%;

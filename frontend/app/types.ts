@@ -64,6 +64,7 @@ export type DecisionPayload = {
 
 export type Conversation = {
   messages: Message[];
+  decisions: DecisionPayload[];
   id: string;
   name: string;
   tree: any[];
@@ -103,6 +104,7 @@ export type TitleResponse = {
 export const initialConversation: Conversation = {
   messages: [],
   id: uuidv4(),
+  decisions: [],
   name: "New Conversation",
   tree: [],
   current: "",

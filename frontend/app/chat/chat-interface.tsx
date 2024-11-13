@@ -2,12 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 
-import { Conversation, Message } from "../types";
+import { Conversation, DecisionPayload, Message } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
 
 import QueryInput from "./user-input";
 import MessageDisplay from "./message-display";
+import { BsChatFill } from "react-icons/bs";
+import { RiFlowChart } from "react-icons/ri";
+import FlowDisplay from "./flow-display";
+import { ReactFlow, ReactFlowProvider } from "@xyflow/react";
 
 interface ChatInterfaceProps {
   currentConversation: string;
@@ -29,6 +33,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStatus, setCurrentStatus] = useState<string>("");
+  const [decisions, setDecisions] = useState<DecisionPayload[]>([]);
+
+  const [mode, setMode] = useState<"chat" | "flow">("chat");
 
   useEffect(() => {
     setMessages(
@@ -41,6 +48,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       currentConversation && conversations.length > 0
         ? conversations.find((c) => c.id === currentConversation)?.current || ""
         : ""
+    );
+    setDecisions(
+      currentConversation && conversations.length > 0
+        ? conversations.find((c) => c.id === currentConversation)?.decisions ||
+            []
+        : []
     );
   }, [currentConversation, conversations]);
 
@@ -64,12 +77,40 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="h-screen flex flex-col items-center justify-start flex-grow">
-      <MessageDisplay
-        messages={messages}
-        current_status={currentStatus}
-        toggleMessageCollapsed={toggleMessageCollapsed}
-      />
-      <QueryInput messages={messages} handleSendQuery={handleSendQuery} />
+      <div className="flex w-full justify-end items-end p-6">
+        <div className="flex gap-2">
+          <button
+            className={`btn btn-round ${
+              mode === "chat" ? "text-primary" : "text-secondary"
+            }`}
+            onClick={() => setMode("chat")}
+          >
+            <BsChatFill />
+          </button>
+          <button
+            className={`btn btn-round ${
+              mode === "flow" ? "text-primary" : "text-secondary"
+            }`}
+            onClick={() => setMode("flow")}
+          >
+            <RiFlowChart />
+          </button>
+        </div>
+      </div>
+      {mode === "chat" ? (
+        <>
+          <MessageDisplay
+            messages={messages}
+            current_status={currentStatus}
+            toggleMessageCollapsed={toggleMessageCollapsed}
+          />
+          <QueryInput messages={messages} handleSendQuery={handleSendQuery} />
+        </>
+      ) : (
+        <ReactFlowProvider>
+          <FlowDisplay decisions={decisions} />
+        </ReactFlowProvider>
+      )}
     </div>
   );
 };

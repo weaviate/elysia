@@ -6,6 +6,7 @@ import {
   TicketMessage,
   DecisionMessage,
   TextPayload,
+  DecisionPayload,
 } from "../types";
 import { getWebsocketHost } from "../api";
 
@@ -15,7 +16,11 @@ export function useSocket(
     conversation_id: string
   ) => void,
   setConversationStatus: (status: string, conversationId: string) => void,
-  setAllConversationStatuses: (status: string) => void
+  setAllConversationStatuses: (status: string) => void,
+  addDecisionToConversation: (
+    decision: DecisionPayload,
+    conversationId: string
+  ) => void
 ) {
   const [socketOnline, setSocketOnline] = useState(false);
   const [socket, setSocket] = useState<WebSocket>();
@@ -44,7 +49,10 @@ export function useSocket(
           setConversationStatus(payload.text, message.conversation_id);
         } else if (message.type === "completed") {
           setConversationStatus("", message.conversation_id);
-        } else if (message.type != "decision") {
+        } else if (message.type === "decision") {
+          const payload = message.payload as DecisionPayload;
+          addDecisionToConversation(payload, message.conversation_id);
+        } else {
           console.log(message);
           const newMessage = { ...message, collapsed: true };
           addMessageToConversation([newMessage], newMessage.conversation_id);

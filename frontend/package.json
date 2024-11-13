@@ -9,7 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
     "@tailwindcss/typography": "^0.5.15",
+    "@xyflow/react": "^12.3.5",
+    "dagre": "^0.8.5",
     "next": "15.0.2",
     "react": "19.0.0-rc-02c0e824-20241028",
     "react-dom": "19.0.0-rc-02c0e824-20241028",
@@ -20,6 +23,7 @@
     "uuidv4": "^6.2.13"
   },
   "devDependencies": {
+    "@types/dagre": "^0.7.52",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

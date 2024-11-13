@@ -27,6 +27,7 @@ export default function Home() {
     setAllConversationStatuses,
     selectConversation,
     setConversationTitle,
+    addDecisionToConversation,
     toggleMessageCollapsed,
     addMessageToConversation,
   } = useConversations(id || "");
@@ -34,7 +35,8 @@ export default function Home() {
   const { socketOnline, sendQuery } = useSocket(
     addMessageToConversation,
     setConversationStatus,
-    setAllConversationStatuses
+    setAllConversationStatuses,
+    addDecisionToConversation
   );
 
   const {

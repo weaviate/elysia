@@ -50,16 +50,16 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({ payload }) => {
         let className = "";
 
         if (activeTypes.has("noun")) {
-          className += "font-bold text-highlight ";
+          className = "font-bold text-highlight ";
         }
         if (activeTypes.has("entity")) {
-          className += "text-accent font-bold ";
+          className = "text-accent font-bold ";
         }
 
         segments.push(
           <span
             key={`segment-${lastIndex}-${event.index}`}
-            className={className.trim()}
+            className={className}
           >
             {segmentText}
           </span>
@@ -80,14 +80,14 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({ payload }) => {
       let className = "";
 
       if (activeTypes.has("noun")) {
-        className += "font-bold text-highlight ";
+        className = "font-bold text-highlight shine-highlight ";
       }
       if (activeTypes.has("entity")) {
-        className += "text-accent font-bold ";
+        className = "text-accent font-bold shine-accent ";
       }
 
       segments.push(
-        <span key={`segment-${lastIndex}-end`} className={className.trim()}>
+        <span key={`segment-${lastIndex}-end`} className={className}>
           {text.slice(lastIndex)}
         </span>
       );
