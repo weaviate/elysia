@@ -173,14 +173,16 @@ export function useConversations(id: string, collections: Collection[]) {
         return c;
       })
     );
+  }, [collections]);
 
+  useEffect(() => {
     conversations.map((c) => {
       const active_collections = Object.entries(c.enabled_collections || [])
         .filter(([_, enabled]) => enabled)
         .map(([name]) => name);
       setCollectionEnabled(active_collections, false, c.id, id);
     });
-  }, [collections]);
+  }, [conversations]);
 
   return {
     setConversations,
