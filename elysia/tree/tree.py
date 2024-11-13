@@ -119,7 +119,15 @@ class Tree:
         self.break_down_instructions = break_down_instructions
         self.dspy_model = dspy_model
         self.collection_names = collection_names
-        self.querier = AgenticQuery(collection_names=collection_names, return_types=["conversation", "message", "ticket", "generic"])
+        self.querier = AgenticQuery(
+            collection_names=collection_names, 
+            return_types={
+                "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+                "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+                "ticket": "retrieve a single ticket, including all fields of the ticket.",
+                "generic": "retrieve any other type of information that does not fit into the other categories."
+            }
+        )
 
         # for training purposes, we may want to run the tree until a certain node and a certain number of times
         self.run_until_node_id = run_until_node_id
@@ -205,10 +213,10 @@ class Tree:
         if "root" not in dir(self):
             raise ValueError("No root decision node found")
 
-    def _update_conversation_history(self, user_prompt: str, assistant_response: str):
+    def _update_conversation_history(self, role: str, message: str):
         self.conversation_history.append({
-            "user": user_prompt,
-            "assistant": assistant_response
+            "role": role,
+            "content": message
         })
 
     def _construct_tree(self, node_id: str, tree: dict):
@@ -245,7 +253,7 @@ class Tree:
 
         if isinstance(action_result, Text):
             self.returns.add_text(objects=action_result)
-            self._update_conversation_history(user_prompt, action_result.objects[0])
+            self._update_conversation_history("assistant", action_result.objects[0])
 
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
 
@@ -264,6 +272,13 @@ class Tree:
 
                 if len(result.objects) > 0:
                     yield self._parse_result(result)
+
+    def _remove_collection_from_data(self, collection_name: str):
+        if collection_name in self.data_queried:
+            del self.data_queried[collection_name]
+        
+        if collection_name in self.returns.retrieved:
+            del self.returns.retrieved[collection_name]
     
     def _parse_error(self, error: str):
         return parse_error(error, self.conversation_id)
@@ -282,6 +297,17 @@ class Tree:
     
     def _parse_finished(self):
         return parse_finished(self.conversation_id)
+
+    def set_collection_names(self, collection_names: list[str], remove_data: bool = False):
+        
+        collection_names_to_remove = [name for name in self.collection_names if name not in collection_names]
+
+        self.collection_names = collection_names
+        self.querier.set_collection_names(collection_names)
+
+        if remove_data:
+            for collection_name in collection_names_to_remove:
+                self._remove_collection_from_data(collection_name)
 
     def hard_reset(self):
         self = Tree(verbosity=self.verbosity)
@@ -311,6 +337,8 @@ class Tree:
 
             if self.break_down_instructions:
                 user_prompt = self.input_executor(user_prompt)
+
+            self._update_conversation_history("user", user_prompt)
 
             if self.verbosity >= 1:
                 print(f"[bold yellow]User prompt:[/bold yellow][yellow]\n{user_prompt}[/yellow]")

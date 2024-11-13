@@ -2,7 +2,7 @@ import json
 import uuid
 import datetime
 from rich import print
-from elysia.util.parsing import objects_dict_to_str, format_datetime
+from elysia.util.parsing import objects_dict_to_str, format_datetime, remove_whitespace
 
 class Status:
     def __init__(self, status: str):
@@ -57,8 +57,34 @@ class Text(Objects):
         super().__init__(objects, metadata)
         self.type = "text"
 
+class SelfInfo(Objects):
+    def __init__(self, name: str = "Elysia"):
+        objects = [
+            {
+                "field": "name",
+                "value": name,
+                "description": "The name of the assistant."
+            },
+            {
+                "field": "description",
+                "value": "A helpful and friendly assistant that can answer questions, query from Weaviate collections, and provide summaries and textual responses.",
+                "description": "A short description of the assistant."
+            },
+            {
+                "field": "purpose",
+                "value": remove_whitespace("""Elysia is an agentic retrieval augmented generation (RAG) service, where users can query from Weaviate collections,
+                and the assistant will retrieve the most relevant information and answer the user's question. This includes a variety
+                of different ways to query, such as by filtering, sorting, querying multiple collections, and providing summaries
+                and textual responses."""),
+                "description": "The purpose of the assistant."
+            }
+        ]
+        super().__init__(objects, {})
+        self.type = "self_info"
+
 class Returns:
     def __init__(self, retrieved: dict, text: Text):
+        self.self_info = SelfInfo()
         self.retrieved = retrieved
         self.text = text
     
@@ -74,19 +100,22 @@ class Returns:
     def to_json(self):
         return {
             "retrieval": {collection_name: self.retrieved[collection_name].to_json() for collection_name in self.retrieved},
-            "text": self.text.to_json()
+            "text": self.text.to_json(),
+            "self_info": self.self_info.to_json()
         }
 
     def to_str(self):
         return json.dumps({
             "retrieval": {collection_name: self.retrieved[collection_name].to_str() for collection_name in self.retrieved},
-            "text": self.text.to_str()
+            "text": self.text.to_str(),
+            "self_info": self.self_info.to_str()
         })
     
     def to_llm_str(self):
         return json.dumps({
             "retrieval": {collection_name: self.retrieved[collection_name].to_llm_str() for collection_name in self.retrieved},
-            "text": self.text.to_llm_str()
+            "text": self.text.to_llm_str(),
+            "self_info": self.self_info.to_llm_str()
         })
     
     @classmethod
@@ -100,7 +129,12 @@ class Returns:
         if "text" in json_dict:
             text = json_dict["text"]
 
-        return cls(retrieved=retrieved, text=Text(text))
+        if "self_info" in json_dict:
+            self_info = SelfInfo(json_dict["self_info"]["objects"][0]["value"])
+        else:
+            self_info = SelfInfo()
+
+        return cls(retrieved=retrieved, text=Text(text), self_info=self_info)
 
     def return_retrieval(self, collection_name: str = "", idx = None):
 

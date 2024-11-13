@@ -36,6 +36,23 @@ class SummarizingPrompt(dspy.Signature):
         """.strip(),
         format = str
     )
+    conversation_history = dspy.InputField(
+        description="""
+        The conversation history between the user and the assistant (you), including all previous messages.
+        During this conversation, the assistant has also generated some information, which is also relevant to the decision.
+        This information is stored in `available_information` field.
+        If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses should use these as context.
+        The history is a list of dictionaries of the format:
+        [
+            {
+                "role": "user" or "assistant",
+                "content": The message
+            }
+        ]
+        In the order which the messages were sent.
+        """.strip(),
+        format = str
+    )
     available_information = dspy.InputField(
         description="""
         The retrieved objects from the knowledge base.
@@ -81,6 +98,23 @@ class TextResponsePrompt(dspy.Signature):
         }
         where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
         This may help you, as previous decisions might give insight into what to say.
+        """.strip(),
+        format = str
+    )
+    conversation_history = dspy.InputField(
+        description="""
+        The conversation history between the user and the assistant (you), including all previous messages.
+        During this conversation, the assistant has also generated some information, which is also relevant to the decision.
+        This information is stored in `available_information` field.
+        If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses should use these as context.
+        The history is a list of dictionaries of the format:
+        [
+            {
+                "role": "user" or "assistant",
+                "content": The message
+            }
+        ]
+        In the order which the messages were sent.
         """.strip(),
         format = str
     )

@@ -9,13 +9,6 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
     class DecisionPrompt(dspy.Signature):
         """
         You are an expert routing agent, who is responsible for routing a user's prompt to the most appropriate task.
-        
-        You are a chatbot for the app called Elysia, a chatbot that can retrieve information from a variety of sources and answer questions about it.
-        Elysia is an agentic retrieval augmented generation (RAG) service, where users can query from Weaviate collections,
-        and you will retrieve the most relevant information and answer the user's question. This includes a variety
-        of different ways to query, such as by filtering, sorting, querying multiple collections, and providing summaries
-        and textual responses.
-
         You are part of an ensemble of routing agents within Elysia, who each make a decision about which task to complete.
         Your decision is one of many that will be used to make the final decision.
 
@@ -63,10 +56,11 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             The history is a list of dictionaries of the format:
             [
                 {
-                    "user": The user's message
-                    "assistant": The assistant's response
+                    "role": "user" or "assistant",
+                    "content": The message
                 }
             ]
+            In the order which the messages were sent.
             """.strip(),
             format = str
         )

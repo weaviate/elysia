@@ -1,0 +1,327 @@
+{
+  "query_initialiser_prompt": {
+    "lm": null,
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "user_prompt": "Summarise issues with the OpenAI vectoriser in verba",
+        "reference": {
+          "datetime": "2024-03-20T00:00:0Z",
+          "day_of_week": "Wednesday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "Give a breakdown of the issues in verba",
+        "reference": {
+          "datetime": "2020-03-22T00:00:0Z",
+          "day_of_week": "Sunday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "summary"
+      },
+      {
+        "user_prompt": "List the common issues in the app",
+        "reference": {
+          "datetime": "2021-10-26T00:00:0Z",
+          "day_of_week": "Tuesday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "Give an itemised summary of the most recent messages in the verba slack conversations collection",
+        "reference": {
+          "datetime": "2022-08-01T00:00:0Z",
+          "day_of_week": "Monday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "message",
+        "output_type": "summary"
+      },
+      {
+        "user_prompt": "Tell me all you can about the PDF issue in verba",
+        "reference": {
+          "datetime": "2020-06-11T00:00:0Z",
+          "day_of_week": "Thursday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "conversation",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "Summarise Kaladins emails and messages about verba from 2024",
+        "reference": {
+          "datetime": "2020-02-02T00:00:0Z",
+          "day_of_week": "Sunday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {
+          "example_verba_email_chains": 20
+        },
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "message",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "Give me individual summaries of Laura's messages and conversations about the PDF issue in verba",
+        "reference": {
+          "datetime": "2021-06-08T00:00:0Z",
+          "day_of_week": "Tuesday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {
+          "example_verba_slack_conversations": 14
+        },
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_email_chains",
+        "return_type": "conversation",
+        "output_type": "summary"
+      },
+      {
+        "user_prompt": "What did Bob say in his last slack message?",
+        "reference": {
+          "datetime": "2021-02-04T00:00:0Z",
+          "day_of_week": "Thursday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "message",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "List the most common issues from the verba github issues collection from 2024, sort by the most recent.",
+        "reference": {
+          "datetime": "2020-04-13T00:00:0Z",
+          "day_of_week": "Monday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {},
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "Tell me all you can about the PDF issue in verba",
+        "reference": {
+          "datetime": "2021-06-15T00:00:0Z",
+          "day_of_week": "Tuesday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {
+          "example_verba_slack_conversations": 20,
+          "example_verba_github_issues": 20
+        },
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_email_chains",
+        "return_type": "conversation",
+        "output_type": "original"
+      },
+      {
+        "user_prompt": "Tell me all you can about the PDF issue in verba",
+        "reference": {
+          "datetime": "2023-09-22T00:00:0Z",
+          "day_of_week": "Friday",
+          "time_of_day": "12:00 AM"
+        },
+        "previous_reasoning": {},
+        "data_queried": {
+          "example_verba_slack_conversations": 20
+        },
+        "available_collections": [
+          "example_verba_github_issues",
+          "example_verba_slack_conversations",
+          "example_verba_email_chains"
+        ],
+        "available_return_types": {
+          "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+          "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+          "ticket": "retrieve a single ticket, including all fields of the ticket.",
+          "generic": "retrieve any other type of information that does not fit into the other categories."
+        },
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "original"
+      }
+    ],
+    "signature": {
+      "instructions": "Given a user prompt, choose the most appropriate collection, return type and output type for a later query.\n\nPick ones that best represents the user prompt. You may only choose one of each, so pick the best one, most relevant to the user prompt.\nThis information will be displayed to the user in a dynamic way, so pick the one that will be most useful.",
+      "fields": [
+        {
+          "prefix": "User Prompt:",
+          "description": "The user's original query"
+        },
+        {
+          "prefix": "Reference:",
+          "description": "Information about the state of the world NOW such as the date and time, used to frame the query."
+        },
+        {
+          "prefix": "Previous Reasoning:",
+          "description": "Your reasoning that you have output from previous decisions.\n            This is so you can use the information from previous decisions to help you decide which collection and return type to choose.\n\n            This is a dictionary of the form:\n            {\n                \"tree_1\": \n                {\n                    \"decision_1\": \"Your reasoning for the decision 1\",\n                    \"decision_2\": \"Your reasoning for the decision 2\",\n                    ...\n                },\n                \"tree_2\": {\n                    \"decision_1\": \"Your reasoning for the decision 1\",\n                    \"decision_2\": \"Your reasoning for the decision 2\",\n                    ...\n                }\n            }\n            where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.\n            \n            Use this to base your current action from previous reasoning."
+        },
+        {
+          "prefix": "Data Queried:",
+          "description": "A list of items, showing whether a query has been completed or not.\n            This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.\n            If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement."
+        },
+        {
+          "prefix": "Available Collections:",
+          "description": "A list of the collections that you have access to."
+        },
+        {
+          "prefix": "Available Return Types:",
+          "description": "A list of the return types that you have access to, with corresponding descriptions of each one."
+        },
+        {
+          "prefix": "Reasoning: Let's think step by step in order to",
+          "description": "${produce the output_type}. We ..."
+        },
+        {
+          "prefix": "Collection Name:",
+          "description": "The name of the collection to query. Only provide the name exactly as it appears."
+        },
+        {
+          "prefix": "Return Type:",
+          "description": "The type of objects to return. Only provide the type name exactly as it appears."
+        },
+        {
+          "prefix": "Output Type:",
+          "description": "One of: 'original' or 'summary'. Output the name exactly as it appears.\n            'original' means the user wants the original objects returned, \n            'summary' means the user wants an individual itemised summary of each of the objects returned.\n            You should only choose 'summary' if the user has specifically asked for individual summaries of the objects in the user_prompt.\n            Most of the time, you should choose 'original', which will return the objects normally."
+        }
+      ]
+    }
+  }
+}

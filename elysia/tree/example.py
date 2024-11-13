@@ -17,16 +17,9 @@ if __name__ == "__main__":
         dspy_model=None
     )
 
-    # tree.process(
-    #     "List the most common issues from the verba github issues collection from 2024, sort by the most recent."
-    # )
-
-    # tree.returns.retrieved["example_verba_github_issues"].return_value(3)
-
     tree.process_sync(
-       "summarise kaladins last email and last slack message"
+        "retrieve the most recent conversation edward had"
     )
 
 
-    tree.returns.retrieved["example_verba_email_chains"].objects[0]
-    tree.returns.retrieved["example_verba_slack_conversations"].objects[0]
+    objs = tree.returns.retrieved["example_verba_github_issues"].objects

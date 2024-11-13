@@ -20,3 +20,9 @@ class NERData(BaseModel):
 
 class TitleData(BaseModel):
     text: str
+
+class SetCollectionsData(BaseModel):
+    collection_names: List[str]
+    remove_data: bool
+    conversation_id: str
+    user_id: str
