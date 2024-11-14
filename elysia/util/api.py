@@ -1,6 +1,7 @@
 import uuid
 
 from elysia.tree.objects import Objects
+from elysia.text.objects import Text
 
 def parse_decision(decision: str, reasoning: str, conversation_id: str, id: str, instruction: str, tree: dict):
     return {
@@ -14,6 +15,14 @@ def parse_decision(decision: str, reasoning: str, conversation_id: str, id: str,
             "instruction": instruction,
             "tree": tree
         }
+    }
+
+def parse_text(text: Text, conversation_id: str):
+    return {
+        "type": "text",
+        "conversation_id": conversation_id,
+        "id": "tex-" + str(uuid.uuid4()),
+        "payload": text.to_json()
     }
 
 def parse_result(result: Objects, conversation_id: str):

@@ -1,5 +1,6 @@
 import dspy
 import datetime
+from typing import Any, Generator
 
 from weaviate.classes.query import Filter, Sort
 from weaviate.collections.classes.internal import QueryReturn
@@ -28,14 +29,15 @@ class QueryInitialiserExecutor(dspy.Module):
         self.available_collections = collection_names
         self.available_return_types = return_types
 
-    def forward(self, user_prompt: str, reference: str, previous_reasoning: dict, data_queried: list[str]) -> str:
+    def forward(self, user_prompt: str, reference: str, previous_reasoning: dict, data_queried: list[str], current_message: str) -> str:
         return self.query_initialiser_prompt(
             user_prompt=user_prompt,
             reference=reference,
             previous_reasoning=previous_reasoning,
             data_queried=data_queried,
             available_collections=self.available_collections,
-            available_return_types=self.available_return_types
+            available_return_types=self.available_return_types,
+            current_message=current_message
         )
     
 class PropertyGroupingExecutor(dspy.Module):
@@ -50,14 +52,16 @@ class PropertyGroupingExecutor(dspy.Module):
         reference: str, 
         previous_reasoning: dict, 
         data_fields: list[str], 
-        example_field: dict
+        example_field: dict,
+        current_message: str
     ) -> str:
         return self.property_grouping_prompt(
             user_prompt=user_prompt,
             reference=reference,
             previous_reasoning=previous_reasoning,
             data_fields=data_fields,
-            example_field=example_field
+            example_field=example_field,
+            current_message=current_message
         )
 
 class QueryExecutor(dspy.Module):
@@ -86,25 +90,26 @@ class QueryExecutor(dspy.Module):
         example_field: dict, 
         previous_reasoning: dict,
         collection_name: str,
-        collection_metadata: dict
-    ) -> tuple[dict, str, str, bool]:
+        collection_metadata: dict,
+        current_message: str
+    ) -> Generator[Any, Any, Any]:
 
         # run query code generation
-        prediction = self.query_creator_prompt(
-            user_prompt=user_prompt, 
-            reference=reference,
-            data_fields=data_fields, 
-            example_field=example_field, 
-            previous_queries=previous_queries,
-            previous_reasoning=previous_reasoning,
-            collection_metadata=collection_metadata
-        )
-
-        dspy.Suggest(
-            prediction.code not in previous_queries,
-            f"The query code you have produced: {prediction.code} has already been used. Please produce a new query code.",
-            target_module=self.query_creator_prompt
-        )
+        try:
+            prediction = self.query_creator_prompt(
+                user_prompt=user_prompt, 
+                reference=reference,
+                data_fields=data_fields, 
+                example_field=example_field, 
+                previous_queries=previous_queries,
+                previous_reasoning=previous_reasoning,
+                collection_metadata=collection_metadata,
+                current_message=current_message
+            )
+        except Exception as e:
+            backend_print(f"Error in query creator prompt: {e}")
+            # Return empty values when there's an error
+            return QueryReturn(objects=[]), None, None, False
 
         try:
             is_query_possible = bool(prediction.is_query_possible)
@@ -113,10 +118,17 @@ class QueryExecutor(dspy.Module):
                 dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_creator_prompt)
             except Exception as e:
                 backend_print(f"Error getting is_query_possible: {e}")
-                is_query_possible = True
+                # Return empty values when there's an error
+                return QueryReturn(objects=[]), None, None, False
 
         if not is_query_possible:
             return QueryReturn(objects=[]), None, None, False
+
+        dspy.Suggest(
+            prediction.code not in previous_queries,
+            f"The query code you have produced: {prediction.code} has already been used. Please produce a new query code.",
+            target_module=self.query_creator_prompt
+        )
 
         # catch any errors in query execution for dspy assert
         try:
@@ -130,7 +142,6 @@ class QueryExecutor(dspy.Module):
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing query code: {e}")
                 return QueryReturn(objects=[]), None, None, False
-
 
         return response, prediction.code, prediction.text_return, is_query_possible
 

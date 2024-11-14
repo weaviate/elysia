@@ -2,7 +2,9 @@ import json
 import uuid
 import datetime
 from rich import print
+
 from elysia.util.parsing import objects_dict_to_str, format_datetime, remove_whitespace
+from elysia.text.objects import Text, Response
 
 class Status:
     def __init__(self, status: str):
@@ -26,7 +28,7 @@ class Objects:
     def add(self, objects: list[dict], metadata: dict = {}):
         self.objects.extend(objects)
         for key, value in metadata.items():
-            
+
             if key not in self.metadata:
                 self.metadata[key] = value
             
@@ -53,10 +55,15 @@ class Objects:
     def return_value(self, idx: int):
         return self.objects[idx]
 
-class Text(Objects):
+class Warning(Objects):
     def __init__(self, objects: list[str], metadata: dict = {}):
         super().__init__(objects, metadata)
-        self.type = "text"
+        self.type = "warning"
+
+class Error(Objects):
+    def __init__(self, objects: list[str], metadata: dict = {}):
+        super().__init__(objects, metadata)
+        self.type = "error"
 
 class SelfInfo(Objects):
     def __init__(self, name: str = "Elysia"):
@@ -95,7 +102,7 @@ class Returns:
         else:
             self.retrieved[collection_name].add(objects.objects, objects.metadata)
 
-    def add_text(self, objects: Text):
+    def add_text(self, objects: Objects):
         self.text.add(objects.objects)
 
     def to_json(self):

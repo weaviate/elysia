@@ -61,7 +61,8 @@ class SummarizingPrompt(dspy.Signature):
         but use judgement to decide which objects are most relevant to the user's query.
         """.strip()
     )
-    summary = dspy.OutputField(description="The summary of the retrieved objects")
+    subtitle = dspy.OutputField(description="A subtitle for the summary")
+    summary = dspy.OutputField(description="The summary of the retrieved objects. You can use markdown formatting.")
 
 class TextResponsePrompt(dspy.Signature):
     """
@@ -119,11 +120,26 @@ class TextResponsePrompt(dspy.Signature):
         format = str
     )
     available_information = dspy.InputField(
-            description="""
-            The retrieved objects from the knowledge base.
-            This will be in the form of a list of dictionaries, where each dictionary contains the metadata and object fields.
-            You should use all of the information available to you to answer the user's prompt, 
-            but use judgement to decide which objects are most relevant to the user's query.
-            """.strip()
+        description="""
+        The retrieved objects from the knowledge base.
+        This will be in the form of a list of dictionaries, where each dictionary contains the metadata and object fields.
+        You should use all of the information available to you to answer the user's prompt, 
+        but use judgement to decide which objects are most relevant to the user's query.
+        """.strip()
     )    
-    response = dspy.OutputField(description="The response to the user's prompt")
+    current_message = dspy.InputField(
+        description="""
+        The current message you, the assistant, have written to send to the user. 
+        This message has not been sent yet, you will add text to it, to be sent to the user later.
+        In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+        """.strip(),
+        format = str
+    )
+    response = dspy.OutputField(
+        description="""
+        The response to the user's prompt. This is a continuation of the current_message field. 
+        This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
+        Use present tense in your text, as if you are currently completing the action.
+        If the current_message field is empty, then this response is the beginning of a new message.
+        """.strip()
+    )

@@ -22,7 +22,7 @@ class SummarizingExecutor(dspy.Module):
             previous_reasoning=previous_reasoning,
             conversation_history=conversation_history,
             reference=reference
-        ).summary
+        )
 
 class TextResponseExecutor(dspy.Module):
 
@@ -35,12 +35,13 @@ class TextResponseExecutor(dspy.Module):
                 available_information: str, 
                 previous_reasoning: dict, 
                 conversation_history: list,
-                **kwargs
+                current_message: str
     ) -> str:
         return self.text_response_prompt(
             user_prompt=user_prompt, 
             available_information=available_information,
             previous_reasoning=previous_reasoning,
             conversation_history=conversation_history,
+            current_message=current_message,
             reference=reference
         ).response

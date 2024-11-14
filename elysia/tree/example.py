@@ -18,9 +18,17 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "retrieve emails written by an insect from 2024"
+        "hi my name is danny"
     )
 
     print(tree.returns)
+
+    tree.process_sync(
+        "what is my name"
+    )
     
     # tree.returns.retrieved["example_verba_email_chains"].metadata
+
+    tree.process_sync(
+        "can't you see the name in your previous reasoning history?"
+    )

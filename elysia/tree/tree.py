@@ -12,8 +12,16 @@ from elysia.querying.agentic_query import AgenticQuery
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace
 from elysia.util.logging import backend_print
-from elysia.util.api import parse_decision, parse_result, parse_finished, parse_error, parse_warning
-from elysia.tree.objects import Text, Returns, Objects, Status
+from elysia.util.api import (
+    parse_decision, 
+    parse_result, 
+    parse_finished, 
+    parse_error, 
+    parse_warning,
+    parse_text
+)
+from elysia.tree.objects import Returns, Objects, Status
+from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 
 import dspy
@@ -130,6 +138,7 @@ class Tree:
                 "generic": "retrieve any other type of information that does not fit into the other categories."
             }
         )
+        self.current_message = ""
 
         # for training purposes, we may want to run the tree until a certain node and a certain number of times
         self.run_until_node_id = run_until_node_id
@@ -243,7 +252,7 @@ class Tree:
         
         return tree
 
-    def _update_returns(self, action_result: Retrieval | Text, user_prompt: str):
+    def _update_returns(self, action_result: Retrieval, user_prompt: str):
 
         if isinstance(action_result, Retrieval): 
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
@@ -253,17 +262,15 @@ class Tree:
             else:
                 self.data_queried[action_result.metadata["collection_name"]] += len(action_result.objects)
 
-        if isinstance(action_result, Text):
-            self.returns.add_text(objects=action_result)
-            self._update_conversation_history("assistant", action_result.objects[0])
-
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
 
         async for result in action_fn(
-            user_prompt, 
-            self.returns, 
-            self.previous_reasoning,
+            user_prompt=user_prompt, 
+            available_information=self.returns, 
+            previous_reasoning=self.previous_reasoning,
             data_queried=self.data_queried,
+            current_message=self.current_message,
+            conversation_history=self.conversation_history,
             **kwargs
         ):
             if isinstance(result, Status):
@@ -274,6 +281,17 @@ class Tree:
 
                 if len(result.objects) > 0:
                     yield self._parse_result(result)
+
+            if isinstance(result, Text):
+                yield self._parse_text(result)
+
+            if isinstance(result, Response) or isinstance(result, Code): 
+                backend_print(f"Current message: \nFrom [bold yellow]'{self.current_message}'[/bold yellow]")
+                self.current_message += " " + result.objects[0]["text"]
+                backend_print(f"To [bold yellow]'{self.current_message}'[/bold yellow]")
+                    
+            if isinstance(result, Summary):
+                self._update_conversation_history("assistant", result.objects[0]["summary"])
 
     def _remove_collection_from_data(self, collection_name: str):
         if collection_name in self.data_queried:
@@ -299,6 +317,9 @@ class Tree:
     
     def _parse_finished(self):
         return parse_finished(self.conversation_id)
+    
+    def _parse_text(self, text: Text):
+        return parse_text(text, self.conversation_id)
 
     def set_collection_names(self, collection_names: list[str], remove_data: bool = False):
         collection_names_to_remove = [name for name in self.collection_names if name not in collection_names]
@@ -390,6 +411,7 @@ class Tree:
             else:
                 current_decision_node = self.decision_nodes[current_decision_node.options[decision]["next"]]
 
+        # end of the tree for this iteration
         if not completed or (self.run_num_trees is not None and self.num_trees_completed < self.run_num_trees):
             
             if self.verbosity == 2:
@@ -400,10 +422,14 @@ class Tree:
             async for result in self.process(user_prompt, recursion_counter + 1, first_run=False, **kwargs):
                 yield result
 
+        # end of all trees
         else:
 
             self.num_trees_completed += 1
             
+            self._update_conversation_history("assistant", self.current_message.strip())
+            self.current_message = ""
+
             yield self._parse_finished()
 
             if self.verbosity >= 1:

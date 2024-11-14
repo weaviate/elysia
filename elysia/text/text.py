@@ -1,7 +1,8 @@
 
-from elysia.util.logging import backend_print
 from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
-from elysia.tree.objects import Returns, Text
+from elysia.tree.objects import Returns
+from elysia.text.objects import Response, Summary
+from elysia.util.logging import backend_print
 
 class Summarizer:
 
@@ -16,10 +17,9 @@ class Summarizer:
             user_prompt=user_prompt, 
             available_information=available_information.to_llm_str(),
             previous_reasoning=previous_reasoning,
-            conversation_history=conversation_history,
-            **kwargs
+            conversation_history=conversation_history
         )
-        output = Text([summary], {})
+        output = Summary([{"text": summary.summary, "title": summary.subtitle}], {})
         yield output
     
 class TextResponse:
@@ -29,6 +29,7 @@ class TextResponse:
 
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs):
 
+        current_message = kwargs.get("current_message", "")
         conversation_history = kwargs.get("conversation_history", [])
 
         output = self.text_response(
@@ -36,7 +37,7 @@ class TextResponse:
             available_information=available_information.to_llm_str(),
             previous_reasoning=previous_reasoning,
             conversation_history=conversation_history,
-            **kwargs
+            current_message=current_message
         )
 
-        yield Text([output], {})
+        yield Response([{"text": output}], {})
