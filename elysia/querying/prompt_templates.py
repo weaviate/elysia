@@ -71,10 +71,12 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             desc="The name of the collection to query. Only provide the name exactly as it appears.",
             format = str
         )
+
         return_type: ReturnTypeLiteral = dspy.OutputField(
             desc="The type of objects to return. Only provide the type name exactly as it appears.",
             format = str
         )
+
         output_type = dspy.OutputField(
             desc="""
             One of: 'original' or 'summary'. Output the name exactly as it appears.
@@ -87,6 +89,7 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             """.strip(),
             format = str
         )
+
         text_return = dspy.OutputField(
             desc="""
             A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
@@ -94,11 +97,89 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             just a brief explanation in plain English, in a chat message format, 
             so you should use markdown and respond to the user in a friendly way.
             Do not use emojis, and do not ask the user to confirm or approve of your actions.
+            Do not ask the user any questions.
             """.strip(),
             format = str
         )
 
     return QueryInitialiserPrompt
+
+class PropertyGroupingPrompt(dspy.Signature):
+    """
+    Determine which property(ies) to group the results by.
+    The goal is to provide a list of properties that the user is likely to filter on in a later query.
+    For example, if the user prompt asks for articles by a specific author, you should group by "author".
+    If the user prompt asks for articles about a specific topic, you should group by "topic".
+    """
+    user_prompt = dspy.InputField(desc="The user's original query")
+
+    reference = dspy.InputField(desc="""
+        Information about the state of the world NOW such as the date and time.
+        """.strip(), 
+        format = str
+    )
+
+    previous_reasoning = dspy.InputField(
+        desc="""
+        Your reasoning that you have output from previous decisions.
+        This is so you can use the information from previous decisions to help you decide what type of query to create.
+
+        This is a dictionary of the form:
+        {
+            "tree_1": 
+            {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            },
+            "tree_2": {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            }
+        }
+        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+        
+        Use this to base your current action from previous reasoning.
+        """.strip(), 
+        format = str
+    )
+
+    data_fields = dspy.InputField(desc="""
+        A list of fields that are available to search over.
+        ["field_name", ...]
+        """.strip(), 
+        format = str
+    )
+
+    example_field = dspy.InputField(desc="""
+        An example from the collection of what the fields look like, in the following format:
+        {
+            "field_name": "field_value",
+            ...
+        }
+        You should use these to understand the format of the data, and to create your query.
+        """.strip(), 
+        format = str
+    )
+    
+    property_name = dspy.OutputField(desc="""
+        A single property name to group the results by.
+        Only provide the property name exactly as it appears.
+        """.strip(), 
+        format = str
+    )
+
+    text_return = dspy.OutputField(desc="""
+        A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
+        Do not include many technical details e.g. variable names, 
+        just a brief explanation in plain English, in a chat message format, 
+        so you should use markdown and respond to the user in a friendly way.
+        Do not use emojis, and do not ask the user to confirm or approve of your actions.
+        Do not ask the user any questions.
+        """.strip(), 
+        format = str
+    )
 
 class QueryCreatorPrompt(dspy.Signature):
     """
@@ -266,6 +347,23 @@ class QueryCreatorPrompt(dspy.Signature):
         """.strip(), 
         format = str
     )
+    collection_metadata = dspy.InputField(desc="""
+        Metadata about the collection, in the following format:
+        {
+            "field_name": {
+                "item_1": quantity,
+                "item_2": quantity,
+                ...
+            },
+            ...
+        }
+        For each field, the quantity (for each item) is the number of unique instances that item appears in the collection, for that field.
+        So you can think of this as a frequency distribution of the field.
+        And you can use this to understand the what unique values exist in the collection for that field, to determine what filters you can use.
+        As well as whether the query is possible, by checking if the required filter values exist in the collection metadata.
+        """.strip(), 
+        format = str
+    )
     previous_queries = dspy.InputField(
         desc="""
         A comma separated list of existing code that has been used to query the collection. 
@@ -277,6 +375,19 @@ class QueryCreatorPrompt(dspy.Signature):
         desc="The generated query code only. Do not enclose it in quotes or in ```. Just the code only.",
         format = str
     )
+
+    is_query_possible = dspy.OutputField(
+        desc="""
+        A boolean value indicating whether the query is able to return any information. (True/False). Return True if the query is able to return information, and False otherwise.
+        Base this decision on the collection metadata, and the user prompt.
+        If, for example, the filter/sort values do not exist in the collection metadata, you should return False, as the query is not possible.
+        However, if the query is extremely generic (just a regular search with no filters or search), and the user prompt does not specify what to filter on, you should return True, 
+        as the query will just be a regular search.
+        Return True or False only, nothing else.
+        """.strip(),
+        format = bool
+    )
+
     text_return = dspy.OutputField(
         desc="""
         A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
@@ -284,9 +395,176 @@ class QueryCreatorPrompt(dspy.Signature):
         just a brief explanation in plain English, in a chat message format, 
         so you should use markdown and respond to the user in a friendly way.
         Do not use emojis, and do not ask the user to confirm or approve of your actions.
+        Do not ask the user any questions.
         """.strip(),
         format = str
     )
+
+class AggregateCollectionPrompt(dspy.Signature):
+    """
+    You are an expert at retrieving metadata about data collections.
+    You must write code to aggregate the objects from the collection.
+    Your goal is retrieving metadata about the data collection, such as the number of objects, the fields, and the types of the fields.
+
+    You should base your aggregation on the previous reasoning, and the user prompt mostly. 
+    The information you return from this will be used to query the collection later. 
+    For example, if the user prompt asks for something related to an author, you should be attempting to find the number of objects per author.
+    This will also determine what authors are available to filter on in a later query.
+    Aim to retrieve as much information as possible.
+
+    To do so, you should use the `collection.aggregate` function, assume you have access to the object `collection` which is a Weaviate collection, `GroupByAggregate`, and `Metrics`.
+
+    The `collection.aggregate.over_all` function has the following signature:
+    
+    ___
+
+    collection.aggregate.over_all(*, 
+            filters: Optional[weaviate.collections.classes.filters._Filters] = None, 
+            group_by: Union[str, weaviate.collections.classes.aggregate.GroupByAggregate, NoneType] = None, 
+            total_count: bool = True, 
+            return_metrics: ... = None
+        ) 
+        -> Union[weaviate.collections.classes.aggregate.AggregateReturn, weaviate.collections.classes.aggregate.AggregateGroupByReturn] method of weaviate.collections.aggregate._AggregateCollection instance
+    Aggregate metrics over all the objects in this collection without any vector search.
+
+    Arguments:
+        `filters`
+            The filters to apply to the search.
+        `group_by`
+            The property name to group the aggregation by.
+        `total_count`
+            Whether to include the total number of objects that match the query in the response.
+        `return_metrics`
+            A list of property metrics to aggregate together after the text search.
+
+    Returns:
+        Depending on the presence of the `group_by` argument, either a `AggregateReturn` object or a `AggregateGroupByReturn that includes the aggregation objects.
+
+    ___
+    
+    Each data type has its own set of available aggregated properties. The following table shows the available properties for each data type.
+
+    Data type	Available properties
+    Text	    (count, topOccurrences (value, occurs))
+    Number	    (count, minimum, maximum, mean, median, mode, sum)
+    Integer	    (count, minimum, maximum, mean, median, mode, sum)
+    Boolean	    (count, totalTrue, totalFalse, percentageTrue, percentageFalse)
+    Date	    (count, minimum, maximum, mean, median, mode)
+    ___
+
+    Here are some examples of how this code should be written:
+
+    Example [1]:
+
+    In the following example, the articles are grouped by the property "inPublication", referring to the article's publisher.
+    The "wordCount" is a property of the dataset, and is aggregated by the all possible values (count, maximum, mean, median, minimum, mode, sum).
+
+    ```
+    collection.aggregate.over_all(
+        group_by=GroupByAggregate(prop="inPublication"),
+        total_count=True,
+        return_metrics=Metrics("wordCount").integer(
+            count=True,
+            maximum=True,
+            mean=True,
+            median=True,
+            minimum=True,
+            mode=True,
+            sum_=True,
+        )
+    )
+    ```
+    This returns the total number of articles, and statistics about the word count of the articles, grouped by the publication.
+
+    
+    Example [2]:
+
+    In the following example, github issues are grouped by the property "issue_author", referring to the author of the issue.
+    ```
+    collection.aggregate.over_all(
+        total_count=True,
+        group_by=GroupByAggregate(prop="issue_author")
+    )
+    ```
+    This returns the total number of issues, each unique issue author, and the number of issues per issue author.
+    
+
+    Example [3]:
+
+    In this example, some generic conversations are grouped by the property "conversation_id", referring to the id of the conversation (integer).
+
+    ```
+    collection.aggregate.over_all(
+        total_count=True,
+        group_by=GroupByAggregate(prop="conversation_id")
+    )
+    ```
+    This returns the total number of conversations, each unique conversation id, and the number of conversations per conversation id.
+    """
+
+    user_prompt = dspy.InputField(desc="The user's original query")
+    reference = dspy.InputField(desc="""
+        Information about the state of the world NOW such as the date and time, used to frame the query.
+        """.strip(), 
+        format = str
+    )
+    previous_reasoning = dspy.InputField(
+        desc="""
+        Your reasoning that you have output from previous decisions.
+        This is so you can use the information from previous decisions to help you decide what type of query to create.
+
+        This is a dictionary of the form:
+        {
+            "tree_1": 
+            {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            },
+            "tree_2": {
+                "decision_1": "Your reasoning for the decision 1",
+                "decision_2": "Your reasoning for the decision 2",
+                ...
+            }
+        }
+        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+        
+        Use this to base your current action from previous reasoning.
+        """.strip(), 
+        format = str
+    )
+    data_fields = dspy.InputField(desc="""
+        A list of properties within the collection that are available to aggregate over.
+        ["field_name", ...]
+        """.strip(), 
+        format = str
+    )
+    example_field = dspy.InputField(desc="""
+        An example from the collection of what the fields look like, in the following format:
+        {
+            "field_name": "field_value",
+            ...
+        }
+        You should use these to understand the format of the data, and to create your aggregation code.
+        """.strip(), 
+        format = str
+    )
+    code = dspy.OutputField(
+        desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only.",
+        format = str
+    )
+    text_return = dspy.OutputField(
+        desc="""
+        A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
+        Do not include many technical details e.g. variable names, 
+        just a brief explanation in plain English, in a chat message format, 
+        so you should use markdown and respond to the user in a friendly way.
+        Do not use emojis, and do not ask the user to confirm or approve of your actions.
+        Do not ask the user any questions.
+        """.strip(),
+        format = str
+    )
+
 
 class ObjectSummaryPrompt(dspy.Signature):
     """

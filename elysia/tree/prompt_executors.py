@@ -19,6 +19,7 @@ class DecisionExecutor(dspy.Module):
                 data_queried: list[str],
                 decision_tree: dict,
                 previous_reasoning: dict,
+                collection_names: list[str],
                 reference: dict = default_reference,
                 idx: int = 0) -> tuple[dict, bool]:
 
@@ -41,6 +42,7 @@ class DecisionExecutor(dspy.Module):
             available_tasks=available_tasks_str,
             decision_tree=decision_tree_str,
             available_information=available_information,
+            collection_names=collection_names,
             data_queried=data_queried_str,
             conversation_history=conversation_history,
             previous_reasoning=previous_reasoning,

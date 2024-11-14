@@ -26,6 +26,7 @@ class Objects:
     def add(self, objects: list[dict], metadata: dict = {}):
         self.objects.extend(objects)
         for key, value in metadata.items():
+            
             if key not in self.metadata:
                 self.metadata[key] = value
             
