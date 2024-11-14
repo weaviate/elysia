@@ -156,7 +156,6 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ decisions }) => {
 
   const onLayout = useCallback(
     (direction: string) => {
-      console.log(nodes);
       const layouted = getLayoutedElements(nodes, edges, { direction });
 
       setNodes([...layouted.nodes]);

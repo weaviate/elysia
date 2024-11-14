@@ -17,6 +17,7 @@ import SelectDropdown from "../navigation/select-dropdown";
 interface ChatInterfaceProps {
   currentConversation: string;
   toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
+  routerChangeCollection: (collection_id: string) => void;
   conversations: Conversation[];
   toggleCollectionEnabled: (
     collection_id: string,
@@ -36,6 +37,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   toggleCollectionEnabled,
   addMessageToConversation,
   handleQuery,
+  routerChangeCollection,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStatus, setCurrentStatus] = useState<string>("");
@@ -120,6 +122,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             messages={messages}
             current_status={currentStatus}
             toggleMessageCollapsed={toggleMessageCollapsed}
+            routerChangeCollection={routerChangeCollection}
           />
           <QueryInput messages={messages} handleSendQuery={handleSendQuery} />
         </>

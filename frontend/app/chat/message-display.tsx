@@ -22,12 +22,14 @@ interface MessageDisplayProps {
   messages: Message[];
   current_status: string;
   toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
+  routerChangeCollection: (collection_id: string) => void;
 }
 
 const MessageDisplay: React.FC<MessageDisplayProps> = ({
   messages,
   current_status,
   toggleMessageCollapsed,
+  routerChangeCollection,
 }) => {
   const size_control =
     messages.length == 0 ? "h-[0px] pb-0" : "h-[100vh] pb-32";
@@ -68,6 +70,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                   <TicketsDisplay
                     key={`${index}-${message.id}`}
                     message={message}
+                    routerChangeCollection={routerChangeCollection}
                   />
                 )}
                 {(message.payload as ResultPayload).type === "message" && (

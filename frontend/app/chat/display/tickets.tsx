@@ -8,9 +8,13 @@ import TicketMessageDisplay from "./ticket";
 
 interface TicketsDisplayProps {
   message: Message;
+  routerChangeCollection: (collection_id: string) => void;
 }
 
-const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
+const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
+  message,
+  routerChangeCollection,
+}) => {
   const payload = message.payload as ResultPayload;
   const tickets = payload.objects as Ticket[];
 
@@ -26,7 +30,12 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
     <div className="w-full flex flex-col justify-start items-start gap-3">
       {payload.metadata["collection_name"] && (
         <div className="w-full flex flex-col justify-start items-start gap-2 mb-2">
-          <p className="text-xs transition-all duration-300 cursor-pointer hover:text-primary hover:border-white text-secondary border border-secondary rounded-lg p-2">
+          <p
+            onClick={() =>
+              routerChangeCollection(payload.metadata["collection_name"])
+            }
+            className="text-xs transition-all duration-300 cursor-pointer hover:text-primary hover:border-white text-secondary border border-secondary rounded-lg p-2"
+          >
             {payload.metadata["collection_name"]}
           </p>
         </div>
