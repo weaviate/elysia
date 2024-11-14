@@ -16,7 +16,15 @@ from starlette.websockets import WebSocketDisconnect
 from elysia.tree.tree import Tree, lm, RecursionLimitException
 from elysia.util.logging import backend_print
 from elysia.util.api import parse_error
-from elysia.api.api_types import QueryData, GetCollectionData, GetCollectionsData, NERData, TitleData, SetCollectionsData
+from elysia.api.api_types import (
+    QueryData, 
+    GetCollectionData, 
+    GetCollectionsData, 
+    NERData, 
+    TitleData, 
+    SetCollectionsData, 
+    GetObjectData
+)
 from elysia.util.collection_metadata import (
     get_collection_data_types,
     get_collection_data,
@@ -272,3 +280,22 @@ async def set_collections(data: SetCollectionsData):
     global tree_manager
     tree_manager.get_tree(data.user_id, data.conversation_id).set_collection_names(data.collection_names, remove_data=data.remove_data)
     return JSONResponse(content={"error": ""}, status_code=200)
+
+@app.post("/api/get_object")
+async def get_object(data: GetObjectData):
+    error = ""
+
+    collection = client.collections.get(data.collection_name)
+    
+    try:
+        object = collection.query.fetch_object_by_id(data.uuid).properties
+    except Exception as e:
+        error = "No object found with this UUID."
+    
+    data_types = get_collection_data_types(data.collection_name)
+    
+    return JSONResponse(content={
+        "properties": data_types,
+        "items": [object],
+        "error": error
+    }, status_code=200)
