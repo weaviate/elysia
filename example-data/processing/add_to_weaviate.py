@@ -111,6 +111,7 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
         collection = soft_create_collection(client, collection_name, "issue_content")
 
     usernames = [d[len("'login': '")+1:d[len("'login': '")+1:].find("'")+len("'login': '")+1] for d in df.user]
+    labels = [[r["name"] for r in ast.literal_eval(row["labels"])] for i, row in df.iterrows()]
 
     # add data to collection
     for i, row in tqdm(df.iterrows(), total=len(df), desc=f"Adding {collection_name} to Weaviate"):
@@ -124,7 +125,10 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
                 "issue_created_at": row["created_at"],
                 "issue_updated_at": row["updated_at"],
                 "issue_url": row["html_url"],
-                "issue_author": usernames[i]
+                "issue_author": usernames[i],
+                "issue_labels": labels[i],
+                "issue_state": row["state"],
+                "issue_comments": row["comments"]
             }
 
             # weaviate metadata
