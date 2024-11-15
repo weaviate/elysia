@@ -28,7 +28,7 @@ items = json.loads(collection.body)["items"]
 
 
 query_payload = QueryData(
-    query="what did edward say in his most recent message",
+    query="what was edwards last message?",
     user_id="2",
     conversation_id="1"
 )
@@ -40,4 +40,4 @@ class fake_websocket:
 await process(query_payload.dict(), fake_websocket())
 
 tree_manager.get_tree(conversation_id="1", user_id="2").returns
-
+tree_manager.get_tree(conversation_id="1", user_id="2").conversation_history

@@ -6,6 +6,10 @@ from rich import print
 from elysia.util.parsing import objects_dict_to_str, format_datetime, remove_whitespace
 from elysia.text.objects import Text, Response
 
+class Branch:
+    def __init__(self, updates: dict):
+        self.updates = updates
+
 class Status:
     def __init__(self, status: str):
         self.status = status

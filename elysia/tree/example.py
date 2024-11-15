@@ -17,18 +17,18 @@ if __name__ == "__main__":
         dspy_model=None
     )
 
-    tree.process_sync(
-        "hi my name is danny"
-    )
+    # tree.process_sync(
+    #     "hi my name is danny"
+    # )
 
-    print(tree.returns)
+    # print(tree.returns)
 
-    tree.process_sync(
-        "what is my name"
-    )
+    # tree.process_sync(
+    #     "what is my name"
+    # )
     
-    # tree.returns.retrieved["example_verba_email_chains"].metadata
+    # # tree.returns.retrieved["example_verba_email_chains"].metadata
 
-    tree.process_sync(
-        "can't you see the name in your previous reasoning history?"
-    )
+    # tree.process_sync(
+    #     "can't you see the name in your previous reasoning history?"
+    # )
