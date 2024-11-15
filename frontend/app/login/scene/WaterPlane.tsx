@@ -19,7 +19,15 @@ function WaterPlane() {
 
     const baseMaterial = new THREE.MeshStandardMaterial({
       color: "#A436AE",
-      normalMap: new THREE.TextureLoader().load("/waternormals.jpg"),
+      normalMap: new THREE.TextureLoader().load(
+        "/waternormals.jpg",
+        (texture) => {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(5, 5); // Increase this number to make the texture repeat more
+        }
+      ),
+      normalScale: new THREE.Vector2(2, 2),
+      normalMapType: THREE.TangentSpaceNormalMap,
       transparent: true,
       roughness: 1,
       metalness: 0,
@@ -48,8 +56,8 @@ function WaterPlane() {
         vUv = uv;
         vec3 pos = transformed;
   
-        float waveStrength = 0.2;
-        float waveSpeed = 1.0;
+        float waveStrength = 0.1;
+        float waveSpeed = 0.5;
   
         // Create more complex wave patterns with varied frequencies and phases
         float wave1 = sin(pos.x * 2.0 + uTime) * cos(pos.y + uTime * 0.8);
