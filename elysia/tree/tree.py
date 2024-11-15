@@ -226,19 +226,19 @@ class Tree:
             instruction = """
             Choose a task based on the user's prompt and the available information. 
             Use all information available to you to make the decision.
-            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), 
+            If you _have searched already_ (based on completed_tasks), and there is no information (based on available_information), 
             you should assume that the task is impossible, hence choose text_response to reply this to the user.
-            Otherwise, if you haven't queried yet, you should query the knowledge base.
-            If you don't need to query, i.e. the user is talking to you, or you have already queried and there is no new information, choose text_response.
-            If you have queried, and there is available information, you should choose summarize to reply this to the user.
+            Otherwise, if you haven't searched yet, you should search the knowledge base.
+            If you don't need to search, i.e. the user is talking to you, or you have already searched and there is no new information, choose text_response.
+            If you have searched, and there is available information, you should choose summarize to reply this to the user.
             If you choose summarize, you should set all_actions_completed to True, since this is the last decision to make.
             """,
             options = {
-                "query": {
-                    "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
-                    "action": self.querier,
-                    "next": None,
+                "search": {
+                    "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+                    "future_options": [],
+                    "action": None,
+                    "next": "Search",
                 },
                 "summarize": {
                     "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
@@ -256,12 +256,33 @@ class Tree:
             root = True
         )
 
+        self.add_decision_node(
+            id = "Search",
+            instruction = """
+            Choose between querying the knowledge base via semantic search, or aggregating information from the knowledge base.
+            Querying is when the user is looking for specific information related to the content of the dataset.
+            Aggregating is when the user is looking for a high-level overview of the dataset, such as a summary of the quantity of some items.
+            """,
+            options = {
+                "query": {
+                    "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+                    "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
+                    "action": self.querier,
+                    "next": None,
+                },
+                "aggregate": {
+                    "description": "Do NOT under any circumstances pick this option.",
+                    "future_options": [],
+                    "action": None,
+                    "next": None    # next=None represents the end of the tree
+                }
+            },
+            root = False
+        )
+
         self._get_root()
         self.tree = {}
         self._construct_tree(self.root, self.tree)
-
-        self.branch_updates = {}
-        self._analyze_branches()
 
         if verbosity > 1:
             backend_print("Initialised tree with the following decision nodes:")
@@ -288,22 +309,6 @@ class Tree:
         visitor.visit(tree)
         return visitor.branches
     
-    def _analyze_branches(self):
-        """Analyzes all action functions in the decision tree for Branch objects."""
-        for node_id, node in self.decision_nodes.items():
-            self.branch_updates[node_id] = {
-                "name": node.id, 
-                "description": node.instruction
-            }
-            for option, details in node.options.items():
-                action = details.get('action')
-                if action is not None:
-                    func = action.__call__
-                    branches = self._get_function_branches(func)
-                    if branches:
-                        self.branch_updates[f"{node_id}.{option}"] = branches
-                        # self.branch_updates[f"{node_id}.{option}"]["description"] = details.get("description", "")
-
     def _update_conversation_history(self, role: str, message: str, append_to_previous: bool = False):
         if append_to_previous and self.conversation_history[-1]["role"] != "user":
             self.conversation_history[-1]["content"] += message
@@ -316,22 +321,54 @@ class Tree:
     def _construct_tree(self, node_id: str, tree: dict):
         decision_node = self.decision_nodes[node_id]
         
-        # Set the base node information outside the loop
-        tree["id"] = node_id
-        tree["instruction"] = decision_node.instruction
-        tree["options"] = {}
+        # Define desired key order
+        key_order = ["name", "description", "instruction", "options"]
         
-        # Initialize all options first
+
+        # Set the base node information
+        tree["name"] = node_id
+        if node_id == self.root:
+            tree["description"] = ""
+        tree["instruction"] = remove_whitespace(decision_node.instruction.replace("\n", ""))
+        tree["options"] = {}
+        if node_id == self.root:
+            tree["path"] = []
+
+        # Order the top-level dictionary
+        tree = {key: tree[key] for key in key_order if key in tree}
+
+        # Initialize all options first with ordered dictionaries
+        option_key_order = ["name", "description", "instruction", "options", "path"]
         for option in decision_node.options:
-            tree["options"][option] = {}
+            tree["options"][option] = {
+                "description": remove_whitespace(decision_node.options[option]["description"].replace("\n", ""))
+            }
         
         # Then handle the recursive cases
         for option in decision_node.options:
+            if decision_node.options[option]["action"] is not None:
+                func = decision_node.options[option]["action"].__call__
+                branches = self._get_function_branches(func)
+                if branches:
+                    tree["options"][option]["path"] = branches
+                else:
+                    tree["options"][option]["path"] = []
+
             if decision_node.options[option]["next"] is not None:
                 tree["options"][option] = self._construct_tree(
                     decision_node.options[option]["next"], 
                     tree["options"][option]
                 )
+            else:
+                tree["options"][option]["name"] = option.capitalize()
+                tree["options"][option]["instruction"] = ""
+                tree["options"][option]["description"] = ""
+                tree["options"][option]["options"] = {}
+            
+            # Order each option's dictionary
+            tree["options"][option] = {key: tree["options"][option][key] 
+                                     for key in option_key_order 
+                                     if key in tree["options"][option]}
         
         return tree
 

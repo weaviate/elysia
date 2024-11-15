@@ -10,6 +10,12 @@ class Summarizer:
         self.summarizer = SummarizingExecutor()
 
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs):
+        
+        Branch({
+            "name": "Summarise",
+            "description": "Summarise the retrieved information.",
+            "returns": "text"
+        })
 
         conversation_history = kwargs.get("conversation_history", [])
 
