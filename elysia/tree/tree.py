@@ -32,6 +32,7 @@ from dspy.primitives.assertions import assert_transform_module, backtrack_handle
 global lm
 lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
 # lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
+# lm = dspy.LM(model="ollama/llama3.2")
 
 dspy.settings.configure(lm=lm)
 

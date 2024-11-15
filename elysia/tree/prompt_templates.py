@@ -7,33 +7,33 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
                   else str)
 
     class DecisionPrompt(dspy.Signature):
-        """
-        You are an expert routing agent, who is responsible for routing a user's prompt to the most appropriate task.
-        You are part of an ensemble of routing agents within Elysia, who each make a decision about which task to complete.
-        Your decision is one of many that will be used to make the final decision.
+        # """
+        # You are an expert routing agent, who is responsible for routing a user's prompt to the most appropriate task.
+        # You are part of an ensemble of routing agents within Elysia, who each make a decision about which task to complete.
+        # Your decision is one of many that will be used to make the final decision.
 
-        Given a query (user_prompt) from a user, and a list of possible tasks (available_tasks), decide the task that needs to be completed.
-        You should think carefully and logically about the user's input and the tasks that you have available to you (available_tasks), and then decide which task is the most appropriate.
+        # Given a query (user_prompt) from a user, and a list of possible tasks (available_tasks), decide the task that needs to be completed.
+        # You should think carefully and logically about the user's input and the tasks that you have available to you (available_tasks), and then decide which task is the most appropriate.
         
-        You may be asked to make this decision more than once at a later date, so you should try to choose the most appropriate task NOW, knowing that you may be asked again.
+        # You may be asked to make this decision more than once at a later date, so you should try to choose the most appropriate task NOW, knowing that you may be asked again.
 
-        You are also responsible for checking if the overall goal has been completed, and returning False if it has, and True otherwise.
-        Remember, the overall goal is to respond to the user's query in a satisfactory way, and you must do so by completing the necessary tasks.
+        # You are also responsible for checking if the overall goal has been completed, and returning False if it has, and True otherwise.
+        # Remember, the overall goal is to respond to the user's query in a satisfactory way, and you must do so by completing the necessary tasks.
 
-        To route the user's query to the most appropriate task, follow these steps:
-        1. Evaluate what tasks are completed via the previous_reasoning field, as well as the information given within these tasks.
-        2. If tasks have already been completed, there may be information that has been retrieved that can help you decide which task to choose.
-        3. If there is no information available, then:
-            a. You could be in the first decision, in which case you should choose the most appropriate task based on the user's query.
-            b. You could be in the process of 
-        4. Evaluate whether the user's query can be answered by the available information.
-            a. If it can, then you should choose the next most appropriate task.
-            b. If it cannot, then you should choose the task so that you can respond to the user's query.
-        5. Evaluate whether all the possible actions that can be taken to answer the user have been taken.
-            a. If the user's query is not satisfied, then you should choose the next most appropriate task.
-            b. If all the actions have been taken, then you should return False for the all_actions_completed field.
-        6. Remember that it is possible that the task is impossible, in which case you have done all actions possible, so you should return True for the all_actions_completed field.
-        """
+        # To route the user's query to the most appropriate task, follow these steps:
+        # 1. Evaluate what tasks are completed via the previous_reasoning field, as well as the information given within these tasks.
+        # 2. If tasks have already been completed, there may be information that has been retrieved that can help you decide which task to choose.
+        # 3. If there is no information available, then:
+        #     a. You could be in the first decision, in which case you should choose the most appropriate task based on the user's query.
+        #     b. You could be in the process of 
+        # 4. Evaluate whether the user's query can be answered by the available information.
+        #     a. If it can, then you should choose the next most appropriate task.
+        #     b. If it cannot, then you should choose the task so that you can respond to the user's query.
+        # 5. Evaluate whether all the possible actions that can be taken to answer the user have been taken.
+        #     a. If the user's query is not satisfied, then you should choose the next most appropriate task.
+        #     b. If all the actions have been taken, then you should return False for the all_actions_completed field.
+        # 6. Remember that it is possible that the task is impossible, in which case you have done all actions possible, so you should return True for the all_actions_completed field.
+        # """
 
         # Regular input fields
         user_prompt = dspy.InputField(
@@ -43,10 +43,10 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             description="The instruction for the decision. Pay close attention to this. You must choose a task based on this instruction alone.",
             format = str
         )
-        reference = dspy.InputField(
-            description="Information about the state of the world NOW such as the date and time, used to frame the decision making.",
-            format = str
-        )
+        # reference = dspy.InputField(
+        #     description="Information about the state of the world NOW such as the date and time, used to frame the decision making.",
+        #     format = str
+        # )
         conversation_history = dspy.InputField(
             description="""
             The conversation history between the user and the assistant (you), including all previous messages.
@@ -109,22 +109,22 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         #     """.strip(),
         #     format = str
         # )
-        collection_names = dspy.InputField(
-            description="""
-            A list of the names of the collections that exist to be queried. 
-            Use this to determine if all (necessary) collections have been queried, combined with the data_queried field.
-            This should inform your decision on whether to query another collection or not.
-            """.strip(),
-            format = str
-        )
-        data_queried = dspy.InputField(
-            description="""
-            A list of items, showing whether a query has been completed or not.
-            This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.
-            If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.
-            """.strip(),
-            format = str
-        )
+        # collection_names = dspy.InputField(
+        #     description="""
+        #     A list of the names of the collections that exist to be queried. 
+        #     Use this to determine if all (necessary) collections have been queried, combined with the data_queried field.
+        #     This should inform your decision on whether to query another collection or not.
+        #     """.strip(),
+        #     format = str
+        # )
+        # data_queried = dspy.InputField(
+        #     description="""
+        #     A list of items, showing whether a query has been completed or not.
+        #     This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.
+        #     If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.
+        #     """.strip(),
+        #     format = str
+        # )
 
         # Task-specific input fields
         available_tasks = dspy.InputField(
@@ -151,31 +151,31 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
-        decision_tree = dspy.InputField(
-            description="""
-            A full nested dictionary of the entire decision tree.
-            This is the _full set_ of tasks available to you _in the future ONLY_, so you should not pick any tasks in this field now.
-            This is a dictionary of the format:
-            {
-                "id": id of the task, semi-descriptive
-                "instruction": instruction for the task, very descriptive, detailing what the task is about
-                "options": a dictionary of the available options for the task, with the tasks as the keys, the values are dictionaries with the same keys as above,
-                e.g.
-                {
-                    "option_1": {
-                        "id": id of the task, semi-descriptive
-                        "instruction": instruction for the task, very descriptive, detailing what the task is about
-                        "options": {"option_1_1": {...}, "option_1_2": {...}}
-                    }
-                }
-            }
-            etc.
-            Tasks that depend on other tasks are nested within the options of the current task.
-            You should NOT pick any tasks in this field, as it will cause an error.
-            Use this field to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward.
-            """.strip(),
-            format=str
-        )
+        # decision_tree = dspy.InputField(
+        #     description="""
+        #     A full nested dictionary of the entire decision tree.
+        #     This is the _full set_ of tasks available to you _in the future ONLY_, so you should not pick any tasks in this field now.
+        #     This is a dictionary of the format:
+        #     {
+        #         "id": id of the task, semi-descriptive
+        #         "instruction": instruction for the task, very descriptive, detailing what the task is about
+        #         "options": a dictionary of the available options for the task, with the tasks as the keys, the values are dictionaries with the same keys as above,
+        #         e.g.
+        #         {
+        #             "option_1": {
+        #                 "id": id of the task, semi-descriptive
+        #                 "instruction": instruction for the task, very descriptive, detailing what the task is about
+        #                 "options": {"option_1_1": {...}, "option_1_2": {...}}
+        #             }
+        #         }
+        #     }
+        #     etc.
+        #     Tasks that depend on other tasks are nested within the options of the current task.
+        #     You should NOT pick any tasks in this field, as it will cause an error.
+        #     Use this field to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward.
+        #     """.strip(),
+        #     format=str
+        # )
 
         # Output fields
         task: TaskLiteral = dspy.OutputField(
@@ -188,13 +188,13 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
-        all_actions_completed_reasoning = dspy.OutputField(
-            description="""
-            Break down all the requests in the user_prompt, and evaluate whether all the possible actions that can be taken to answer the user have been taken.
-            To answer this, you should look at the previous_reasoning field, to see if everything that can be done has been done.
-            You should also see if there are any other actions that could have been taken in the past that need to be completed.
-            """.strip()
-        )
+        # all_actions_completed_reasoning = dspy.OutputField(
+        #     description="""
+        #     Break down all the requests in the user_prompt, and evaluate whether all the possible actions that can be taken to answer the user have been taken.
+        #     To answer this, you should look at the previous_reasoning field, to see if everything that can be done has been done.
+        #     You should also see if there are any other actions that could have been taken in the past that need to be completed.
+        #     """.strip()
+        # )
         all_actions_completed = dspy.OutputField(
             description="""
             _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), 
