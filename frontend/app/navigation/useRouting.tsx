@@ -33,6 +33,10 @@ export function useRouting(
     }
   }, [searchParams]);
 
+  const routerToLogin = () => {
+    router.push("/login");
+  };
+
   const routerChangeMode = (mode: "home" | "data-explorer") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("mode", mode);
@@ -81,6 +85,7 @@ export function useRouting(
   return {
     routerChangeMode,
     routerChangeCollection,
+    routerToLogin,
     pageUp,
     pageUpMax,
     pageDown,

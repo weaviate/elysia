@@ -41,6 +41,7 @@ export default function Home() {
     pageDown,
     pageUpMax,
     pageDownMax,
+    routerToLogin,
   } = useRouting(
     handleModeChange,
     mode,
@@ -92,6 +93,7 @@ export default function Home() {
       <Sidebar
         handleModeChange={routerChangeMode}
         mode={mode}
+        routerToLogin={routerToLogin}
         fetchCollections={fetchCollections}
         selectCollection={routerChangeCollection}
         selectedCollection={selectedCollection}
