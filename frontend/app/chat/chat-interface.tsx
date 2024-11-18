@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 
-import { Conversation, DecisionPayload, Message } from "../types";
+import { Conversation, DecisionTreeNode, Message } from "../types";
 
 import { v4 as uuidv4 } from "uuid";
 
@@ -39,9 +39,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStatus, setCurrentStatus] = useState<string>("");
-  const [decisions, setDecisions] = useState<DecisionPayload[]>([]);
 
   const [mode, setMode] = useState<"chat" | "flow">("chat");
+  const [currentTree, setCurrentTree] = useState<DecisionTreeNode | null>(null);
 
   useEffect(() => {
     setMessages(
@@ -55,11 +55,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         ? conversations.find((c) => c.id === currentConversation)?.current || ""
         : ""
     );
-    setDecisions(
+    setCurrentTree(
       currentConversation && conversations.length > 0
-        ? conversations.find((c) => c.id === currentConversation)?.decisions ||
-            []
-        : []
+        ? conversations.find((c) => c.id === currentConversation)?.tree || null
+        : null
     );
   }, [currentConversation, conversations]);
 
@@ -125,7 +124,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </>
       ) : (
         <ReactFlowProvider>
-          <FlowDisplay decisions={decisions} />
+          <FlowDisplay currentTree={currentTree} />
         </ReactFlowProvider>
       )}
     </div>

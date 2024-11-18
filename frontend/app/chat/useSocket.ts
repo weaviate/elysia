@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Message, TextPayload, DecisionPayload } from "../types";
+import { Message, TextPayload } from "../types";
 import { getWebsocketHost } from "../api";
 
 export function useSocket(
@@ -9,10 +9,7 @@ export function useSocket(
   ) => void,
   setConversationStatus: (status: string, conversationId: string) => void,
   setAllConversationStatuses: (status: string) => void,
-  addDecisionToConversation: (
-    decision: DecisionPayload,
-    conversationId: string
-  ) => void
+  updateTree: (message: Message) => void
 ) {
   const [socketOnline, setSocketOnline] = useState(false);
   const [socket, setSocket] = useState<WebSocket>();
@@ -41,11 +38,9 @@ export function useSocket(
           setConversationStatus(payload.text, message.conversation_id);
         } else if (message.type === "completed") {
           setConversationStatus("", message.conversation_id);
-        } else if (message.type === "decision") {
-          const payload = message.payload as DecisionPayload;
-          addDecisionToConversation(payload, message.conversation_id);
+        } else if (message.type === "tree_update") {
+          updateTree(message);
         } else {
-          console.log(message);
           const newMessage = { ...message, collapsed: true };
           addMessageToConversation([newMessage], newMessage.conversation_id);
         }

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { generateIdFromIp } from "./util";
 
-import { initialConversation } from "./types";
+import { DecisionTreeNode, initialConversation } from "./types";
 import { useConversations } from "./chat/useConversations";
 import { useSocket } from "./chat/useSocket";
 import { useCollections } from "./explorer/useCollections";
@@ -54,8 +54,6 @@ export default function Home() {
   );
 
   const {
-    setConversations,
-    setCurrentConversation,
     conversations,
     currentConversation,
     addConversation,
@@ -64,7 +62,7 @@ export default function Home() {
     setAllConversationStatuses,
     selectConversation,
     setConversationTitle,
-    addDecisionToConversation,
+    updateTree,
     toggleCollectionEnabled,
     addMessageToConversation,
   } = useConversations(id || "", collections);
@@ -73,13 +71,14 @@ export default function Home() {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
-    addDecisionToConversation
+    updateTree
   );
 
   useEffect(() => {
-    setConversations([initialConversation]);
-    setCurrentConversation(initialConversation.id);
-    generateIdFromIp().then((id) => setId(id));
+    generateIdFromIp().then((id) => {
+      setId(id);
+      addConversation();
+    });
   }, []);
 
   const handleQuery = (query: string, conversationId: string) => {

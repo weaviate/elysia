@@ -82,7 +82,10 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
                 <div className="flex items-center gap-2">
                   {ticket.issue_labels.length > 0 &&
                     ticket.issue_labels.map((label, idx) => (
-                      <div className="p-2 bg-background_secondary rounded-lg">
+                      <div
+                        key={`${idx}-${label}`}
+                        className="p-2 bg-background_secondary rounded-lg"
+                      >
                         <p className="text-xs font-bold text-white">{label}</p>
                       </div>
                     ))}

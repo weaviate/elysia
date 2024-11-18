@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 
 import {
   ReactFlow,
@@ -8,109 +8,135 @@ import {
   useEdgesState,
   Node,
   Edge,
+  ConnectionLineType,
 } from "@xyflow/react";
+import dagre from "dagre";
 
 import "@xyflow/react/dist/style.css";
 
-import { DecisionPayload } from "../types";
 import DecisionNode from "./nodes/decision";
-import ReasoningNode from "./nodes/reasoning";
-import InstructionNode from "./nodes/instruction";
+import { DecisionTreeNode } from "../types";
 
 interface FlowDisplayProps {
-  decisions: DecisionPayload[];
+  currentTree: DecisionTreeNode | null;
 }
 
-const FlowDisplay: React.FC<FlowDisplayProps> = ({ decisions }) => {
+const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
-  const createNodes = (decisions: DecisionPayload[]) => {
-    const nodes: Node[] = [];
-    const centerX = window.innerWidth / 2; // Dynamic center based on window width
-    const verticalSpacing = 200; // Consistent vertical spacing between node groups
-
-    decisions.forEach((decision, index) => {
-      const baseOffset = index * verticalSpacing * 3; // Multiply by 2 to give more space between decision groups
-
-      // Decision node
-      nodes.push({
-        id: `${index}-decision`,
-        type: "decision",
-        draggable: true,
-        position: { x: centerX - 150, y: baseOffset }, // Subtract half the typical node width
-        data: {
-          text: decision.decision,
-        },
-      });
-
-      // Reasoning node
-      nodes.push({
-        id: `${index}-reasoning`,
-        type: "reasoning",
-        draggable: true,
-        position: { x: centerX - 150, y: baseOffset + verticalSpacing }, // One spacing unit down
-        data: {
-          text: decision.reasoning,
-        },
-      });
-
-      // Instruction node
-      nodes.push({
-        id: `${index}-instruction`,
-        type: "instruction",
-        draggable: true,
-        position: { x: centerX - 150, y: baseOffset + verticalSpacing * 2 }, // 1.5 spacing units down
-        data: {
-          text: decision.instruction,
-        },
-      });
-    });
-    return nodes;
-  };
-
-  const createEdges = (decisions: DecisionPayload[]) => {
-    const edges: Edge[] = [];
-    decisions.forEach((decision, index) => {
-      // Connect decision to reasoning
-      edges.push({
-        id: `e${index}-decision-reasoning`,
-        source: `${index}-decision`,
-        target: `${index}-reasoning`,
-      });
-
-      // Connect reasoning to instruction
-      edges.push({
-        id: `e${index}-reasoning-instruction`,
-        source: `${index}-reasoning`,
-        target: `${index}-instruction`,
-      });
-
-      // Connect instruction to next decision if not last
-      if (index < decisions.length - 1) {
-        edges.push({
-          id: `e${index}-instruction-decision`,
-          source: `${index}-instruction`,
-          target: `${index + 1}-decision`,
-        });
-      }
-    });
-    return edges;
-  };
 
   const nodeTypes = useMemo(
     () => ({
       decision: DecisionNode,
-      reasoning: ReasoningNode,
-      instruction: InstructionNode,
     }),
     []
   );
 
+  // Dagre graph setup for layout
+  const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+
+  const nodeWidth = 300;
+  const nodeHeight = 100;
+
+  const getLayoutedElements = (
+    nodes: Node[],
+    edges: Edge[],
+    direction = "TB"
+  ) => {
+    const isHorizontal = direction === "LR";
+    dagreGraph.setGraph({
+      rankdir: direction,
+      ranksep: 100, // Vertical spacing between nodes (default is 50)
+      nodesep: 100, // Horizontal spacing between nodes (default is 50)
+    });
+
+    nodes.forEach((node) => {
+      dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    });
+
+    edges.forEach((edge) => {
+      dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    const newNodes = nodes.map((node) => {
+      const nodeWithPosition = dagreGraph.node(node.id);
+      const newNode = {
+        ...node,
+        targetPosition: isHorizontal ? "left" : "top",
+        sourcePosition: isHorizontal ? "right" : "bottom",
+        // We are shifting the dagre node position (anchor=center center) to the top left
+        // so it matches the React Flow node anchor point (top left).
+        position: {
+          x: nodeWithPosition.x - nodeWidth / 2,
+          y: nodeWithPosition.y - nodeHeight / 2,
+        },
+      };
+
+      return newNode;
+    });
+
+    return { nodes: newNodes, edges };
+  };
+
+  const createNodesEdges = (tree: DecisionTreeNode) => {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    let idCounter = 0;
+    const getId = () => `node-${idCounter++}`;
+
+    const traverse = (
+      node: DecisionTreeNode,
+      parentId: string | null = null
+    ) => {
+      const nodeId = getId();
+
+      // Create decision node
+      nodes.push({
+        id: nodeId,
+        type: "decision",
+        data: {
+          text: node.name,
+          description: node.description,
+          choosen: node.choosen,
+          instruction: node.instruction,
+        },
+        position: { x: 0, y: 0 },
+      });
+
+      if (parentId) {
+        edges.push({
+          id: `edge-${parentId}-${nodeId}`,
+          source: parentId,
+          target: nodeId,
+          type: "smoothstep",
+          animated: node.choosen,
+        });
+      }
+
+      if (node.options && Object.keys(node.options).length > 0) {
+        Object.keys(node.options).forEach((option) => {
+          traverse(node.options[option], nodeId);
+        });
+      }
+    };
+
+    traverse(tree);
+
+    return getLayoutedElements(nodes, edges);
+  };
+
   useEffect(() => {
-    setNodes(createNodes(decisions));
-    setEdges(createEdges(decisions));
-  }, [decisions]);
+    if (currentTree) {
+      const { nodes, edges } = createNodesEdges(currentTree);
+      setNodes(nodes as Node[]);
+      setEdges(edges);
+    } else {
+      setNodes([]);
+      setEdges([]);
+    }
+  }, [currentTree]);
 
   return (
     <div
@@ -122,10 +148,11 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ decisions }) => {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
+          connectionLineType={ConnectionLineType.SmoothStep}
           onEdgesChange={onEdgesChange}
-          snapGrid={[15, 15]}
-          snapToGrid={true}
           fitView
+          nodesDraggable={false}
+          draggable={false}
         ></ReactFlow>
       </div>
     </div>
