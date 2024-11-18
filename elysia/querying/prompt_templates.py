@@ -92,24 +92,21 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
 
         current_message = dspy.InputField(
             description="""
-                The current message you, the assistant, have written to send to the user. 
-                This message has not been sent yet, you will add text to it, to be sent to the user later.
-                In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
-                """.strip(),
-                format = str
-            )
+            The current message you, the assistant, have written to send to the user. 
+            This message has not been sent yet, you will add text to it, to be sent to the user later.
+            In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+            """.strip(),
+            format = str
+        )
         text_return = dspy.OutputField(
             desc="""
-            A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
-            Do not include many technical details e.g. variable names, 
-            just a brief explanation in plain English, in a chat message format, 
-            so you should use markdown and respond to the user in a friendly way.
-            Do not use emojis, and do not ask the user to confirm or approve of your actions.
-            Do not ask the user any questions.
-            This is a continuation of the current_message field. 
-            This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
-            Use present tense in your text, as if you are currently completing the action.
-            If the current_message field is empty, then this response is the beginning of a new message.
+            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
+            You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
+            Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
+            Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
+            Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+            If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
+            Use gender neutral language.
             """.strip(),
             format = str
         )
@@ -197,19 +194,16 @@ def construct_property_grouping_prompt(property_names: list[str]) -> dspy.Signat
             """.strip(), 
             format = str
         )
-
+        
         text_return = dspy.OutputField(
             desc="""
-            A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
-            Do not include many technical details e.g. variable names, 
-            just a brief explanation in plain English, in a chat message format, 
-            so you should use markdown and respond to the user in a friendly way.
-            Do not use emojis, and do not ask the user to confirm or approve of your actions.
-            Do not ask the user any questions.
-            This is a continuation of the current_message field. 
-            This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
-            Use present tense in your text, as if you are currently completing the action.
-            If the current_message field is empty, then this response is the beginning of a new message.
+            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
+            You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
+            Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
+            Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
+            Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+            If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
+            Use gender neutral language.
             """.strip(),
             format = str
         )
@@ -431,18 +425,16 @@ class QueryCreatorPrompt(dspy.Signature):
             """.strip(),
             format = str
         )
+    
     text_return = dspy.OutputField(
         desc="""
-        A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
-        Do not include many technical details e.g. variable names, 
-        just a brief explanation in plain English, in a chat message format, 
-        so you should use markdown and respond to the user in a friendly way.
-        Do not use emojis, and do not ask the user to confirm or approve of your actions.
-        Do not ask the user any questions.
-        This is a continuation of the current_message field. 
-        This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
-        Use present tense in your text, as if you are currently completing the action.
-        If the current_message field is empty, then this response is the beginning of a new message.
+        Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
+        You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
+        Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
+        Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
+        Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+        If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
+        Use gender neutral language.
         """.strip(),
         format = str
     )
@@ -602,16 +594,16 @@ class AggregateCollectionPrompt(dspy.Signature):
     )
     text_return = dspy.OutputField(
         desc="""
-        A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
-        Do not include many technical details e.g. variable names, 
-        just a brief explanation in plain English, in a chat message format, 
-        so you should use markdown and respond to the user in a friendly way.
-        Do not use emojis, and do not ask the user to confirm or approve of your actions.
-        Do not ask the user any questions.
+        Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
+        You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
+        Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
+        Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
+        Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+        If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
+        Use gender neutral language.
         """.strip(),
         format = str
     )
-
 
 class ObjectSummaryPrompt(dspy.Signature):
     """

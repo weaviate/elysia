@@ -18,8 +18,12 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "what did edward say about the new feature in verba?"
+        "what did edward say in his last message?"
     )
+
+    # tree.process_sync(
+    #     "query again to find out who else was in the conversation about that that message was in?"
+    # )
 
     # print(tree.returns)
 
@@ -27,7 +31,7 @@ if __name__ == "__main__":
     #     "what is my name"
     # )
     
-    # # tree.returns.retrieved["example_verba_email_chains"].metadata
+    # # tree.returns.retrieved["example_verba_slack_conversations"].objects
 
     # tree.process_sync(
     #     "can't you see the name in your previous reasoning history?"

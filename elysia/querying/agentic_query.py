@@ -4,8 +4,9 @@ import dspy
 from weaviate.classes.aggregate import GroupByAggregate
 
 from elysia.globals.weaviate_client import client
-from elysia.globals.reference import reference
+from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
+from elysia.util.parsing import update_current_message
 from elysia.querying.prompt_executors import (
     QueryExecutor, 
     QueryInitialiserExecutor, 
@@ -32,13 +33,13 @@ class AgenticQuery:
         self.object_summariser = ObjectSummaryExecutor().activate_assertions()
         
 
-        if len(query_creator_filepath) > 0:
-            self.querier.load(query_creator_filepath)
-            backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_creator_filepath}[/italic magenta]")
+        # if len(query_creator_filepath) > 0:
+        #     self.querier.load(query_creator_filepath)
+        #     backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_creator_filepath}[/italic magenta]")
 
-        if len(query_initialiser_filepath) > 0:
-            self.query_initialiser.load(query_initialiser_filepath)
-            backend_print(f"[green]Loaded query initialiser[/green] model at [italic magenta]{query_initialiser_filepath}[/italic magenta]")
+        # if len(query_initialiser_filepath) > 0:
+        #     self.query_initialiser.load(query_initialiser_filepath)
+        #     backend_print(f"[green]Loaded query initialiser[/green] model at [italic magenta]{query_initialiser_filepath}[/italic magenta]")
 
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names
@@ -68,19 +69,20 @@ class AgenticQuery:
             # Run the query initialiser pipeline
             initialiser = self.query_initialiser(
                 user_prompt=user_prompt,
-                reference=reference,
                 previous_reasoning=previous_reasoning,
                 data_queried=data_queried,
                 current_message=current_message
             )
-            current_message += " " + initialiser.text_return
+
+            current_message, message_update = update_current_message(current_message, initialiser.text_return)
 
             # Yield results to front end
             yield TreeUpdate(from_node="query", to_node="query_initialiser", reasoning=initialiser.reasoning, last = False)
-            if initialiser.text_return is not None:
-                yield Response([{"text": initialiser.text_return}], {})
+            if message_update != "":
+                yield Response([{"text": message_update}], {})
         
         except Exception as e:
+            print(e)
             yield Error(f"Error in initialising query: {e}")
 
         previous_reasoning["query_initialiser"] = initialiser.reasoning
@@ -105,17 +107,17 @@ class AgenticQuery:
             property_grouper = PropertyGroupingExecutor(data_fields, initialiser.collection_name)
             collection_metadata, grouper = property_grouper(
                 user_prompt=user_prompt,
-                reference=reference,
                 previous_reasoning=previous_reasoning,
                 data_fields=data_fields,
                 example_field=example_field,
                 current_message=current_message
             )
             
-            current_message += " " + grouper.text_return
+            current_message, message_update = update_current_message(current_message, grouper.text_return)
 
             # Yield results to front end
-            yield Response([{"text": grouper.text_return}], {})
+            if message_update != "":
+                yield Response([{"text": message_update}], {})
             if collection_metadata == {}:
                 yield Warning(f"Agent was unable to determine a property to group by. Performing a regular query instead.")
             yield TreeUpdate(from_node="query_initialiser", to_node="property_grouper", reasoning=grouper.reasoning, last = False)
@@ -137,7 +139,6 @@ class AgenticQuery:
             # Run the query executor (write and execute the query)
             response, query = self.querier(
                 user_prompt = user_prompt, 
-                reference = reference, 
                 previous_queries = self.previous_queries, 
                 data_fields = data_fields, 
                 example_field = example_field, 
@@ -147,10 +148,11 @@ class AgenticQuery:
                 current_message = current_message
             )
 
-            current_message += " " + query.text_return
+            current_message, message_update = update_current_message(current_message, query.text_return)
 
             # Yield results to front end
-            yield Response([{"text": query.text_return}], {})
+            if message_update != "":
+                yield Response([{"text": message_update}], {})
             yield Code([{"text": query.code, "language": "python", "title": "Query"}], {})
             yield TreeUpdate(from_node="property_grouper", to_node="query_executor", reasoning=query.reasoning, last = initialiser.output_type != "summary")
 

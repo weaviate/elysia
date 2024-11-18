@@ -12,7 +12,7 @@ import nest_asyncio
 from elysia.text.text import Summarizer, TextResponse
 from elysia.querying.agentic_query import AgenticQuery
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
-from elysia.util.parsing import remove_whitespace
+from elysia.util.parsing import remove_whitespace, update_current_message
 from elysia.util.logging import backend_print
 from elysia.util.api import (
     parse_decision, 
@@ -64,7 +64,13 @@ class DecisionNode:
     def _options_to_json(self):
         out = {}
         for node in self.options:
-            out[node] = {key: value for key, value in self.options[node].items() if key not in ["action", "returns", "next"]}
+            out[node] = self.options[node]["description"]
+        return out
+    
+    def _options_to_future(self):
+        out = {}
+        for node in self.options:
+            out[node] = self.options[node]["future"]
         return out
 
     def decide(self, 
@@ -77,6 +83,7 @@ class DecisionNode:
                idx: int,
                data_queried: dict,
                collection_names: list[str],
+               current_message: str = "",
                **kwargs):
         
         output, self.completed = self.decision_executor(
@@ -89,7 +96,9 @@ class DecisionNode:
             data_queried = data_queried,
             decision_tree = decision_tree,
             previous_reasoning = previous_reasoning,
+            future_tasks = self._options_to_future(),
             collection_names = collection_names,
+            current_message = current_message,
             idx = idx
         )
 
@@ -101,7 +110,7 @@ class DecisionNode:
         else:
             action_fn = None
 
-        return self.decision, self.reasoning, action_fn, self.completed
+        return output, action_fn, self.completed
 
     def __call__(self, user_prompt: str, completed_tasks: list[dict], available_information: list[dict], conversation_history: list[dict], **kwargs):
         return self.decide(user_prompt, completed_tasks, available_information, conversation_history, **kwargs)
@@ -240,19 +249,19 @@ class Tree:
             options = {
                 "search": {
                     "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future_options": [],
+                    "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names),
                     "action": None,
                     "next": "search",
                 },
                 "summarize": {
                     "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
-                    "future_options": [],
+                    "future": "",
                     "action": Summarizer(),
                     "next": None    # next=None represents the end of the tree
                 },
                 "text_response": {
                     "description": "Respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
-                    "future_options": [],
+                    "future": "",
                     "action": TextResponse(),
                     "next": None
                 }
@@ -270,13 +279,13 @@ class Tree:
             options = {
                 "query": {
                     "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
+                    "future": "",
                     "action": self.querier,
                     "next": None,
                 },
                 "aggregate": {
                     "description": "Do NOT under any circumstances pick this option.",
-                    "future_options": [],
+                    "future": "",
                     "action": None,
                     "next": None    # next=None represents the end of the tree
                 }
@@ -426,8 +435,9 @@ class Tree:
                 yield self.returner._parse_text(result)
 
             if isinstance(result, Response): 
-                self.current_message += " " + result.objects[0]["text"]
-                self._update_conversation_history("assistant", result.objects[0]["text"].strip(), append_to_previous=True)
+                self.current_message, message_update = update_current_message(self.current_message, result.objects[0]["text"])
+                if message_update != "":
+                    self._update_conversation_history("assistant", message_update.strip(), append_to_previous=True)
                 backend_print(f"Updated current message: [bold yellow]'{self.current_message}'[/bold yellow]")
                     
             if isinstance(result, Summary):
@@ -504,7 +514,7 @@ class Tree:
                 completed = True
                 break
 
-            decision, reasoning, action_fn, completed = current_decision_node(
+            decision, action_fn, completed = current_decision_node(
                 user_prompt=user_prompt, 
                 completed_tasks=self.previous_info,
                 available_information=self.returns,
@@ -513,29 +523,35 @@ class Tree:
                 decision_tree=self.tree,
                 previous_reasoning=self.previous_reasoning,
                 collection_names=self.collection_names,
+                current_message=self.current_message,
                 idx=self.num_trees_completed
             )
 
-            yield self.returner._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
-            yield self.returner._parse_tree_update(current_decision_node.id, decision, reasoning, False)
+            self.current_message, message_update = update_current_message(self.current_message, decision.text_return)
+            print(f"Decision message: [bold yellow]'{message_update}'[/bold yellow]")
+
+            if message_update != "":
+                yield self.returner._parse_text(Response([{"text": message_update}], {}))
+            yield self.returner._parse_decision(current_decision_node.id, decision.task, decision.reasoning, current_decision_node.instruction)
+            yield self.returner._parse_tree_update(current_decision_node.id, decision.task, decision.reasoning, False)
             
-            self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = reasoning
-            self.decision_history.append(decision)
+            self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = decision.reasoning
+            self.decision_history.append(decision.task)
             self.previous_info.append(current_decision_node.construct_as_previous_info())            
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")
                 backend_print(f"Instruction: [italic]{current_decision_node.instruction.strip()}[/italic]")
-                backend_print(f"Decision: [green]{decision}[/green]\n")
+                backend_print(f"Decision: [green]{decision.task}[/green]\n")
 
             if action_fn is not None:
                 async for result in self._evaluate_action(action_fn, user_prompt, completed, **kwargs):
                     yield result
 
-            if current_decision_node.options[decision]["next"] is None:
+            if current_decision_node.options[decision.task]["next"] is None:
                 break
             else:
-                current_decision_node = self.decision_nodes[current_decision_node.options[decision]["next"]]
+                current_decision_node = self.decision_nodes[current_decision_node.options[decision.task]["next"]]
 
         # end of the tree for this iteration
         if not completed or (self.run_num_trees is not None and self.num_trees_completed < self.run_num_trees):

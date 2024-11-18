@@ -1,6 +1,6 @@
 import dspy
 from elysia.text.prompt_templates import SummarizingPrompt, TextResponsePrompt
-from elysia.globals.reference import reference
+from elysia.globals.reference import create_reference
 
 class SummarizingExecutor(dspy.Module):
 
@@ -21,7 +21,7 @@ class SummarizingExecutor(dspy.Module):
             available_information=available_information,
             previous_reasoning=previous_reasoning,
             conversation_history=conversation_history,
-            reference=reference
+            reference=create_reference()
         )
 
 class TextResponseExecutor(dspy.Module):
@@ -43,5 +43,5 @@ class TextResponseExecutor(dspy.Module):
             previous_reasoning=previous_reasoning,
             conversation_history=conversation_history,
             current_message=current_message,
-            reference=reference
+            reference=create_reference()
         ).response

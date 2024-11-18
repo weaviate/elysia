@@ -1,7 +1,7 @@
 from weaviate.classes.query import Filter
 from elysia.globals.weaviate_client import client
 
-from elysia.globals.reference import reference
+from elysia.globals.reference import create_reference
 
 from elysia.util.logging import backend_print
 from elysia.querying.prompt_executors import QueryRewriterExecutor

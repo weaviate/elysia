@@ -11,7 +11,7 @@ from typing import Callable
 
 from elysia.tree.objects import Returns
 from elysia.globals.weaviate_client import client
-from elysia.globals.reference import reference
+from elysia.globals.reference import create_reference
 from elysia.querying.prompt_templates import (
     construct_query_initialiser_prompt, 
     QueryCreatorPrompt, 
@@ -30,12 +30,17 @@ class QueryInitialiserExecutor(dspy.Module):
         self.available_collections = collection_names
         self.available_return_types = return_types
 
-    def forward(self, user_prompt: str, reference: str, previous_reasoning: dict, data_queried: list[str], current_message: str) -> str:
+    def forward(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str], current_message: str) -> str:
+        
+        data_queried_str = ""
+        for collection_name, num_items in data_queried.items():
+            data_queried_str += f" - {collection_name}: {num_items} objects retrieved {'(empty - either no objects for this prompt or incorrect query)' if num_items == 0 else ''}\n"
+        
         return self.query_initialiser_prompt(
             user_prompt=user_prompt,
-            reference=reference,
+            reference=create_reference(),
             previous_reasoning=previous_reasoning,
-            data_queried=data_queried,
+            data_queried=data_queried_str,
             available_collections=self.available_collections,
             available_return_types=self.available_return_types,
             current_message=current_message
@@ -67,7 +72,6 @@ class PropertyGroupingExecutor(dspy.Module):
     def forward(
         self, 
         user_prompt: str, 
-        reference: str, 
         previous_reasoning: dict, 
         data_fields: list[str], 
         example_field: dict,
@@ -76,7 +80,7 @@ class PropertyGroupingExecutor(dspy.Module):
         
         prediction = self.property_grouping_prompt(
             user_prompt=user_prompt,
-            reference=reference,
+            reference=create_reference(),
             previous_reasoning=previous_reasoning,
             data_fields=data_fields,
             example_field=example_field,
@@ -114,7 +118,6 @@ class QueryExecutor(dspy.Module):
     def forward(
         self, 
         user_prompt: str, 
-        reference: str, 
         previous_queries: list, 
         data_fields: list, 
         example_field: dict, 
@@ -128,7 +131,7 @@ class QueryExecutor(dspy.Module):
         try:
             prediction = self.query_creator_prompt(
                 user_prompt=user_prompt, 
-                reference=reference,
+                reference=create_reference(),
                 data_fields=data_fields, 
                 example_field=example_field, 
                 previous_queries=previous_queries,
@@ -196,7 +199,6 @@ class AggregateCollectionExecutor(dspy.Module):
     def forward(
         self, 
         user_prompt: str, 
-        reference: str, 
         data_fields: list, 
         example_field: dict, 
         previous_reasoning: dict, 
@@ -205,7 +207,7 @@ class AggregateCollectionExecutor(dspy.Module):
         
         prediction = self.aggregate_collection_prompt(
             user_prompt=user_prompt, 
-            reference=reference, 
+            reference=create_reference(), 
             previous_reasoning=previous_reasoning,
             data_fields=data_fields, 
             example_field=example_field, 

@@ -18,9 +18,11 @@ class DecisionExecutor(dspy.Module):
                 completed_tasks: list[str],
                 data_queried: list[str],
                 decision_tree: dict,
+                future_tasks: dict,
                 previous_reasoning: dict,
                 collection_names: list[str],
                 reference: dict = default_reference,
+                current_message: str = "",
                 idx: int = 0) -> tuple[dict, bool]:
 
         # convert available_tasks to a string
@@ -44,8 +46,10 @@ class DecisionExecutor(dspy.Module):
             available_information=available_information,
             collection_names=collection_names,
             data_queried=data_queried_str,
+            future_information=future_tasks,
             conversation_history=conversation_history,
             previous_reasoning=previous_reasoning,
+            current_message=current_message,
             config = {"temperature": 0.7+0.01*idx}
         )
 

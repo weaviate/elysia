@@ -141,5 +141,6 @@ class TextResponsePrompt(dspy.Signature):
         This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
         Use present tense in your text, as if you are currently completing the action.
         If the current_message field is empty, then this response is the beginning of a new message.
+        Use gender neutral language.
         """.strip()
     )

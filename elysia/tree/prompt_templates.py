@@ -125,6 +125,14 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
+        current_message = dspy.InputField(
+            description="""
+            The current message you, the assistant, have written to send to the user. 
+            This message has not been sent yet, you will add text to it, to be sent to the user later.
+            In essence, the concatenation of this field, current_message, and the text_return field, will be sent to the user.
+            """.strip(),
+            format = str
+        )
 
         # Task-specific input fields
         available_tasks = dspy.InputField(
@@ -151,31 +159,46 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
-        decision_tree = dspy.InputField(
+        future_information = dspy.InputField(
             description="""
-            A full nested dictionary of the entire decision tree.
-            This is the _full set_ of tasks available to you _in the future ONLY_, so you should not pick any tasks in this field now.
+            For each task, what future tasks are available after selecting this action.
+            This provides context so you know what you can do in the future if you select each task.
             This is a dictionary of the format:
             {
-                "id": id of the task, semi-descriptive
-                "instruction": instruction for the task, very descriptive, detailing what the task is about
-                "options": a dictionary of the available options for the task, with the tasks as the keys, the values are dictionaries with the same keys as above,
-                e.g.
-                {
-                    "option_1": {
-                        "id": id of the task, semi-descriptive
-                        "instruction": instruction for the task, very descriptive, detailing what the task is about
-                        "options": {"option_1_1": {...}, "option_1_2": {...}}
-                    }
-                }
+                "task_1": "description of future tasks after selecting task_1",
+                "task_2": "description of future tasks after selecting task_2",
+                ...
             }
-            etc.
-            Tasks that depend on other tasks are nested within the options of the current task.
-            You should NOT pick any tasks in this field, as it will cause an error.
-            Use this field to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward.
+            Use this to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward.
+            If this is empty, it is likely that this is the last task in a sequence, but it does not necessarily mean this is the last action to take.
             """.strip(),
-            format=str
+            format = str
         )
+        # decision_tree = dspy.InputField(
+        #     description="""
+        #     A full nested dictionary of the entire decision tree.
+        #     This is the _full set_ of tasks available to you _in the future ONLY_, so you should not pick any tasks in this field now.
+        #     This is a dictionary of the format:
+        #     {
+        #         "id": id of the task, semi-descriptive
+        #         "instruction": instruction for the task, very descriptive, detailing what the task is about
+        #         "options": a dictionary of the available options for the task, with the tasks as the keys, the values are dictionaries with the same keys as above,
+        #         e.g.
+        #         {
+        #             "option_1": {
+        #                 "id": id of the task, semi-descriptive
+        #                 "instruction": instruction for the task, very descriptive, detailing what the task is about
+        #                 "options": {"option_1_1": {...}, "option_1_2": {...}}
+        #             }
+        #         }
+        #     }
+        #     etc.
+        #     Tasks that depend on other tasks are nested within the options of the current task.
+        #     You should NOT pick any tasks in this field, as it will cause an error.
+        #     Use this field to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward.
+        #     """.strip(),
+        #     format=str
+        # )
 
         # Output fields
         task: TaskLiteral = dspy.OutputField(
@@ -207,6 +230,20 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             (True/False)
             """.strip(),
             format=bool
+        )
+        text_return = dspy.OutputField(
+            desc="""
+            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
+            You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
+            Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
+            Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
+            Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+            If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
+            Do NOT attempt to complete the task within this field, or to answer the user's query. You are only communicating your reasoning for the decision in a step-wise fashion. 
+            This is displayed to the user as non-primary text, so stick to this brief exactly.
+            Use gender neutral language.
+            """.strip(),
+            format = str
         )
 
     return DecisionPrompt

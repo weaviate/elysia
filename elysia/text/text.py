@@ -43,5 +43,6 @@ class TextResponse:
             conversation_history=conversation_history,
             current_message=current_message
         )
+        output = "\n\n" + output
 
         yield Response([{"text": output}], {})
