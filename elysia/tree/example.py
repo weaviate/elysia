@@ -18,9 +18,10 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "what did edward say in his last message?"
+        "what did kaladin say to shallan?"
     )
 
+    x=1
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"
     # )

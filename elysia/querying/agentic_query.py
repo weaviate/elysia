@@ -74,6 +74,8 @@ class AgenticQuery:
                 current_message=current_message
             )
 
+            previous_reasoning["query_initialiser"] = initialiser.reasoning
+
             current_message, message_update = update_current_message(current_message, initialiser.text_return)
 
             # Yield results to front end
@@ -84,8 +86,6 @@ class AgenticQuery:
         except Exception as e:
             print(e)
             yield Error(f"Error in initialising query: {e}")
-
-        previous_reasoning["query_initialiser"] = initialiser.reasoning
 
         # Get some metadata about the collection
         self._find_previous_queries(initialiser.collection_name, available_information)
@@ -115,6 +115,8 @@ class AgenticQuery:
             
             current_message, message_update = update_current_message(current_message, grouper.text_return)
 
+            previous_reasoning["property_grouper"] = grouper.reasoning
+
             # Yield results to front end
             if message_update != "":
                 yield Response([{"text": message_update}], {})
@@ -123,10 +125,8 @@ class AgenticQuery:
             yield TreeUpdate(from_node="query_initialiser", to_node="property_grouper", reasoning=grouper.reasoning, last = False)
         
         except Exception as e:
-            yield Error(f"Error in property grouping: {e}")
+            yield Warning(f"Error in property grouping: {e}")
 
-        previous_reasoning["property_grouper"] = grouper.reasoning
-        
         # -- Step 3: Query the collection
         Branch({
             "name": "Query Executor",
@@ -148,27 +148,25 @@ class AgenticQuery:
                 current_message = current_message
             )
 
-            current_message, message_update = update_current_message(current_message, query.text_return)
-
-            # Yield results to front end
-            if message_update != "":
-                yield Response([{"text": message_update}], {})
-            yield Code([{"text": query.code, "language": "python", "title": "Query"}], {})
-            yield TreeUpdate(from_node="property_grouper", to_node="query_executor", reasoning=query.reasoning, last = initialiser.output_type != "summary")
-
-            if eval(query.is_query_possible):
-                yield Status(f"Retrieved {len(response.objects)} objects from {initialiser.collection_name}")
-
-                if query.code is not None:
-                    self.previous_queries.append(query.code)
-
         except Exception as e:
             yield Error(f"Error in query execution: {e}")
 
-        # Only continue if the query is possible
-        if not eval(query.is_query_possible):
+        # If the query is not possible, yield a generic retrieval and return nothing
+        if query is None:
             yield GenericRetrieval([], {"collection_name": initialiser.collection_name, "impossible_prompts": [user_prompt]})
             return
+
+        current_message, message_update = update_current_message(current_message, query.text_return)
+
+        # Yield results to front end
+        if message_update != "":
+            yield Response([{"text": message_update}], {})
+        yield Code([{"text": query.code, "language": "python", "title": "Query"}], {})
+        yield TreeUpdate(from_node="property_grouper", to_node="query_executor", reasoning=query.reasoning, last = initialiser.output_type != "summary")
+        yield Status(f"Retrieved {len(response.objects)} objects from {initialiser.collection_name}")
+
+        # Add the query code to the previous queries
+        self.previous_queries.append(query.code)
 
         # Get the objects from the response (query executor)
         objects = []

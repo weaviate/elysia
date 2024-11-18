@@ -36,7 +36,7 @@ class QueryInitialiserExecutor(dspy.Module):
         for collection_name, num_items in data_queried.items():
             data_queried_str += f" - {collection_name}: {num_items} objects retrieved {'(empty - either no objects for this prompt or incorrect query)' if num_items == 0 else ''}\n"
         
-        return self.query_initialiser_prompt(
+        prediction = self.query_initialiser_prompt(
             user_prompt=user_prompt,
             reference=create_reference(),
             previous_reasoning=previous_reasoning,
@@ -45,6 +45,12 @@ class QueryInitialiserExecutor(dspy.Module):
             available_return_types=self.available_return_types,
             current_message=current_message
         )
+
+        dspy.Assert(prediction.collection_name in self.available_collections, 
+                    f"The collection name you have chosen: {prediction.collection_name} is not in the available collections: {self.available_collections}", 
+                    target_module=self.query_initialiser_prompt)
+        
+        return prediction
     
 class PropertyGroupingExecutor(dspy.Module):
 
@@ -142,7 +148,7 @@ class QueryExecutor(dspy.Module):
         except Exception as e:
             backend_print(f"Error in query creator prompt: {e}")
             # Return empty values when there's an error
-            return QueryReturn(objects=[]), None, None, False
+            return QueryReturn(objects=[]), None
 
         try:
             is_query_possible = eval(prediction.is_query_possible)
@@ -153,10 +159,10 @@ class QueryExecutor(dspy.Module):
             except Exception as e:
                 backend_print(f"Error getting is_query_possible: {e}")
                 # Return empty values when there's an error
-                return QueryReturn(objects=[]), None, None, False
+                return QueryReturn(objects=[]), None
 
         if not is_query_possible:
-            return QueryReturn(objects=[]), None, None, False
+            return QueryReturn(objects=[]), None
 
         dspy.Suggest(
             prediction.code not in previous_queries,
@@ -175,7 +181,7 @@ class QueryExecutor(dspy.Module):
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing query code: {e}")
-                return QueryReturn(objects=[]), None, None, False
+                return QueryReturn(objects=[]), None
 
         return response, prediction
 

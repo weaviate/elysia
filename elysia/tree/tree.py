@@ -445,6 +445,7 @@ class Tree:
 
             if isinstance(result, Error):
                 yield self.returner._parse_error(result.text)
+                raise Exception(result.text)
 
             if isinstance(result, Warning):
                 yield self.returner._parse_warning(result.text)
