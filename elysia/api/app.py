@@ -326,6 +326,7 @@ async def object_relevance(data: ObjectRelevanceData):
         error = str(e)
     return JSONResponse(
         content={
+            "conversation_id": data.conversation_id,
             "any_relevant": any_relevant,
             "error": error
         }, 
