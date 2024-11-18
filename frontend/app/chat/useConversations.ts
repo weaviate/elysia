@@ -15,28 +15,34 @@ import {
   setCollectionEnabled,
 } from "./api";
 
-export function useConversations(id: string, collections: Collection[]) {
+import { getCollections } from "../explorer/api";
+
+export function useConversations(id: string) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<string | null>(
     null
   );
 
+  const [collections, setCollections] = useState<Collection[]>([]);
+
   const addConversation = () => {
     const conversation_id = uuidv4();
     getDecisionTree(id, conversation_id).then((data) => {
-      console.log(data);
-      const newConversation = {
-        ...initialConversation,
-        id: conversation_id,
-        tree: data.tree,
-        base_tree: data.tree,
-        enabled_collections: collections.reduce(
-          (acc, c) => ({ ...acc, [c.name]: true }),
-          {}
-        ),
-      };
-      setConversations([...(conversations || []), newConversation]);
-      setCurrentConversation(newConversation.id);
+      getCollections().then((collections) => {
+        setCollections(collections);
+        const newConversation = {
+          ...initialConversation,
+          id: conversation_id,
+          tree: data.tree,
+          base_tree: data.tree,
+          enabled_collections: collections.reduce(
+            (acc, c) => ({ ...acc, [c.name]: true }),
+            {}
+          ),
+        };
+        setConversations([...(conversations || []), newConversation]);
+        setCurrentConversation(newConversation.id);
+      });
     });
   };
 
