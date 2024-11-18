@@ -35,7 +35,6 @@ export async function setCollectionEnabled(
   conversation_id: string,
   user_id: string
 ) {
-  console.log(collection_names, remove_data, conversation_id, user_id);
   const res = await fetch(`http://localhost:8000/api/set_collections`, {
     method: "POST",
     headers: {

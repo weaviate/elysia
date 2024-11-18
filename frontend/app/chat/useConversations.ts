@@ -100,25 +100,6 @@ export function useConversations(id: string, collections: Collection[]) {
     );
   };
 
-  const toggleMessageCollapsed = (
-    conversationId: string,
-    message_id: string
-  ) => {
-    setConversations((prevConversations) =>
-      prevConversations.map((c) => {
-        if (c.id === conversationId) {
-          return {
-            ...c,
-            messages: c.messages.map((m) =>
-              m.id === message_id ? { ...m, collapsed: !m.collapsed } : m
-            ),
-          };
-        }
-        return c;
-      })
-    );
-  };
-
   const initializeEnabledCollections = (
     collections: { [key: string]: boolean },
     collection_id: string
@@ -178,6 +159,7 @@ export function useConversations(id: string, collections: Collection[]) {
   useEffect(() => {
     conversations.map((c) => {
       const active_collections = Object.entries(c.enabled_collections || [])
+        /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
         .filter(([_, enabled]) => enabled)
         .map(([name]) => name);
       setCollectionEnabled(active_collections, false, c.id, id);
@@ -195,7 +177,6 @@ export function useConversations(id: string, collections: Collection[]) {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
-    toggleMessageCollapsed,
     addDecisionToConversation,
     setConversationTitle,
     initializeEnabledCollections,

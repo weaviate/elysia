@@ -3,22 +3,36 @@
 import React, { useEffect, useState } from "react";
 import { ConversationMessage } from "@/app/types";
 import ConversationMessageDisplay from "./conversation-message";
+import CollectionDisplay from "./collection";
 
 interface ConversationsDisplayProps {
   payload: ConversationMessage[][];
+  metadata: any;
+  routerChangeCollection: (collection_id: string) => void;
 }
 
 const ConversationsDisplay: React.FC<ConversationsDisplayProps> = ({
   payload,
+  metadata,
+  routerChangeCollection,
 }) => {
   const [conversationCollapsed, setConversationCollapsed] = useState(false);
 
   useEffect(() => {
-    payload.length > 1 && setConversationCollapsed(true);
+    if (payload.length > 1) {
+      setConversationCollapsed(true);
+    }
   }, [payload]);
 
   return (
     <div className="w-full flex flex-col justify-start items-start ">
+      {metadata["collection_name"] && (
+        <CollectionDisplay
+          collection_name={metadata["collection_name"]}
+          total_objects={payload.length}
+          routerChangeCollection={routerChangeCollection}
+        />
+      )}
       {(conversationCollapsed ? payload.slice(0, 1) : payload).map(
         (conversation, idx) => (
           <div

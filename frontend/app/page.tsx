@@ -11,10 +11,15 @@ import { useConversations } from "./chat/useConversations";
 import { useSocket } from "./chat/useSocket";
 import { useCollections } from "./explorer/useCollections";
 import DataExplorer from "./explorer/data-explorer";
+import { useRouting } from "./navigation/useRouting";
 
 export default function Home() {
   const [mode, setMode] = useState<"home" | "data-explorer">("home");
   const [id, setId] = useState<string>();
+
+  const handleModeChange = (_p: "home" | "data-explorer") => {
+    setMode(_p);
+  };
 
   const {
     collections,
@@ -23,14 +28,30 @@ export default function Home() {
     selectCollection,
     collectionData,
     loadingCollection,
-    pageUp,
-    pageDown,
-    pageUpMax,
     pageSize,
-    pageDownMax,
+    setPage,
     maxPage,
     page,
   } = useCollections();
+
+  const {
+    routerChangeMode,
+    routerChangeCollection,
+    pageUp,
+    pageDown,
+    pageUpMax,
+    pageDownMax,
+    routerToLogin,
+  } = useRouting(
+    handleModeChange,
+    mode,
+    selectCollection,
+    selectedCollection,
+    collections,
+    maxPage,
+    page,
+    setPage
+  );
 
   const {
     setConversations,
@@ -44,7 +65,6 @@ export default function Home() {
     selectConversation,
     setConversationTitle,
     addDecisionToConversation,
-    toggleMessageCollapsed,
     toggleCollectionEnabled,
     addMessageToConversation,
   } = useConversations(id || "", collections);
@@ -62,10 +82,6 @@ export default function Home() {
     generateIdFromIp().then((id) => setId(id));
   }, []);
 
-  const handleModeChange = (_p: "home" | "data-explorer") => {
-    setMode(_p);
-  };
-
   const handleQuery = (query: string, conversationId: string) => {
     sendQuery(id || "", query, conversationId);
     setConversationTitle(query, conversationId);
@@ -74,10 +90,11 @@ export default function Home() {
   return (
     <div className="w-full flex">
       <Sidebar
-        handleModeChange={handleModeChange}
+        handleModeChange={routerChangeMode}
         mode={mode}
+        routerToLogin={routerToLogin}
         fetchCollections={fetchCollections}
-        selectCollection={selectCollection}
+        selectCollection={routerChangeCollection}
         selectedCollection={selectedCollection}
         collections={collections}
         socketOnline={socketOnline}
@@ -94,7 +111,7 @@ export default function Home() {
           toggleCollectionEnabled={toggleCollectionEnabled}
           addMessageToConversation={addMessageToConversation}
           handleQuery={handleQuery}
-          toggleMessageCollapsed={toggleMessageCollapsed}
+          routerChangeCollection={routerChangeCollection}
         />
       )}
       {mode === "data-explorer" && (

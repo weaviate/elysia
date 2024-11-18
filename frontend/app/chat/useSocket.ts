@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Message,
-  TextMessage,
-  ErrorMessage,
-  TicketMessage,
-  DecisionMessage,
-  TextPayload,
-  DecisionPayload,
-} from "../types";
+import { Message, TextPayload, DecisionPayload } from "../types";
 import { getWebsocketHost } from "../api";
 
 export function useSocket(
@@ -93,35 +85,6 @@ export function useSocket(
     //fakeQuery(conversation_id);
     setConversationStatus("Thinking...", conversation_id);
     socket?.send(JSON.stringify({ user_id, query, conversation_id }));
-  };
-
-  const fakeQuery = (conversation_id: string) => {
-    // This is fake data for now
-    const text_message: Message = { ...TextMessage, conversation_id };
-    const error_message: Message = { ...ErrorMessage, conversation_id };
-    const ticket_message: Message = { ...TicketMessage, conversation_id };
-    const decision_message: Message = {
-      ...DecisionMessage,
-      conversation_id,
-    };
-
-    setConversationStatus("Thinking...", conversation_id);
-
-    setTimeout(() => {
-      setConversationStatus("Querying...", conversation_id);
-    }, 2000);
-
-    setTimeout(() => {
-      setConversationStatus("Collecting...", conversation_id);
-    }, 4000);
-
-    setTimeout(() => {
-      addMessageToConversation(
-        [text_message, error_message, ticket_message, decision_message],
-        conversation_id
-      );
-      setConversationStatus("", conversation_id);
-    }, 8000);
   };
 
   return { socketOnline, sendQuery };

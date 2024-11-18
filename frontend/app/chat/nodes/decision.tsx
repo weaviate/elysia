@@ -1,6 +1,6 @@
-import { useCallback } from "react";
 import { Handle, Position } from "@xyflow/react";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function DecisionNode({ data }: { data: any }) {
   return (
     <>

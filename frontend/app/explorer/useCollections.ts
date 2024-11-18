@@ -59,29 +59,8 @@ export function useCollections() {
     setLoadingCollection(false);
   };
 
-  const selectCollection = async (collection: string) => {
+  const selectCollection = async (collection: string | null) => {
     setSelectedCollection(collection);
-    setPage(0);
-  };
-
-  const pageUp = () => {
-    if (!selectedCollection) return;
-    const collection = collections.find((c) => c.name === selectedCollection);
-    if (!collection) return;
-    if (page + 1 > maxPage) return;
-    setPage((prev) => prev + 1);
-  };
-
-  const pageUpMax = () => {
-    setPage(maxPage);
-  };
-
-  const pageDown = () => {
-    if (page === 0) return;
-    setPage((prev) => prev - 1);
-  };
-
-  const pageDownMax = () => {
     setPage(0);
   };
 
@@ -97,10 +76,6 @@ export function useCollections() {
     setPage,
     pageSize,
     setPageSize,
-    pageUp,
-    pageDown,
-    pageUpMax,
-    pageDownMax,
     maxPage,
   };
 }

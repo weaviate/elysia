@@ -38,6 +38,7 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
   pageSize,
   page,
 }) => {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const [selectedCell, setSelectedCell] = useState<{
     [key: string]: any;
   } | null>(null);

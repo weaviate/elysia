@@ -3,33 +3,40 @@
 import React, { useEffect, useState } from "react";
 
 import { Message, ResultPayload, Ticket } from "../../types";
-import { TbDots } from "react-icons/tb";
 import TicketMessageDisplay from "./ticket";
+import { FaDatabase } from "react-icons/fa";
+import CollectionDisplay from "./collection";
 
 interface TicketsDisplayProps {
   message: Message;
+  routerChangeCollection: (collection_id: string) => void;
 }
 
-const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
+const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
+  message,
+  routerChangeCollection,
+}) => {
   const payload = message.payload as ResultPayload;
   const tickets = payload.objects as Ticket[];
 
   const [ticketCollapsed, setTicketCollapsed] = useState(false);
 
   useEffect(() => {
-    tickets.length > 3 && setTicketCollapsed(true);
+    if (tickets.length > 3) {
+      setTicketCollapsed(true);
+    }
   }, [tickets]);
 
   if (tickets.length === 0) return null;
 
   return (
-    <div className="w-full flex flex-col justify-start items-start gap-3">
+    <div className="w-full flex flex-col justify-start items-start gap-3 ">
       {payload.metadata["collection_name"] && (
-        <div className="w-full flex flex-col justify-start items-start gap-2 mb-2">
-          <p className="text-xs transition-all duration-300 cursor-pointer hover:text-primary hover:border-white text-secondary border border-secondary rounded-lg p-2">
-            {payload.metadata["collection_name"]}
-          </p>
-        </div>
+        <CollectionDisplay
+          collection_name={payload.metadata["collection_name"]}
+          total_objects={tickets.length}
+          routerChangeCollection={routerChangeCollection}
+        />
       )}
       <div className="flex flex-col w-full justify-start items-start gap-3">
         {(ticketCollapsed ? tickets.slice(0, 3) : tickets).map(

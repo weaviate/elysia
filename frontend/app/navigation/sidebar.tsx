@@ -23,6 +23,7 @@ interface SidebarProps {
   currentConversation: string;
   conversations: Conversation[];
   socketOnline: boolean;
+  routerToLogin: () => void;
   collections: Collection[];
 }
 
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   addConversation,
   conversations,
   removeConversation,
+  routerToLogin,
   selectConversation,
   currentConversation,
   socketOnline,
@@ -60,7 +62,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div
-          className={`flex items-center gap-1 ${
+          onClick={routerToLogin}
+          className={`flex items-center gap-1 cursor-pointer ${
             collapsed ? "justify-center" : "justify-start"
           }`}
         >

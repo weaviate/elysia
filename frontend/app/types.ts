@@ -4,6 +4,7 @@ export type Message = {
   type:
     | "result"
     | "error"
+    | "text"
     | "User"
     | "decision"
     | "status"
@@ -12,11 +13,24 @@ export type Message = {
   conversation_id: string;
   id: string;
   collapsed?: boolean; //added for ticket display
-  payload: ResultPayload | DecisionPayload | TextPayload | ErrorPayload;
+  payload:
+    | ResultPayload
+    | DecisionPayload
+    | TextPayload
+    | ErrorPayload
+    | ResponsePayload;
+};
+
+export type ResponsePayload = {
+  type: "response" | "summary" | "code";
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  metadata: any;
+  objects: TextPayload[] | SummaryPayload[] | CodePayload[];
 };
 
 export type ResultPayload = {
   type: "text" | "ticket" | "message" | "conversation";
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
   objects:
     | string[]
@@ -26,6 +40,17 @@ export type ResultPayload = {
 };
 
 export type TextPayload = {
+  text: string;
+};
+
+export type SummaryPayload = {
+  text: string;
+  title: string;
+};
+
+export type CodePayload = {
+  language: string;
+  title: string;
   text: string;
 };
 
@@ -43,6 +68,9 @@ export type Ticket = {
   issue_created_at: string;
   issue_author: string;
   issue_url: string;
+  issue_labels: string[];
+  issue_state: string;
+  issue_comments: number;
 };
 
 export type ConversationMessage = {
@@ -60,6 +88,7 @@ export type DecisionPayload = {
   decision: string;
   reasoning: string;
   instruction: string;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   tree: any[];
 };
 
@@ -69,6 +98,7 @@ export type Conversation = {
   enabled_collections: { [key: string]: boolean };
   id: string;
   name: string;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   tree: any[];
   current: string;
 };
@@ -86,6 +116,7 @@ export type Collection = {
 
 export type CollectionData = {
   properties: { [key: string]: string };
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   items: { [key: string]: any }[];
   error: string;
 };
@@ -115,62 +146,4 @@ export const initialConversation: Conversation = {
   enabled_collections: {},
   tree: [],
   current: "",
-};
-
-export const ErrorMessage: Message = {
-  type: "error",
-  conversation_id: "",
-  id: uuidv4(),
-  payload: {
-    type: "text",
-    metadata: {},
-    objects: ["This is an **error message**"],
-  },
-};
-
-export const TextMessage: Message = {
-  type: "result",
-  conversation_id: "",
-  id: uuidv4(),
-  payload: {
-    type: "text",
-    metadata: {},
-    objects: ["This is a **text message**"],
-  },
-};
-
-export const TicketMessage: Message = {
-  type: "result",
-  conversation_id: "",
-  id: uuidv4(),
-  payload: {
-    type: "ticket",
-    metadata: {},
-    objects: [
-      {
-        issue_id: "2377991602",
-        uuid: uuidv4(),
-        issue_author: "username",
-        issue_url: "https://github.com/username/repo/issues/2377991602",
-        issue_updated_at: "2024-07-02T10:48:53Z",
-        issue_title: "Addition of ability to read .docx files",
-        issue_content:
-          "This pull request is a new feature to add the ability to read .docx files using the BasicReader. It does pull in a new dependency as well (python-docx).",
-        issue_created_at: "2024-06-27T12:12:19Z",
-      },
-    ],
-  },
-};
-
-export const DecisionMessage: Message = {
-  type: "decision",
-  conversation_id: "",
-  id: uuidv4(),
-  payload: {
-    id: "Node-1",
-    decision: "Querying GitHub Collection",
-    reasoning: "User requested to query the GitHub Collection",
-    instruction: "Querying GitHub Collection",
-    tree: [{ id: "Initial", instruction: "Starting Tree" }],
-  },
 };
