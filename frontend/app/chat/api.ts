@@ -1,6 +1,11 @@
 "use server";
 
-import { ErrorResponse, NERResponse, TitleResponse } from "../types";
+import {
+  DecisionTreePayload,
+  ErrorResponse,
+  NERResponse,
+  TitleResponse,
+} from "../types";
 
 export async function handleNamedEntityRecognition(text: string) {
   const res = await fetch(`http://localhost:8000/api/ner`, {
@@ -51,4 +56,23 @@ export async function setCollectionEnabled(
   if (data.error) {
     throw new Error(data.error);
   }
+}
+
+export async function getDecisionTree(
+  user_id: string,
+  conversation_id: string
+) {
+  const res = await fetch(`http://localhost:8000/api/initialise_tree`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user_id, conversation_id }),
+  });
+  const data: DecisionTreePayload = await res.json();
+  const data_2 = { ...data, tree: { ...data.tree, choosen: true } };
+  if (data_2.error) {
+    throw new Error(data_2.error);
+  }
+  return data_2;
 }

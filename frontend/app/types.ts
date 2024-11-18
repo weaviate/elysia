@@ -9,16 +9,17 @@ export type Message = {
     | "decision"
     | "status"
     | "completed"
-    | "warning";
+    | "warning"
+    | "tree_update";
   conversation_id: string;
   id: string;
   collapsed?: boolean; //added for ticket display
   payload:
     | ResultPayload
-    | DecisionPayload
     | TextPayload
     | ErrorPayload
-    | ResponsePayload;
+    | ResponsePayload
+    | TreeUpdatePayload;
 };
 
 export type ResponsePayload = {
@@ -83,24 +84,35 @@ export type ConversationMessage = {
   message_timestamp: string;
 };
 
-export type DecisionPayload = {
-  id: string;
+export type TreeUpdatePayload = {
+  node: string;
   decision: string;
   reasoning: string;
-  instruction: string;
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  tree: any[];
+  reset: boolean;
 };
 
 export type Conversation = {
   messages: Message[];
-  decisions: DecisionPayload[];
   enabled_collections: { [key: string]: boolean };
   id: string;
   name: string;
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  tree: any[];
+  tree: DecisionTreeNode | null;
+  base_tree: DecisionTreeNode | null;
   current: string;
+};
+
+export type DecisionTreePayload = {
+  conversation_id: string;
+  error: string;
+  tree: DecisionTreeNode;
+};
+
+export type DecisionTreeNode = {
+  name: string;
+  description: string;
+  instruction: string;
+  options: { [key: string]: DecisionTreeNode };
+  choosen?: boolean;
 };
 
 export type CollectionPayload = {
@@ -141,9 +153,9 @@ export type ErrorResponse = {
 export const initialConversation: Conversation = {
   messages: [],
   id: uuidv4(),
-  decisions: [],
   name: "New Conversation",
   enabled_collections: {},
-  tree: [],
+  tree: null,
+  base_tree: null,
   current: "",
 };

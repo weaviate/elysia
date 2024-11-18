@@ -2,13 +2,18 @@ import { useEffect, useState } from "react";
 import {
   Collection,
   Conversation,
-  DecisionPayload,
+  DecisionTreeNode,
   initialConversation,
   Message,
+  TreeUpdatePayload,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 
-import { handleConversationTitleGeneration, setCollectionEnabled } from "./api";
+import {
+  getDecisionTree,
+  handleConversationTitleGeneration,
+  setCollectionEnabled,
+} from "./api";
 
 export function useConversations(id: string, collections: Collection[]) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -17,16 +22,22 @@ export function useConversations(id: string, collections: Collection[]) {
   );
 
   const addConversation = () => {
-    const newConversation = {
-      ...initialConversation,
-      id: uuidv4(),
-      enabled_collections: collections.reduce(
-        (acc, c) => ({ ...acc, [c.name]: true }),
-        {}
-      ),
-    };
-    setConversations([...(conversations || []), newConversation]);
-    setCurrentConversation(newConversation.id);
+    const conversation_id = uuidv4();
+    getDecisionTree(id, conversation_id).then((data) => {
+      console.log(data);
+      const newConversation = {
+        ...initialConversation,
+        id: conversation_id,
+        tree: data.tree,
+        base_tree: data.tree,
+        enabled_collections: collections.reduce(
+          (acc, c) => ({ ...acc, [c.name]: true }),
+          {}
+        ),
+      };
+      setConversations([...(conversations || []), newConversation]);
+      setCurrentConversation(newConversation.id);
+    });
   };
 
   const removeConversation = (id: string) => {
@@ -38,20 +49,6 @@ export function useConversations(id: string, collections: Collection[]) {
 
   const selectConversation = (id: string) => {
     setCurrentConversation(id);
-  };
-
-  const addDecisionToConversation = (
-    decision: DecisionPayload,
-    conversationId: string
-  ) => {
-    setConversations((prevConversations) =>
-      prevConversations.map((c) => {
-        if (c.id === conversationId) {
-          return { ...c, decisions: [...(c.decisions || []), decision] };
-        }
-        return c;
-      })
-    );
   };
 
   const setConversationStatus = (status: string, conversationId: string) => {
@@ -135,6 +132,67 @@ export function useConversations(id: string, collections: Collection[]) {
     );
   };
 
+  const updateTree = (tree_update_message: Message) => {
+    const payload = tree_update_message.payload as TreeUpdatePayload;
+
+    const findAndUpdateNode = (
+      tree: DecisionTreeNode | null,
+      base_tree: DecisionTreeNode | null
+    ): DecisionTreeNode | null => {
+      if (!tree) return null;
+
+      const tree_name = tree.name.toLowerCase().replace(/\s+/g, "_");
+
+      // If this is the node we're looking for
+      if (tree_name === payload.node.toLowerCase()) {
+        // Update the specific option within tree.options where option.name === payload.decision
+        const updatedOptions = Object.entries(tree.options).reduce(
+          (acc, [key, option]) => {
+            if (key.toLowerCase() === payload.decision.toLowerCase()) {
+              acc[key] = {
+                ...option,
+                choosen: true,
+                description: payload.reasoning,
+                options: payload.reset
+                  ? base_tree?.options || {}
+                  : option.options || {}, // Use option.options instead of acc[key].options
+              };
+            } else {
+              acc[key] = option;
+            }
+            return acc;
+          },
+          {} as { [key: string]: DecisionTreeNode }
+        );
+        return { ...tree, options: updatedOptions };
+      } else if (tree.options && Object.keys(tree.options).length > 0) {
+        // Recurse into options
+        const updatedOptions = Object.entries(tree.options).reduce(
+          (acc, [key, option]) => {
+            const updatedNode = findAndUpdateNode(option, base_tree);
+            if (updatedNode) {
+              acc[key] = updatedNode;
+            }
+            return acc;
+          },
+          {} as { [key: string]: DecisionTreeNode }
+        );
+        return { ...tree, options: updatedOptions };
+      } else {
+        return tree;
+      }
+    };
+
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === tree_update_message.conversation_id) {
+          return { ...c, tree: findAndUpdateNode(c.tree, c.base_tree) };
+        }
+        return c;
+      })
+    );
+  };
+
   useEffect(() => {
     if (!collections) return;
     setConversations((prevConversations) =>
@@ -177,9 +235,9 @@ export function useConversations(id: string, collections: Collection[]) {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
-    addDecisionToConversation,
     setConversationTitle,
     initializeEnabledCollections,
     toggleCollectionEnabled,
+    updateTree,
   };
 }

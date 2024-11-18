@@ -13,6 +13,7 @@
     "@react-three/fiber": "^8.17.10",
     "@tailwindcss/typography": "^0.5.15",
     "@xyflow/react": "^12.3.5",
+    "dagre": "^0.8.5",
     "lil-gui": "^0.20.0",
     "next": "14.2.18",
     "react": "^18",
@@ -27,6 +28,7 @@
     "uuidv4": "^6.2.13"
   },
   "devDependencies": {
+    "@types/dagre": "^0.7.52",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
