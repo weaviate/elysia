@@ -65,7 +65,7 @@ export default function Home() {
     updateTree,
     toggleCollectionEnabled,
     addMessageToConversation,
-  } = useConversations(id || "", collections);
+  } = useConversations(id || "");
 
   const { socketOnline, sendQuery } = useSocket(
     addMessageToConversation,
