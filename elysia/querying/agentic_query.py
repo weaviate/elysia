@@ -12,8 +12,8 @@ from elysia.querying.prompt_executors import (
     PropertyGroupingExecutor, 
     ObjectSummaryExecutor
 )
-from elysia.tree.objects import Returns, Objects, Status, Text
-
+from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch
+from elysia.text.objects import Response, Code
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval
 
 class AgenticQuery:
@@ -53,14 +53,15 @@ class AgenticQuery:
             if "previous_queries" in metadata:
                 self.previous_queries.extend(metadata["previous_queries"])
 
-    def _initialise_query(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str]):
+    def _initialise_query(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str], current_message: str):
 
         # run initialiser to get collection name and return type
         initialiser = self.query_initialiser(
             user_prompt=user_prompt,
             reference=reference,
             previous_reasoning=previous_reasoning,
-            data_queried=data_queried
+            data_queried=data_queried,
+            current_message=current_message
         )
 
         return initialiser
@@ -81,12 +82,18 @@ class AgenticQuery:
 
         return out
         
-    async def query(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
-
+    async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
+        
         data_queried = kwargs.get("data_queried", [])
+        current_message = kwargs.get("current_message", "")
 
         # -- Step 1: Determine collection and other fields
-        initialiser = self._initialise_query(user_prompt, previous_reasoning, data_queried)
+        Branch({
+            "name": "Query Initialiser",
+            "description": "Determine the collection and return type to query.",
+            "returns": "collection_name, return_type, output_type"
+        })
+        initialiser = self._initialise_query(user_prompt, previous_reasoning, data_queried, current_message)
 
         reasoning = initialiser.reasoning
         collection_name = initialiser.collection_name
@@ -94,7 +101,7 @@ class AgenticQuery:
         output_type = initialiser.output_type
 
         if initialiser.text_return is not None:
-            yield Text([initialiser.text_return], {})
+            yield Response([{"text": initialiser.text_return}], {})
 
         self._find_previous_queries(collection_name, available_information)
 
@@ -110,14 +117,28 @@ class AgenticQuery:
         data_fields = list(example_field.keys())
 
         # -- Step 2: Determine property to group by and aggregate to get information (TODO: somehow cache this)
-        property_grouper = self.property_grouper(user_prompt, reference, previous_reasoning, data_fields, example_field)
+        Branch({
+            "name": "Property Grouper",
+            "description": "Determine the property to group by to get information about the collection.",
+            "returns": "property_name"
+        })
+        property_grouper = self.property_grouper(user_prompt, reference, previous_reasoning, data_fields, example_field, current_message)
         property_name = property_grouper.property_name
-        
-        yield Text([property_grouper.text_return], {})
 
-        aggregation = self._aggregate(collection_name, property_name)
-
+        try:
+            aggregation = self._aggregate(collection_name, property_name)
+            yield Response([{"text": property_grouper.text_return}], {})
+            current_message += " " + property_grouper.text_return
+        except Exception as e:
+            aggregation = {}
+            yield Warning([f"Aggregation error: {e}"], {})
+            
         # -- Step 3: Query the collection
+        Branch({
+            "name": "Query Executor",
+            "description": "Write code and query the collection to retrieve objects.",
+            "returns": "objects, code, text_return, is_query_possible"
+        })
         yield Status(f"Querying {collection_name}")
         response, code, text_return, is_query_possible = self.querier(
             user_prompt = user_prompt, 
@@ -127,9 +148,12 @@ class AgenticQuery:
             example_field = example_field, 
             collection_metadata = aggregation,
             previous_reasoning = previous_reasoning,
-            collection_name = collection_name
+            collection_name = collection_name,
+            current_message = current_message
         )
-        yield Text([text_return], {})
+        yield Response([{"text": text_return}], {})
+        current_message += " " + text_return
+        yield Code([{"text": code, "language": "python", "title": "Query"}], {})
 
         if is_query_possible:
 
@@ -176,6 +200,3 @@ class AgenticQuery:
         
         else:
             yield GenericRetrieval([], {"collection_name": collection_name, "impossible_prompts": [user_prompt]})
-
-    def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
-        return self.query(user_prompt, available_information, previous_reasoning, **kwargs)

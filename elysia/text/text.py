@@ -1,7 +1,8 @@
 
-from elysia.util.logging import backend_print
 from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
-from elysia.tree.objects import Returns, Text
+from elysia.tree.objects import Returns, Branch, Status
+from elysia.text.objects import Response, Summary
+from elysia.util.logging import backend_print
 
 class Summarizer:
 
@@ -12,14 +13,15 @@ class Summarizer:
 
         conversation_history = kwargs.get("conversation_history", [])
 
+        yield Status("Summarising results")
         summary = self.summarizer(
             user_prompt=user_prompt, 
             available_information=available_information.to_llm_str(),
             previous_reasoning=previous_reasoning,
-            conversation_history=conversation_history,
-            **kwargs
+            conversation_history=conversation_history
         )
-        output = Text([summary], {})
+        
+        output = Summary([{"text": summary.summary, "title": summary.subtitle}], {})
         yield output
     
 class TextResponse:
@@ -29,14 +31,23 @@ class TextResponse:
 
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs):
 
+        Branch({
+            "name": "Text Response",
+            "description": "Generate a chat response to the user's prompt.",
+            "returns": "text"
+        })
+
+        current_message = kwargs.get("current_message", "")
         conversation_history = kwargs.get("conversation_history", [])
+
+        yield Status("Crafting response")
 
         output = self.text_response(
             user_prompt=user_prompt, 
             available_information=available_information.to_llm_str(),
             previous_reasoning=previous_reasoning,
             conversation_history=conversation_history,
-            **kwargs
+            current_message=current_message
         )
 
-        yield Text([output], {})
+        yield Response([{"text": output}], {})

@@ -26,3 +26,7 @@ class SetCollectionsData(BaseModel):
     remove_data: bool
     conversation_id: str
     user_id: str
+
+class GetObjectData(BaseModel):
+    collection_name: str
+    uuid: str

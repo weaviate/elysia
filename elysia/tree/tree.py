@@ -1,6 +1,8 @@
 import json
 import os
-from typing import Callable, List
+import ast
+import inspect
+from typing import Callable, List, Any, Dict
 from rich import print
 
 import asyncio
@@ -12,8 +14,16 @@ from elysia.querying.agentic_query import AgenticQuery
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace
 from elysia.util.logging import backend_print
-from elysia.util.api import parse_decision, parse_result, parse_finished, parse_error, parse_warning
-from elysia.tree.objects import Text, Returns, Objects, Status
+from elysia.util.api import (
+    parse_decision, 
+    parse_result, 
+    parse_finished, 
+    parse_error, 
+    parse_warning,
+    parse_text
+)
+from elysia.tree.objects import Returns, Objects, Status, Branch
+from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 
 import dspy
@@ -24,6 +34,7 @@ from dspy.primitives.assertions import assert_transform_module, backtrack_handle
 global lm
 lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
 # lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
+# lm = dspy.LM(model="ollama/llama3.2")
 
 dspy.settings.configure(lm=lm)
 
@@ -103,7 +114,60 @@ class DecisionNode:
             "decision": self.decision,
             "instruction": self.instruction
         }
+    
+class TreeReturner:
+    def __init__(self, conversation_id: str):
+        self.conversation_id = conversation_id
+
+    def _parse_error(self, error: str):
+        return parse_error(error, self.conversation_id)
+    
+    def _parse_warning(self, warning: str):
+        return parse_warning(warning, self.conversation_id)
+
+    def _parse_status(self, status: Status):
+        return status.to_json(self.conversation_id)
+    
+    def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
+        return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
+
+    def _parse_result(self, result: Objects):
+        return parse_result(result, self.conversation_id)
+    
+    def _parse_finished(self):
+        return parse_finished(self.conversation_id)
+    
+    def _parse_text(self, text: Text):
+        return parse_text(text, self.conversation_id)
+
+class BranchVisitor(ast.NodeVisitor):
+    def __init__(self):
+        self.branches = []
         
+    def _evaluate_constant(self, node):
+        """Convert AST Constant node to its actual value."""
+        return node.value
+    
+    def _evaluate_dict(self, node):
+        """Convert AST Dict node to a regular Python dictionary."""
+        if isinstance(node, ast.Dict):
+            return {
+                self._evaluate_constant(key): self._evaluate_constant(value)
+                for key, value in zip(node.keys, node.values)
+            }
+        return None
+        
+    def visit_Call(self, node):
+        # Check if the call is creating a Branch object
+        if isinstance(node.func, ast.Name) and node.func.id == 'Branch':
+            # Extract the updates dictionary from the Branch constructor
+            if node.args:
+                dict_node = node.args[0]
+                evaluated_dict = self._evaluate_dict(dict_node)
+                if evaluated_dict:
+                    self.branches.append(evaluated_dict)
+        self.generic_visit(node)
+
 
 class Tree:
 
@@ -130,6 +194,7 @@ class Tree:
                 "generic": "retrieve any other type of information that does not fit into the other categories."
             }
         )
+        self.current_message = ""
 
         # for training purposes, we may want to run the tree until a certain node and a certain number of times
         self.run_until_node_id = run_until_node_id
@@ -144,17 +209,20 @@ class Tree:
         self.conversation_history = []
         self.previous_reasoning = {}
 
+
         self.returns = Returns(
             retrieved = {}, 
             text = Text(objects=[], metadata={})
         )
+
+        self.returner = TreeReturner(conversation_id=self.conversation_id)
 
         if self.break_down_instructions:
             self.input_executor = InputExecutor()
 
         # default initialisations ---
         self.add_decision_node(
-            id = "base",
+            id = "Base",
             instruction = """
             Choose a task based on the user's prompt and the available information. 
             Use all information available to you to make the decision.
@@ -167,27 +235,21 @@ class Tree:
             """,
             options = {
                 "query": {
-                    "description": "query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+                    "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
                     "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
-                    "status": "Deciding which collection to query",
                     "action": self.querier,
-                    "returns": None,
                     "next": None,
                 },
                 "summarize": {
-                    "description": "summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+                    "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
                     "future_options": [],
-                    "status": "Summarizing information",
-                    "action": Summarizer(), 
-                    "returns": "text",
+                    "action": Summarizer(),
                     "next": None    # next=None represents the end of the tree
                 },
                 "text_response": {
-                    "description": "respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+                    "description": "Respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
                     "future_options": [],
-                    "status": "Crafting response",
                     "action": TextResponse(),
-                    "returns": "text",
                     "next": None
                 }
             },
@@ -197,6 +259,9 @@ class Tree:
         self._get_root()
         self.tree = {}
         self._construct_tree(self.root, self.tree)
+
+        self.branch_updates = {}
+        self._analyze_branches()
 
         if verbosity > 1:
             backend_print("Initialised tree with the following decision nodes:")
@@ -215,11 +280,38 @@ class Tree:
         if "root" not in dir(self):
             raise ValueError("No root decision node found")
 
-    def _update_conversation_history(self, role: str, message: str):
-        self.conversation_history.append({
-            "role": role,
-            "content": message
-        })
+    def _get_function_branches(self, func: Any) -> List[Dict]:
+        """Analyzes a function for Branch objects without executing it."""
+        source = inspect.getsource(func)
+        tree = ast.parse(source.strip())
+        visitor = BranchVisitor()
+        visitor.visit(tree)
+        return visitor.branches
+    
+    def _analyze_branches(self):
+        """Analyzes all action functions in the decision tree for Branch objects."""
+        for node_id, node in self.decision_nodes.items():
+            self.branch_updates[node_id] = {
+                "name": node.id, 
+                "description": node.instruction
+            }
+            for option, details in node.options.items():
+                action = details.get('action')
+                if action is not None:
+                    func = action.__call__
+                    branches = self._get_function_branches(func)
+                    if branches:
+                        self.branch_updates[f"{node_id}.{option}"] = branches
+                        # self.branch_updates[f"{node_id}.{option}"]["description"] = details.get("description", "")
+
+    def _update_conversation_history(self, role: str, message: str, append_to_previous: bool = False):
+        if append_to_previous and self.conversation_history[-1]["role"] != "user":
+            self.conversation_history[-1]["content"] += message
+        else:
+            self.conversation_history.append({
+                "role": role,
+                "content": message
+            })
 
     def _construct_tree(self, node_id: str, tree: dict):
         decision_node = self.decision_nodes[node_id]
@@ -243,7 +335,7 @@ class Tree:
         
         return tree
 
-    def _update_returns(self, action_result: Retrieval | Text, user_prompt: str):
+    def _update_returns(self, action_result: Retrieval, user_prompt: str):
 
         if isinstance(action_result, Retrieval): 
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
@@ -253,27 +345,36 @@ class Tree:
             else:
                 self.data_queried[action_result.metadata["collection_name"]] += len(action_result.objects)
 
-        if isinstance(action_result, Text):
-            self.returns.add_text(objects=action_result)
-            self._update_conversation_history("assistant", action_result.objects[0])
-
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
 
         async for result in action_fn(
-            user_prompt, 
-            self.returns, 
-            self.previous_reasoning,
+            user_prompt=user_prompt, 
+            available_information=self.returns, 
+            previous_reasoning=self.previous_reasoning,
             data_queried=self.data_queried,
+            current_message=self.current_message,
+            conversation_history=self.conversation_history,
             **kwargs
         ):
             if isinstance(result, Status):
-                yield self._parse_status(result)
+                yield self.returner._parse_status(result)
 
             if isinstance(result, Objects):
                 self._update_returns(result, user_prompt)
 
                 if len(result.objects) > 0:
-                    yield self._parse_result(result)
+                    yield self.returner._parse_result(result)
+
+            if isinstance(result, Text):
+                yield self.returner._parse_text(result)
+
+            if isinstance(result, Response): 
+                self.current_message += " " + result.objects[0]["text"]
+                self._update_conversation_history("assistant", result.objects[0]["text"].strip(), append_to_previous=True)
+                backend_print(f"Updated current message: [bold yellow]'{self.current_message}'[/bold yellow]")
+                    
+            if isinstance(result, Summary):
+                self._update_conversation_history("assistant", result.objects[0]["text"], append_to_previous=False)
 
     def _remove_collection_from_data(self, collection_name: str):
         if collection_name in self.data_queried:
@@ -281,24 +382,6 @@ class Tree:
         
         if collection_name in self.returns.retrieved:
             del self.returns.retrieved[collection_name]
-    
-    def _parse_error(self, error: str):
-        return parse_error(error, self.conversation_id)
-    
-    def _parse_warning(self, warning: str):
-        return parse_warning(warning, self.conversation_id)
-
-    def _parse_status(self, status: Status):
-        return status.to_json(self.conversation_id)
-    
-    def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
-        return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
-
-    def _parse_result(self, result: Objects):
-        return parse_result(result, self.conversation_id)
-    
-    def _parse_finished(self):
-        return parse_finished(self.conversation_id)
 
     def set_collection_names(self, collection_names: list[str], remove_data: bool = False):
         collection_names_to_remove = [name for name in self.collection_names if name not in collection_names]
@@ -369,8 +452,8 @@ class Tree:
                 idx=self.num_trees_completed
             )
 
-            yield self._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
-            yield self._parse_status(Status(current_decision_node.options[decision]["status"]))
+            yield self.returner._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
+            # yield self.returner._parse_status(Status(current_decision_node.options[decision]["status"]))
 
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = reasoning
             self.decision_history.append(decision)
@@ -390,6 +473,7 @@ class Tree:
             else:
                 current_decision_node = self.decision_nodes[current_decision_node.options[decision]["next"]]
 
+        # end of the tree for this iteration
         if not completed or (self.run_num_trees is not None and self.num_trees_completed < self.run_num_trees):
             
             if self.verbosity == 2:
@@ -400,11 +484,13 @@ class Tree:
             async for result in self.process(user_prompt, recursion_counter + 1, first_run=False, **kwargs):
                 yield result
 
+        # end of all trees
         else:
 
             self.num_trees_completed += 1
-            
-            yield self._parse_finished()
+            self.current_message = ""
+
+            yield self.returner._parse_finished()
 
             if self.verbosity >= 1:
                 backend_print(f"[bold green]Model identified overall goal as completed![/bold green]")

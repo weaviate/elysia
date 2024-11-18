@@ -90,6 +90,14 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             format = str
         )
 
+        current_message = dspy.InputField(
+            description="""
+                The current message you, the assistant, have written to send to the user. 
+                This message has not been sent yet, you will add text to it, to be sent to the user later.
+                In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+                """.strip(),
+                format = str
+            )
         text_return = dspy.OutputField(
             desc="""
             A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
@@ -98,6 +106,10 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             so you should use markdown and respond to the user in a friendly way.
             Do not use emojis, and do not ask the user to confirm or approve of your actions.
             Do not ask the user any questions.
+            This is a continuation of the current_message field. 
+            This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
+            Use present tense in your text, as if you are currently completing the action.
+            If the current_message field is empty, then this response is the beginning of a new message.
             """.strip(),
             format = str
         )
@@ -170,14 +182,27 @@ class PropertyGroupingPrompt(dspy.Signature):
         format = str
     )
 
-    text_return = dspy.OutputField(desc="""
+    current_message = dspy.InputField(
+        description="""
+            The current message you, the assistant, have written to send to the user. 
+            This message has not been sent yet, you will add text to it, to be sent to the user later.
+            In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+            """.strip(),
+            format = str
+        )
+    text_return = dspy.OutputField(
+        desc="""
         A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
         Do not include many technical details e.g. variable names, 
         just a brief explanation in plain English, in a chat message format, 
         so you should use markdown and respond to the user in a friendly way.
         Do not use emojis, and do not ask the user to confirm or approve of your actions.
         Do not ask the user any questions.
-        """.strip(), 
+        This is a continuation of the current_message field. 
+        This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
+        Use present tense in your text, as if you are currently completing the action.
+        If the current_message field is empty, then this response is the beginning of a new message.
+        """.strip(),
         format = str
     )
 
@@ -388,6 +413,14 @@ class QueryCreatorPrompt(dspy.Signature):
         format = bool
     )
 
+    current_message = dspy.InputField(
+        description="""
+            The current message you, the assistant, have written to send to the user. 
+            This message has not been sent yet, you will add text to it, to be sent to the user later.
+            In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+            """.strip(),
+            format = str
+        )
     text_return = dspy.OutputField(
         desc="""
         A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
@@ -396,6 +429,10 @@ class QueryCreatorPrompt(dspy.Signature):
         so you should use markdown and respond to the user in a friendly way.
         Do not use emojis, and do not ask the user to confirm or approve of your actions.
         Do not ask the user any questions.
+        This is a continuation of the current_message field. 
+        This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
+        Use present tense in your text, as if you are currently completing the action.
+        If the current_message field is empty, then this response is the beginning of a new message.
         """.strip(),
         format = str
     )
