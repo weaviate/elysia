@@ -17,9 +17,9 @@ if __name__ == "__main__":
         dspy_model=None
     )
 
-    # tree.process_sync(
-    #     "hi my name is danny"
-    # )
+    tree.process_sync(
+        "what was edward's last message?"
+    )
 
     # print(tree.returns)
 

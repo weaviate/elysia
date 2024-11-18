@@ -20,9 +20,10 @@ from elysia.util.api import (
     parse_finished, 
     parse_error, 
     parse_warning,
-    parse_text
+    parse_text,
+    parse_tree_update
 )
-from elysia.tree.objects import Returns, Objects, Status, Branch
+from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate
 from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 
@@ -128,6 +129,9 @@ class TreeReturner:
     def _parse_status(self, status: Status):
         return status.to_json(self.conversation_id)
     
+    def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool):
+        return parse_tree_update(node_id, decision, reasoning, self.conversation_id, reset)
+    
     def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
         return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
 
@@ -222,23 +226,23 @@ class Tree:
 
         # default initialisations ---
         self.add_decision_node(
-            id = "Base",
+            id = "base",
             instruction = """
             Choose a task based on the user's prompt and the available information. 
             Use all information available to you to make the decision.
-            If you _have queried already_ (based on completed_tasks), and there is no information (based on available_information), 
+            If you _have searched already_ (based on completed_tasks), and there is no information (based on available_information), 
             you should assume that the task is impossible, hence choose text_response to reply this to the user.
-            Otherwise, if you haven't queried yet, you should query the knowledge base.
-            If you don't need to query, i.e. the user is talking to you, or you have already queried and there is no new information, choose text_response.
-            If you have queried, and there is available information, you should choose summarize to reply this to the user.
+            Otherwise, if you haven't searched yet, you should search the knowledge base.
+            If you don't need to search, i.e. the user is talking to you, or you have already searched and there is no new information, choose text_response.
+            If you have searched, and there is available information, you should choose summarize to reply this to the user.
             If you choose summarize, you should set all_actions_completed to True, since this is the last decision to make.
             """,
             options = {
-                "query": {
-                    "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
-                    "action": self.querier,
-                    "next": None,
+                "search": {
+                    "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+                    "future_options": [],
+                    "action": None,
+                    "next": "search",
                 },
                 "summarize": {
                     "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
@@ -256,12 +260,33 @@ class Tree:
             root = True
         )
 
+        self.add_decision_node(
+            id = "search",
+            instruction = """
+            Choose between querying the knowledge base via semantic search, or aggregating information from the knowledge base.
+            Querying is when the user is looking for specific information related to the content of the dataset.
+            Aggregating is when the user is looking for a high-level overview of the dataset, such as a summary of the quantity of some items.
+            """,
+            options = {
+                "query": {
+                    "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+                    "future_options": ["collections that can be queried are " + ", ".join(self.collection_names)],
+                    "action": self.querier,
+                    "next": None,
+                },
+                "aggregate": {
+                    "description": "Do NOT under any circumstances pick this option.",
+                    "future_options": [],
+                    "action": None,
+                    "next": None    # next=None represents the end of the tree
+                }
+            },
+            root = False
+        )
+
         self._get_root()
         self.tree = {}
         self._construct_tree(self.root, self.tree)
-
-        self.branch_updates = {}
-        self._analyze_branches()
 
         if verbosity > 1:
             backend_print("Initialised tree with the following decision nodes:")
@@ -288,22 +313,6 @@ class Tree:
         visitor.visit(tree)
         return visitor.branches
     
-    def _analyze_branches(self):
-        """Analyzes all action functions in the decision tree for Branch objects."""
-        for node_id, node in self.decision_nodes.items():
-            self.branch_updates[node_id] = {
-                "name": node.id, 
-                "description": node.instruction
-            }
-            for option, details in node.options.items():
-                action = details.get('action')
-                if action is not None:
-                    func = action.__call__
-                    branches = self._get_function_branches(func)
-                    if branches:
-                        self.branch_updates[f"{node_id}.{option}"] = branches
-                        # self.branch_updates[f"{node_id}.{option}"]["description"] = details.get("description", "")
-
     def _update_conversation_history(self, role: str, message: str, append_to_previous: bool = False):
         if append_to_previous and self.conversation_history[-1]["role"] != "user":
             self.conversation_history[-1]["content"] += message
@@ -316,22 +325,67 @@ class Tree:
     def _construct_tree(self, node_id: str, tree: dict):
         decision_node = self.decision_nodes[node_id]
         
-        # Set the base node information outside the loop
-        tree["id"] = node_id
-        tree["instruction"] = decision_node.instruction
-        tree["options"] = {}
+        # Define desired key order
+        key_order = ["name", "description", "instruction", "options"]
         
-        # Initialize all options first
+        # Set the base node information
+        tree["name"] = node_id.capitalize().replace("_", " ")
+        if node_id == self.root:
+            tree["description"] = ""
+        tree["instruction"] = remove_whitespace(decision_node.instruction.replace("\n", ""))
+        tree["options"] = {}
+
+        # Order the top-level dictionary
+        tree = {key: tree[key] for key in key_order if key in tree}
+
+        # Initialize all options first with ordered dictionaries
+        option_key_order = ["name", "description", "instruction", "options"]
         for option in decision_node.options:
-            tree["options"][option] = {}
+            tree["options"][option] = {
+                "description": remove_whitespace(decision_node.options[option]["description"].replace("\n", ""))
+            }
         
         # Then handle the recursive cases
         for option in decision_node.options:
-            if decision_node.options[option]["next"] is not None:
+            if decision_node.options[option]["action"] is not None:
+                func = decision_node.options[option]["action"].__call__
+                branches = self._get_function_branches(func)
+                if branches:
+                    tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                    tree["options"][option]["instruction"] = ""
+                    sub_tree = tree["options"][option]
+                    for branch in branches:
+                        branch_name = branch["name"].lower().replace(" ", "_")
+                        if "options" not in sub_tree:
+                            sub_tree["options"] = {}
+                        sub_tree["options"][branch_name] = branch
+                        sub_tree["options"][branch_name]["name"] = branch["name"]
+                        sub_tree["options"][branch_name]["description"] = branch["description"]
+                        sub_tree["options"][branch_name]["instruction"] = ""
+                        sub_tree = sub_tree["options"][branch_name]
+                    sub_tree["options"] = {}
+                
+                else:
+                    tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                    tree["options"][option]["instruction"] = ""
+                    tree["options"][option]["description"] = ""
+                    tree["options"][option]["options"] = {}
+
+            elif decision_node.options[option]["next"] is not None:
                 tree["options"][option] = self._construct_tree(
                     decision_node.options[option]["next"], 
                     tree["options"][option]
                 )
+            else:
+                tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                tree["options"][option]["instruction"] = ""
+                tree["options"][option]["description"] = ""
+                tree["options"][option]["options"] = {}
+            
+            # Order each option's dictionary
+            tree["options"][option] = {key: tree["options"][option][key] 
+                                     for key in option_key_order 
+                                     if key in tree["options"][option]}
         
         return tree
 
@@ -345,7 +399,7 @@ class Tree:
             else:
                 self.data_queried[action_result.metadata["collection_name"]] += len(action_result.objects)
 
-    async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
+    async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
 
         async for result in action_fn(
             user_prompt=user_prompt, 
@@ -358,6 +412,9 @@ class Tree:
         ):
             if isinstance(result, Status):
                 yield self.returner._parse_status(result)
+
+            if isinstance(result, TreeUpdate):
+                yield self.returner._parse_tree_update(result.from_node, result.to_node, result.reasoning, result.last and not completed)
 
             if isinstance(result, Objects):
                 self._update_returns(result, user_prompt)
@@ -453,20 +510,20 @@ class Tree:
             )
 
             yield self.returner._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
-            # yield self.returner._parse_status(Status(current_decision_node.options[decision]["status"]))
-
+            yield self.returner._parse_tree_update(current_decision_node.id, decision, reasoning, False)
+            
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = reasoning
             self.decision_history.append(decision)
-            self.previous_info.append(current_decision_node.construct_as_previous_info())
-
-            if action_fn is not None:
-                async for result in self._evaluate_action(action_fn, user_prompt, **kwargs):
-                    yield result
+            self.previous_info.append(current_decision_node.construct_as_previous_info())            
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")
                 backend_print(f"Instruction: [italic]{current_decision_node.instruction.strip()}[/italic]")
                 backend_print(f"Decision: [green]{decision}[/green]\n")
+
+            if action_fn is not None:
+                async for result in self._evaluate_action(action_fn, user_prompt, completed, **kwargs):
+                    yield result
 
             if current_decision_node.options[decision]["next"] is None:
                 break

@@ -31,12 +31,6 @@ class TextResponse:
 
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict = {}, **kwargs):
 
-        Branch({
-            "name": "Text Response",
-            "description": "Generate a chat response to the user's prompt.",
-            "returns": "text"
-        })
-
         current_message = kwargs.get("current_message", "")
         conversation_history = kwargs.get("conversation_history", [])
 

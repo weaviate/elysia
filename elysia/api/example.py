@@ -27,6 +27,15 @@ collection_properties = json.loads(collection.body)["properties"]
 items = json.loads(collection.body)["items"]
 
 
+# initialise tree
+initialise_tree_payload = InitialiseTreeData(
+    user_id="2",
+    conversation_id="1"
+)
+initialise_tree_response = await initialise_tree(initialise_tree_payload)
+
+tree = json.loads(initialise_tree_response.body)["tree"]
+
 query_payload = QueryData(
     query="what was edwards last message?",
     user_id="2",
@@ -36,6 +45,8 @@ query_payload = QueryData(
 class fake_websocket:
     async def send_json(self, data: dict):
         print(data) 
+        if data["type"] == "tree_update":
+            print(f"connection from {data['payload']['node']} to {data['payload']['decision']}")
 
 await process(query_payload.dict(), fake_websocket())
 
