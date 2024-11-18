@@ -23,7 +23,7 @@ from elysia.util.api import (
     parse_text,
     parse_tree_update
 )
-from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate
+from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate, Error, Warning
 from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 
@@ -433,6 +433,12 @@ class Tree:
             if isinstance(result, Summary):
                 self._update_conversation_history("assistant", result.objects[0]["text"], append_to_previous=False)
 
+            if isinstance(result, Error):
+                yield self.returner._parse_error(result.text)
+
+            if isinstance(result, Warning):
+                yield self.returner._parse_warning(result.text)
+
     def _remove_collection_from_data(self, collection_name: str):
         if collection_name in self.data_queried:
             del self.data_queried[collection_name]
@@ -475,6 +481,7 @@ class Tree:
 
         if recursion_counter > 5:
             backend_print(f"[bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
+            yield self.returner._parse_warning("Recursion limit reached!")
             raise RecursionLimitException("Recursion limit reached!")  # Force exit from the async function by raising an exception
 
         self.previous_reasoning[f"tree_{self.num_trees_completed+1}"] = {}

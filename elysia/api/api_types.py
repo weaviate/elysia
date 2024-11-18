@@ -34,3 +34,8 @@ class SetCollectionsData(BaseModel):
 class GetObjectData(BaseModel):
     collection_name: str
     uuid: str
+
+class ObjectRelevanceData(BaseModel):
+    conversation_id: str
+    user_prompt: str
+    objects: list[dict]

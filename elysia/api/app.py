@@ -24,6 +24,7 @@ from elysia.api.api_types import (
     TitleData, 
     SetCollectionsData, 
     GetObjectData,
+    ObjectRelevanceData,
     InitialiseTreeData
 )
 from elysia.util.collection_metadata import (
@@ -31,7 +32,7 @@ from elysia.util.collection_metadata import (
     get_collection_data,
 )
 from elysia.globals.weaviate_client import client
-from elysia.api.prompt_executors import TitleCreatorExecutor
+from elysia.api.prompt_executors import TitleCreatorExecutor, ObjectRelevanceExecutor
 
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
@@ -126,9 +127,7 @@ async def process(data: QueryData, websocket: WebSocket):
             await websocket.send_json(yielded_result)
             await asyncio.sleep(0)
     except RecursionLimitException:
-        await websocket.send_json(
-            {"status": "error", "data": "Recursion limit reached!", "type": "ERROR"}
-        )
+        pass
 
 # Process endpoint
 @app.websocket("/ws/query")
@@ -313,3 +312,22 @@ async def get_object(data: GetObjectData):
         "items": [object],
         "error": error
     }, status_code=200)
+
+@app.post("/api/object_relevance")
+async def object_relevance(data: ObjectRelevanceData):
+    error = ""
+    object_relevance = ObjectRelevanceExecutor()
+    try:
+        prediction = object_relevance(data.user_prompt, data.objects)
+        any_relevant = eval(prediction.any_relevant)
+        assert isinstance(any_relevant, bool)
+    except Exception as e:
+        any_relevant = False
+        error = str(e)
+    return JSONResponse(
+        content={
+            "any_relevant": any_relevant,
+            "error": error
+        }, 
+        status_code=200
+    )

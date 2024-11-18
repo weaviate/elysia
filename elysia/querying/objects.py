@@ -1,10 +1,11 @@
 import datetime
 import json
 
-from elysia.util.parsing import format_datetime
-from elysia.tree.objects import Objects
+from rich import print
 from weaviate.classes.query import Filter, Sort
 
+from elysia.util.parsing import format_datetime
+from elysia.tree.objects import Objects
 from elysia.globals.weaviate_client import client
 
 class Retrieval(Objects):

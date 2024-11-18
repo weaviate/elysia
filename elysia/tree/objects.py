@@ -23,6 +23,14 @@ class Status:
                 "text": self.status
             }
         }
+    
+class Warning:
+    def __init__(self, text: str):
+        self.text = text
+    
+class Error:
+    def __init__(self, text: str):
+        self.text = text
 
 class TreeUpdate:
 
@@ -43,8 +51,7 @@ class Objects:
 
             if key not in self.metadata:
                 self.metadata[key] = value
-            
-            if isinstance(self.metadata[key], list):
+            elif isinstance(self.metadata[key], list):
                 self.metadata[key].extend(value)
             else:
                 self.metadata[key] = value
@@ -67,15 +74,6 @@ class Objects:
     def return_value(self, idx: int):
         return self.objects[idx]
 
-class Warning(Objects):
-    def __init__(self, objects: list[str], metadata: dict = {}):
-        super().__init__(objects, metadata)
-        self.type = "warning"
-
-class Error(Objects):
-    def __init__(self, objects: list[str], metadata: dict = {}):
-        super().__init__(objects, metadata)
-        self.type = "error"
 
 class SelfInfo(Objects):
     def __init__(self, name: str = "Elysia"):

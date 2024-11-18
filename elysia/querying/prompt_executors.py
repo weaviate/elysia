@@ -5,6 +5,7 @@ from typing import Any, Generator
 from weaviate.classes.query import Filter, Sort
 from weaviate.collections.classes.internal import QueryReturn
 from weaviate.collections.classes.aggregate import AggregateGroupByReturn, AggregateReturn
+from weaviate.classes.aggregate import GroupByAggregate
 
 from typing import Callable
 
@@ -16,7 +17,7 @@ from elysia.querying.prompt_templates import (
     QueryCreatorPrompt, 
     ObjectSummaryPrompt, 
     AggregateCollectionPrompt, 
-    PropertyGroupingPrompt
+    construct_property_grouping_prompt
 )
 from elysia.util.logging import backend_print
 from elysia.util.parsing import format_datetime
@@ -42,10 +43,27 @@ class QueryInitialiserExecutor(dspy.Module):
     
 class PropertyGroupingExecutor(dspy.Module):
 
-    def __init__(self):
+    def __init__(self, property_names: list[str], collection_name: str):
         super().__init__()
-        self.property_grouping_prompt = dspy.ChainOfThought(PropertyGroupingPrompt)
+        self.property_grouping_prompt = dspy.ChainOfThought(construct_property_grouping_prompt(property_names))
+        self.collection_name = collection_name
 
+    def _group_by(self, property_name: str):
+        collection = client.collections.get(self.collection_name)
+        aggregation = collection.aggregate.over_all(
+            total_count=True,
+            group_by=GroupByAggregate(prop=property_name)
+        )
+
+        out = {}
+        for result in aggregation.groups:
+            if result.grouped_by.prop in out:
+                out[result.grouped_by.prop][result.grouped_by.value] = result.total_count
+            else:
+                out[result.grouped_by.prop] = {result.grouped_by.value: result.total_count}
+
+        return out
+    
     def forward(
         self, 
         user_prompt: str, 
@@ -55,7 +73,8 @@ class PropertyGroupingExecutor(dspy.Module):
         example_field: dict,
         current_message: str
     ) -> str:
-        return self.property_grouping_prompt(
+        
+        prediction = self.property_grouping_prompt(
             user_prompt=user_prompt,
             reference=reference,
             previous_reasoning=previous_reasoning,
@@ -63,6 +82,17 @@ class PropertyGroupingExecutor(dspy.Module):
             example_field=example_field,
             current_message=current_message
         )
+
+        try:
+            groupby = self._group_by(prediction.property_name)
+        except Exception as e:
+            try:
+                dspy.Assert(False, f"Error grouping by property: {e}", target_module=self.property_grouping_prompt)
+            except Exception as e:
+                backend_print(f"Error grouping by property: {e}")
+                return {}, prediction
+
+        return groupby, prediction
 
 class QueryExecutor(dspy.Module):
 
@@ -112,7 +142,8 @@ class QueryExecutor(dspy.Module):
             return QueryReturn(objects=[]), None, None, False
 
         try:
-            is_query_possible = bool(prediction.is_query_possible)
+            is_query_possible = eval(prediction.is_query_possible)
+            assert isinstance(is_query_possible, bool)
         except Exception as e:
             try:
                 dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_creator_prompt)
@@ -201,12 +232,12 @@ class ObjectSummaryExecutor(dspy.Module):
         super().__init__()
         self.object_summary_prompt = dspy.ChainOfThought(ObjectSummaryPrompt)
 
-    def forward(self, objects: list[dict]) -> list[str]:
-        summaries = self.object_summary_prompt(objects=objects).summaries
+    def forward(self, objects: list[dict]):
+        prediction = self.object_summary_prompt(objects=objects)
 
         try:
-            summary_list = eval(summaries)
+            summary_list = eval(prediction.summaries)
         except Exception as e:
             dspy.Assert(False, f"Error converting summaries to list: {e}", target_module=self.object_summary_prompt)
 
-        return summary_list
+        return summary_list, prediction

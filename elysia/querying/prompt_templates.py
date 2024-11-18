@@ -116,95 +116,105 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
 
     return QueryInitialiserPrompt
 
-class PropertyGroupingPrompt(dspy.Signature):
-    """
-    Determine which property(ies) to group the results by.
-    The goal is to provide a list of properties that the user is likely to filter on in a later query.
-    For example, if the user prompt asks for articles by a specific author, you should group by "author".
-    If the user prompt asks for articles about a specific topic, you should group by "topic".
-    """
-    user_prompt = dspy.InputField(desc="The user's original query")
+def construct_property_grouping_prompt(property_names: list[str]) -> dspy.Signature:
 
-    reference = dspy.InputField(desc="""
-        Information about the state of the world NOW such as the date and time.
-        """.strip(), 
-        format = str
-    )
+    PropertyLiteral = (Literal[tuple(property_names)] if property_names is not None  # type: ignore
+                  else str)
 
-    previous_reasoning = dspy.InputField(
-        desc="""
-        Your reasoning that you have output from previous decisions.
-        This is so you can use the information from previous decisions to help you decide what type of query to create.
+    class PropertyGroupingPrompt(dspy.Signature):
+        """
+        Determine which property to group the results by.
+        The goal is to provide a list of properties that the user is likely to filter on in a later query.
+        You are essentially tasked with collecting metadata about the collection for this specific query/user prompt,
+        by using a group by command. But you only need to provide the property name, not the entire command.
+        For example, if the user prompt asks for articles by a specific author, you should group by "author".
+        If the user prompt asks for articles about a specific topic, you should group by "topic".
+        """
+        user_prompt = dspy.InputField(desc="The user's original query")
 
-        This is a dictionary of the form:
-        {
-            "tree_1": 
+        reference = dspy.InputField(desc="""
+            Information about the state of the world NOW such as the date and time.
+            """.strip(), 
+            format = str
+        )
+
+        previous_reasoning = dspy.InputField(
+            desc="""
+            Your reasoning that you have output from previous decisions.
+            This is so you can use the information from previous decisions to help you decide what type of query to create.
+
+            This is a dictionary of the form:
             {
-                "decision_1": "Your reasoning for the decision 1",
-                "decision_2": "Your reasoning for the decision 2",
-                ...
-            },
-            "tree_2": {
-                "decision_1": "Your reasoning for the decision 1",
-                "decision_2": "Your reasoning for the decision 2",
+                "tree_1": 
+                {
+                    "decision_1": "Your reasoning for the decision 1",
+                    "decision_2": "Your reasoning for the decision 2",
+                    ...
+                },
+                "tree_2": {
+                    "decision_1": "Your reasoning for the decision 1",
+                    "decision_2": "Your reasoning for the decision 2",
+                    ...
+                }
+            }
+            where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
+            
+            Use this to base your current action from previous reasoning.
+            """.strip(), 
+            format = str
+        )
+
+        data_fields = dspy.InputField(desc="""
+            A list of fields that are available to search over.
+            ["field_name", ...]
+            """.strip(), 
+            format = str
+        )
+
+        example_field = dspy.InputField(desc="""
+            An example from the collection of what the fields look like, in the following format:
+            {
+                "field_name": "field_value",
                 ...
             }
-        }
-        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
-        
-        Use this to base your current action from previous reasoning.
-        """.strip(), 
-        format = str
-    )
+            You should use these to understand the format of the data, and to create your query.
+            """.strip(), 
+            format = str
+        )
 
-    data_fields = dspy.InputField(desc="""
-        A list of fields that are available to search over.
-        ["field_name", ...]
-        """.strip(), 
-        format = str
-    )
-
-    example_field = dspy.InputField(desc="""
-        An example from the collection of what the fields look like, in the following format:
-        {
-            "field_name": "field_value",
-            ...
-        }
-        You should use these to understand the format of the data, and to create your query.
-        """.strip(), 
-        format = str
-    )
-    
-    property_name = dspy.OutputField(desc="""
-        A single property name to group the results by.
-        Only provide the property name exactly as it appears.
-        """.strip(), 
-        format = str
-    )
-
-    current_message = dspy.InputField(
-        description="""
+        current_message = dspy.InputField(
+            description="""
             The current message you, the assistant, have written to send to the user. 
             This message has not been sent yet, you will add text to it, to be sent to the user later.
             In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
             """.strip(),
             format = str
         )
-    text_return = dspy.OutputField(
-        desc="""
-        A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
-        Do not include many technical details e.g. variable names, 
-        just a brief explanation in plain English, in a chat message format, 
-        so you should use markdown and respond to the user in a friendly way.
-        Do not use emojis, and do not ask the user to confirm or approve of your actions.
-        Do not ask the user any questions.
-        This is a continuation of the current_message field. 
-        This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
-        Use present tense in your text, as if you are currently completing the action.
-        If the current_message field is empty, then this response is the beginning of a new message.
-        """.strip(),
-        format = str
-    )
+        
+        property_name: PropertyLiteral = dspy.OutputField(desc="""
+            A single property name to group the results by.
+            Only provide the property name exactly as it appears.
+            """.strip(), 
+            format = str
+        )
+
+        text_return = dspy.OutputField(
+            desc="""
+            A brief, punctual explanation of what actions you have carried out during this task, to display to the user. 
+            Do not include many technical details e.g. variable names, 
+            just a brief explanation in plain English, in a chat message format, 
+            so you should use markdown and respond to the user in a friendly way.
+            Do not use emojis, and do not ask the user to confirm or approve of your actions.
+            Do not ask the user any questions.
+            This is a continuation of the current_message field. 
+            This response should be a natural continuation of the current_message field, as if you are continuing the paragraph.
+            Use present tense in your text, as if you are currently completing the action.
+            If the current_message field is empty, then this response is the beginning of a new message.
+            """.strip(),
+            format = str
+        )
+
+    return PropertyGroupingPrompt
 
 class QueryCreatorPrompt(dspy.Signature):
     """

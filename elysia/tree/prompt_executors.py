@@ -57,7 +57,8 @@ class DecisionExecutor(dspy.Module):
 
 
         try:
-            completed = bool(eval(decision.all_actions_completed))
+            completed = eval(decision.all_actions_completed)
+            assert isinstance(completed, bool)
         except Exception as e:
             print(f"Error reading completed output as boolean: {e}")
             return decision, False

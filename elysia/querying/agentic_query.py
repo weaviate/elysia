@@ -27,7 +27,6 @@ class AgenticQuery:
         self.collection_names = collection_names
 
         self.query_initialiser = QueryInitialiserExecutor(self.collection_names, return_types).activate_assertions()        
-        self.property_grouper = PropertyGroupingExecutor()
         self.querier = QueryExecutor().activate_assertions(max_backtracks=3)
         # self.aggregator = AggregateCollectionExecutor().activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions()
@@ -51,36 +50,7 @@ class AgenticQuery:
         if collection_name in available_information.retrieved:
             metadata = available_information.retrieved[collection_name].metadata
             if "previous_queries" in metadata:
-                self.previous_queries.extend(metadata["previous_queries"])
-
-    def _initialise_query(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str], current_message: str):
-
-        # run initialiser to get collection name and return type
-        initialiser = self.query_initialiser(
-            user_prompt=user_prompt,
-            reference=reference,
-            previous_reasoning=previous_reasoning,
-            data_queried=data_queried,
-            current_message=current_message
-        )
-
-        return initialiser
-
-    def _aggregate(self, collection_name: str, property_name: str):
-        collection = client.collections.get(collection_name)
-        aggregation = collection.aggregate.over_all(
-            total_count=True,
-            group_by=GroupByAggregate(prop=property_name)
-        )
-
-        out = {}
-        for result in aggregation.groups:
-            if result.grouped_by.prop in out:
-                out[result.grouped_by.prop][result.grouped_by.value] = result.total_count
-            else:
-                out[result.grouped_by.prop] = {result.grouped_by.value: result.total_count}
-
-        return out
+                self.previous_queries.extend(metadata["previous_queries"])       
         
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
         
@@ -92,30 +62,35 @@ class AgenticQuery:
             "name": "Query Initialiser",
             "description": "Determine the collection and return type to query."
         })
-        initialiser = self._initialise_query(user_prompt, previous_reasoning, data_queried, current_message)
+        yield Status(f"Initialising query")
 
-        reasoning = initialiser.reasoning
-        collection_name = initialiser.collection_name
-        return_type = initialiser.return_type
-        output_type = initialiser.output_type
-        current_message += " " + initialiser.text_return
+        try:
+            # Run the query initialiser pipeline
+            initialiser = self.query_initialiser(
+                user_prompt=user_prompt,
+                reference=reference,
+                previous_reasoning=previous_reasoning,
+                data_queried=data_queried,
+                current_message=current_message
+            )
+            current_message += " " + initialiser.text_return
 
-        yield TreeUpdate(from_node="query", to_node="query_initialiser", reasoning=reasoning, last = False)
+            # Yield results to front end
+            yield TreeUpdate(from_node="query", to_node="query_initialiser", reasoning=initialiser.reasoning, last = False)
+            if initialiser.text_return is not None:
+                yield Response([{"text": initialiser.text_return}], {})
+        
+        except Exception as e:
+            yield Error(f"Error in initialising query: {e}")
 
-        if initialiser.text_return is not None:
-            yield Response([{"text": initialiser.text_return}], {})
+        previous_reasoning["query_initialiser"] = initialiser.reasoning
 
-        self._find_previous_queries(collection_name, available_information)
-
-        # add reasoning from initialiser to previous reasoning just for query step
-        previous_reasoning["query_initialiser"] = reasoning
-
-        # get example fields from collection
-        example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
+        # Get some metadata about the collection
+        self._find_previous_queries(initialiser.collection_name, available_information)
+        example_field = client.collections.get(initialiser.collection_name).query.fetch_objects(limit=1).objects[0].properties
         for key in example_field:
             if isinstance(example_field[key], datetime.datetime):
                 example_field[key] = example_field[key].isoformat()
-
         data_fields = list(example_field.keys())
 
         # -- Step 2: Determine property to group by and aggregate to get information (TODO: somehow cache this)
@@ -123,93 +98,126 @@ class AgenticQuery:
             "name": "Property Grouper",
             "description": "Determine the property to group by to get information about the collection."
         })
-        property_grouper = self.property_grouper(user_prompt, reference, previous_reasoning, data_fields, example_field, current_message)
-        property_name = property_grouper.property_name
+        yield Status(f"Gathering information about the collection")
 
         try:
-            aggregation = self._aggregate(collection_name, property_name)
-            yield Response([{"text": property_grouper.text_return}], {})
-            current_message += " " + property_grouper.text_return
-        except Exception as e:
-            aggregation = {}
-            yield Warning([f"Aggregation error: {e}"], {})
-
-        yield TreeUpdate(from_node="query_initialiser", to_node="property_grouper", reasoning=property_grouper.reasoning, last = False)
+            # Run the property grouper
+            property_grouper = PropertyGroupingExecutor(data_fields, initialiser.collection_name)
+            collection_metadata, grouper = property_grouper(
+                user_prompt=user_prompt,
+                reference=reference,
+                previous_reasoning=previous_reasoning,
+                data_fields=data_fields,
+                example_field=example_field,
+                current_message=current_message
+            )
             
+            current_message += " " + grouper.text_return
+
+            # Yield results to front end
+            yield Response([{"text": grouper.text_return}], {})
+            if collection_metadata == {}:
+                yield Warning(f"Agent was unable to determine a property to group by. Performing a regular query instead.")
+            yield TreeUpdate(from_node="query_initialiser", to_node="property_grouper", reasoning=grouper.reasoning, last = False)
+        
+        except Exception as e:
+            yield Error(f"Error in property grouping: {e}")
+
+        previous_reasoning["property_grouper"] = grouper.reasoning
+        
         # -- Step 3: Query the collection
         Branch({
             "name": "Query Executor",
             "description": "Write code and query the collection to retrieve objects."
         })
-    
-        yield Status(f"Querying {collection_name}")
-        response, prediction = self.querier(
-            user_prompt = user_prompt, 
-            reference = reference, 
-            previous_queries = self.previous_queries, 
-            data_fields = data_fields, 
-            example_field = example_field, 
-            collection_metadata = aggregation,
-            previous_reasoning = previous_reasoning,
-            collection_name = collection_name,
-            current_message = current_message
-        )
+        yield Status(f"Querying {initialiser.collection_name}")
 
-        yield Response([{"text": prediction.text_return}], {})
-        yield Code([{"text": prediction.code, "language": "python", "title": "Query"}], {})
-        yield TreeUpdate(from_node="property_grouper", to_node="query_executor", reasoning=prediction.reasoning, last = output_type != "summary")
+        try:
 
-        current_message += " " + prediction.text_return
+            # Run the query executor (write and execute the query)
+            response, query = self.querier(
+                user_prompt = user_prompt, 
+                reference = reference, 
+                previous_queries = self.previous_queries, 
+                data_fields = data_fields, 
+                example_field = example_field, 
+                collection_metadata = collection_metadata,
+                previous_reasoning = previous_reasoning,
+                collection_name = initialiser.collection_name,
+                current_message = current_message
+            )
 
-        if bool(prediction.is_query_possible):
+            current_message += " " + query.text_return
 
-            yield Status(f"Retrieved {len(response.objects)} objects from {collection_name}")
+            # Yield results to front end
+            yield Response([{"text": query.text_return}], {})
+            yield Code([{"text": query.code, "language": "python", "title": "Query"}], {})
+            yield TreeUpdate(from_node="property_grouper", to_node="query_executor", reasoning=query.reasoning, last = initialiser.output_type != "summary")
 
-            if prediction.code is not None:
-                self.previous_queries.append(prediction.code)
+            if eval(query.is_query_possible):
+                yield Status(f"Retrieved {len(response.objects)} objects from {initialiser.collection_name}")
 
-            objects = []
-            for obj in response.objects:
-                objects.append({k: v for k, v in obj.properties.items()})
-                objects[-1]["uuid"] = obj.uuid.hex
+                if query.code is not None:
+                    self.previous_queries.append(query.code)
 
-            if output_type == "summary":
+        except Exception as e:
+            yield Error(f"Error in query execution: {e}")
 
-                Branch({
-                    "name": "Object Summariser",
-                    "description": "Generate itemised summaries of the retrieved objects."
-                })
+        # Only continue if the query is possible
+        if not eval(query.is_query_possible):
+            yield GenericRetrieval([], {"collection_name": initialiser.collection_name, "impossible_prompts": [user_prompt]})
+            return
 
-                yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="Generating itemised summaries of the retrieved objects", last = True)
-                yield Status(f"Generating summaries of the retrieved objects")
-                object_summaries = self.object_summariser(objects)
-                yield Status(f"Summarised {len(object_summaries)} objects")
+        # Get the objects from the response (query executor)
+        objects = []
+        for obj in response.objects:
+            objects.append({k: v for k, v in obj.properties.items()})
+            objects[-1]["uuid"] = obj.uuid.hex
+
+        # -- (Optional) Step 4: Summarise the objects
+        if initialiser.return_type == "summary":
+            Branch({
+                "name": "Object Summariser",
+                "description": "Generate itemised summaries of the retrieved objects."
+            })
+            yield Status(f"Generating summaries of the retrieved objects")
+
+            try:
+
+                # Run the object summariser
+                summary_list, summariser = self.object_summariser(objects)
+
+                # Yield results to front end
+                yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning=summariser.reasoning, last = True)
+                yield Status(f"Summarised {len(summariser)} objects")
 
                 # attach summaries to objects
                 for i, obj in enumerate(objects):
-                    if i < len(object_summaries):
-                        obj["summary"] = object_summaries[i]
+                    if i < len(summary_list):
+                        obj["summary"] = summary_list[i]
                     else:
                         obj["summary"] = ""
+            
+            except Exception as e:
+                yield Error(f"Error in object summarisation: {e}")
 
-            else:
-                for obj in objects:
-                    obj["summary"] = ""
-
-            metadata = {
-                "previous_queries": self.previous_queries, 
-                "collection_name": collection_name,
-                "collection_metadata": aggregation
-            }
-
-            if return_type == "conversation":
-                yield ConversationRetrieval(objects, metadata)
-            elif return_type == "message":
-                yield MessageRetrieval(objects, metadata)
-            elif return_type == "ticket":
-                yield TicketRetrieval(objects, metadata)
-            else:
-                yield GenericRetrieval(objects, metadata)
-        
+        # If no summarisation, attach empty strings
         else:
-            yield GenericRetrieval([], {"collection_name": collection_name, "impossible_prompts": [user_prompt]})
+            for obj in objects:
+                obj["summary"] = ""
+
+        metadata = {
+            "previous_queries": [query.code], 
+            "collection_name": initialiser.collection_name,
+            "collection_metadata": collection_metadata
+        }
+
+        if initialiser.return_type == "conversation":
+            yield ConversationRetrieval(objects, metadata)
+        elif initialiser.return_type == "message":
+            yield MessageRetrieval(objects, metadata)
+        elif initialiser.return_type == "ticket":
+            yield TicketRetrieval(objects, metadata)
+        else:
+            yield GenericRetrieval(objects, metadata)
+        

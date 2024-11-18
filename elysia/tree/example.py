@@ -18,7 +18,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "what was edward's last message?"
+        "what did edward say about the new feature in verba?"
     )
 
     # print(tree.returns)
