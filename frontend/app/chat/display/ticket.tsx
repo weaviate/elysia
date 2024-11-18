@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Ticket } from "../../types";
 import MarkdownMessageDisplay from "./markdown";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { IoLink } from "react-icons/io5";
 
 interface TicketMessageDisplayProps {
   ticket: Ticket;
@@ -38,45 +38,83 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
       onClick={() => setTicketCollapsed((prev) => !prev)}
     >
       <div className="flex flex-col gap-2 w-full">
-        <div className="flex justify-between items-start w-full">
-          <div className="flex flex-col items-start gap-1">
-            <p className="text-primary text-base font-bold">
-              {ticket.issue_title}
-            </p>
-            <p className="text-xs font-light text-secondary">
-              <span className="font-bold">{ticket.issue_author}</span> opened
-              this on {formatDate(ticket.issue_created_at)}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {ticket.summary && (
-              <button
-                className="btn-static text-xs text-secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleSummary();
-                }}
-              >
-                <p>
-                  {ticket.summary && showSummary
-                    ? "Show Original"
-                    : "Show Summary"}
+        <div className="flex items-start w-full">
+          <div className="flex flex-col items-start gap-1 w-full">
+            <div className="flex justify-between items-center gap-2 w-full">
+              <div className="flex items-center gap-1">
+                <p className="text-primary text-base font-bold">
+                  {ticket.issue_title}
                 </p>
-              </button>
-            )}
-            {ticket.issue_url && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openLink();
-                }}
-                className="text-secondary btn btn-round"
-              >
-                <FaExternalLinkAlt size={12} />
-              </button>
-            )}
+                {ticket.issue_url && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openLink();
+                    }}
+                    className="text-secondary btn btn-round"
+                  >
+                    <IoLink size={12} />
+                  </button>
+                )}
+                <div className="flex items-center gap-2">
+                  {ticket.issue_state === "open" && (
+                    <div className="p-2 bg-background_accent rounded-lg">
+                      <p className="text-xs font-bold text-white">Open</p>
+                    </div>
+                  )}
+                  {ticket.issue_state === "closed" && (
+                    <div className="p-2 bg-background_error rounded-lg">
+                      <p className="text-xs font-bold text-white">Closed</p>
+                    </div>
+                  )}
+                  {ticket.issue_state !== "open" &&
+                    ticket.issue_state !== "closed" && (
+                      <div className="p-2 bg-background_secondary rounded-lg">
+                        <p className="text-xs font-bold text-white">
+                          {ticket.issue_state}
+                        </p>
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  {ticket.issue_labels.length > 0 &&
+                    ticket.issue_labels.map((label, idx) => (
+                      <div className="p-2 bg-background_secondary rounded-lg">
+                        <p className="text-xs font-bold text-white">{label}</p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-light text-secondary">
+                <span className="font-bold">{ticket.issue_author}</span> opened
+                this on {formatDate(ticket.issue_created_at)}
+              </p>
+              {ticket.summary && (
+                <button
+                  className="btn-static text-xs text-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSummary();
+                  }}
+                >
+                  |
+                  <p>
+                    {ticket.summary && showSummary
+                      ? "Show Original"
+                      : "Show Summary"}
+                  </p>
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
         {((!ticketCollapsed && !ticket.summary) ||
           (!showSummary && ticket.summary)) && (
           <div className="text-primary overflow-scroll text-sm gap-5 mt-2 flex max-h-[50vh] flex-col text-wrap">

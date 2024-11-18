@@ -122,7 +122,7 @@ const QueryInput: React.FC<QueryInputProps> = ({
             className="btn w-full bg-background_alt text-primary text-sm"
           >
             <IoChatbubble size={16} />
-            <p>What was Edward's last conversation?</p>
+            <p>What was the last conversation of Edward?</p>
           </button>
           <button
             onClick={() => {

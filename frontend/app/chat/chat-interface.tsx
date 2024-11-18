@@ -11,12 +11,11 @@ import MessageDisplay from "./message-display";
 import { BsChatFill } from "react-icons/bs";
 import { RiFlowChart } from "react-icons/ri";
 import FlowDisplay from "./flow-display";
-import { ReactFlow, ReactFlowProvider } from "@xyflow/react";
+import { ReactFlowProvider } from "@xyflow/react";
 import SelectDropdown from "../navigation/select-dropdown";
 
 interface ChatInterfaceProps {
   currentConversation: string;
-  toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
   routerChangeCollection: (collection_id: string) => void;
   conversations: Conversation[];
   toggleCollectionEnabled: (
@@ -33,7 +32,6 @@ interface ChatInterfaceProps {
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentConversation,
   conversations,
-  toggleMessageCollapsed,
   toggleCollectionEnabled,
   addMessageToConversation,
   handleQuery,
@@ -121,7 +119,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <MessageDisplay
             messages={messages}
             current_status={currentStatus}
-            toggleMessageCollapsed={toggleMessageCollapsed}
             routerChangeCollection={routerChangeCollection}
           />
           <QueryInput messages={messages} handleSendQuery={handleSendQuery} />

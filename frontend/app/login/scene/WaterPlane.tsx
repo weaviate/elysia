@@ -10,6 +10,7 @@ function WaterPlane() {
 
   useFrame((state) => {
     if (material) {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       (material as any).uTime.value = state.clock.getElapsedTime();
     }
   });
@@ -33,9 +34,11 @@ function WaterPlane() {
       metalness: 0,
       opacity: 0.95,
     });
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (baseMaterial as any).uTime = { value: 0 };
 
     baseMaterial.onBeforeCompile = (shader) => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       shader.uniforms.uTime = (baseMaterial as any).uTime;
 
       shader.vertexShader = shader.vertexShader.replace(
@@ -103,7 +106,7 @@ function WaterPlane() {
       castShadow
       material={material}
     >
-      <planeGeometry args={[20, 20, 500, 500]} />
+      <planeGeometry args={[20, 20, 100, 100]} />
     </mesh>
   );
 }

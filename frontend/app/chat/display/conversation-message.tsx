@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import MarkdownMessageDisplay from "./markdown";
 import { ConversationMessage } from "@/app/types";
+import CollectionDisplay from "./collection";
 
 interface ConversationMessageProps {
   payload: ConversationMessage[];
@@ -37,7 +38,9 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
   >({});
 
   useEffect(() => {
-    payload.length > 2 && setMessageCollapsed(true);
+    if (payload.length > 2) {
+      setMessageCollapsed(true);
+    }
 
     // Get unique authors
     const uniqueAuthors = Array.from(

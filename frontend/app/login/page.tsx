@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
+import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import { useEffect } from "react";
 import { Environment } from "@react-three/drei";
@@ -48,7 +49,7 @@ function Statue() {
 export default function LoginPage() {
   const router = useRouter();
   const [camera, setCamera] = React.useState<THREE.Camera>();
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
 
   const changePage = () => {
     router.push("/?mode=home");

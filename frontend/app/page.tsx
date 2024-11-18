@@ -65,7 +65,6 @@ export default function Home() {
     selectConversation,
     setConversationTitle,
     addDecisionToConversation,
-    toggleMessageCollapsed,
     toggleCollectionEnabled,
     addMessageToConversation,
   } = useConversations(id || "", collections);
@@ -112,7 +111,6 @@ export default function Home() {
           toggleCollectionEnabled={toggleCollectionEnabled}
           addMessageToConversation={addMessageToConversation}
           handleQuery={handleQuery}
-          toggleMessageCollapsed={toggleMessageCollapsed}
           routerChangeCollection={routerChangeCollection}
         />
       )}

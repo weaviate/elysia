@@ -6,7 +6,11 @@ import {
   ConversationMessage,
   ErrorPayload,
   Message,
+  ResponsePayload,
+  SummaryPayload,
   ResultPayload,
+  TextPayload,
+  CodePayload,
 } from "../types";
 
 import UserMessageDisplay from "./display/user";
@@ -17,18 +21,18 @@ import TicketsDisplay from "./display/tickets";
 import WarningDisplay from "./display/warning";
 import ConversationsDisplay from "./display/conversations";
 import ConversationMessageDisplay from "./display/conversation-message";
+import SummaryDisplay from "./display/summary";
+import CodeDisplay from "./display/code";
 
 interface MessageDisplayProps {
   messages: Message[];
   current_status: string;
-  toggleMessageCollapsed: (conversationId: string, message_id: string) => void;
   routerChangeCollection: (collection_id: string) => void;
 }
 
 const MessageDisplay: React.FC<MessageDisplayProps> = ({
   messages,
   current_status,
-  toggleMessageCollapsed,
   routerChangeCollection,
 }) => {
   const size_control =
@@ -58,14 +62,6 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             )}
             {message.type === "result" && (
               <div className="w-full flex flex-col justify-start items-start ">
-                {(message.payload as ResultPayload).type === "text" && (
-                  <TextDisplay
-                    key={`${index}-${message.id}`}
-                    payload={
-                      (message.payload as ResultPayload).objects as string[]
-                    }
-                  />
-                )}
                 {(message.payload as ResultPayload).type === "ticket" && (
                   <TicketsDisplay
                     key={`${index}-${message.id}`}
@@ -85,9 +81,42 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                 {(message.payload as ResultPayload).type === "conversation" && (
                   <ConversationsDisplay
                     key={`${index}-${message.id}`}
+                    metadata={(message.payload as ResultPayload).metadata}
                     payload={
                       (message.payload as ResultPayload)
                         .objects as ConversationMessage[][]
+                    }
+                    routerChangeCollection={routerChangeCollection}
+                  />
+                )}
+              </div>
+            )}
+            {message.type === "text" && (
+              <div className="w-full flex flex-col justify-start items-start ">
+                {(message.payload as ResponsePayload).type === "response" && (
+                  <TextDisplay
+                    key={`${index}-${message.id}`}
+                    payload={
+                      (message.payload as ResponsePayload)
+                        .objects as TextPayload[]
+                    }
+                  />
+                )}
+                {(message.payload as ResponsePayload).type === "summary" && (
+                  <SummaryDisplay
+                    key={`${index}-${message.id}`}
+                    payload={
+                      (message.payload as ResponsePayload)
+                        .objects as SummaryPayload[]
+                    }
+                  />
+                )}
+                {(message.payload as ResponsePayload).type === "code" && (
+                  <CodeDisplay
+                    key={`${index}-${message.id}`}
+                    payload={
+                      (message.payload as ResponsePayload)
+                        .objects as CodePayload[]
                     }
                   />
                 )}
