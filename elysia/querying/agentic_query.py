@@ -98,6 +98,7 @@ class AgenticQuery:
         collection_name = initialiser.collection_name
         return_type = initialiser.return_type
         output_type = initialiser.output_type
+        current_message += " " + initialiser.text_return
 
         yield TreeUpdate(from_node="query", to_node="query_initialiser", reasoning=reasoning, last = False)
 
