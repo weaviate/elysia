@@ -20,9 +20,10 @@ from elysia.util.api import (
     parse_finished, 
     parse_error, 
     parse_warning,
-    parse_text
+    parse_text,
+    parse_tree_update
 )
-from elysia.tree.objects import Returns, Objects, Status, Branch
+from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate
 from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 
@@ -128,6 +129,9 @@ class TreeReturner:
     def _parse_status(self, status: Status):
         return status.to_json(self.conversation_id)
     
+    def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool):
+        return parse_tree_update(node_id, decision, reasoning, self.conversation_id, reset)
+    
     def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
         return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
 
@@ -222,7 +226,7 @@ class Tree:
 
         # default initialisations ---
         self.add_decision_node(
-            id = "Base",
+            id = "base",
             instruction = """
             Choose a task based on the user's prompt and the available information. 
             Use all information available to you to make the decision.
@@ -238,7 +242,7 @@ class Tree:
                     "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
                     "future_options": [],
                     "action": None,
-                    "next": "Search",
+                    "next": "search",
                 },
                 "summarize": {
                     "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
@@ -257,7 +261,7 @@ class Tree:
         )
 
         self.add_decision_node(
-            id = "Search",
+            id = "search",
             instruction = """
             Choose between querying the knowledge base via semantic search, or aggregating information from the knowledge base.
             Querying is when the user is looking for specific information related to the content of the dataset.
@@ -324,21 +328,18 @@ class Tree:
         # Define desired key order
         key_order = ["name", "description", "instruction", "options"]
         
-
         # Set the base node information
-        tree["name"] = node_id
+        tree["name"] = node_id.capitalize().replace("_", " ")
         if node_id == self.root:
             tree["description"] = ""
         tree["instruction"] = remove_whitespace(decision_node.instruction.replace("\n", ""))
         tree["options"] = {}
-        if node_id == self.root:
-            tree["path"] = []
 
         # Order the top-level dictionary
         tree = {key: tree[key] for key in key_order if key in tree}
 
         # Initialize all options first with ordered dictionaries
-        option_key_order = ["name", "description", "instruction", "options", "path"]
+        option_key_order = ["name", "description", "instruction", "options"]
         for option in decision_node.options:
             tree["options"][option] = {
                 "description": remove_whitespace(decision_node.options[option]["description"].replace("\n", ""))
@@ -350,17 +351,33 @@ class Tree:
                 func = decision_node.options[option]["action"].__call__
                 branches = self._get_function_branches(func)
                 if branches:
-                    tree["options"][option]["path"] = branches
+                    tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                    tree["options"][option]["instruction"] = ""
+                    sub_tree = tree["options"][option]
+                    for branch in branches:
+                        branch_name = branch["name"].lower().replace(" ", "_")
+                        if "options" not in sub_tree:
+                            sub_tree["options"] = {}
+                        sub_tree["options"][branch_name] = branch
+                        sub_tree["options"][branch_name]["name"] = branch["name"]
+                        sub_tree["options"][branch_name]["description"] = branch["description"]
+                        sub_tree["options"][branch_name]["instruction"] = ""
+                        sub_tree = sub_tree["options"][branch_name]
+                    sub_tree["options"] = {}
+                
                 else:
-                    tree["options"][option]["path"] = []
+                    tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                    tree["options"][option]["instruction"] = ""
+                    tree["options"][option]["description"] = ""
+                    tree["options"][option]["options"] = {}
 
-            if decision_node.options[option]["next"] is not None:
+            elif decision_node.options[option]["next"] is not None:
                 tree["options"][option] = self._construct_tree(
                     decision_node.options[option]["next"], 
                     tree["options"][option]
                 )
             else:
-                tree["options"][option]["name"] = option.capitalize()
+                tree["options"][option]["name"] = option.capitalize().replace("_", " ")
                 tree["options"][option]["instruction"] = ""
                 tree["options"][option]["description"] = ""
                 tree["options"][option]["options"] = {}
@@ -382,7 +399,7 @@ class Tree:
             else:
                 self.data_queried[action_result.metadata["collection_name"]] += len(action_result.objects)
 
-    async def _evaluate_action(self, action_fn: Callable, user_prompt: str, **kwargs):
+    async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
 
         async for result in action_fn(
             user_prompt=user_prompt, 
@@ -395,6 +412,9 @@ class Tree:
         ):
             if isinstance(result, Status):
                 yield self.returner._parse_status(result)
+
+            if isinstance(result, TreeUpdate):
+                yield self.returner._parse_tree_update(result.from_node, result.to_node, result.reasoning, result.last and not completed)
 
             if isinstance(result, Objects):
                 self._update_returns(result, user_prompt)
@@ -490,20 +510,20 @@ class Tree:
             )
 
             yield self.returner._parse_decision(current_decision_node.id, decision, reasoning, current_decision_node.instruction)
-            # yield self.returner._parse_status(Status(current_decision_node.options[decision]["status"]))
-
+            yield self.returner._parse_tree_update(current_decision_node.id, decision, reasoning, False)
+            
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = reasoning
             self.decision_history.append(decision)
-            self.previous_info.append(current_decision_node.construct_as_previous_info())
-
-            if action_fn is not None:
-                async for result in self._evaluate_action(action_fn, user_prompt, **kwargs):
-                    yield result
+            self.previous_info.append(current_decision_node.construct_as_previous_info())            
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")
                 backend_print(f"Instruction: [italic]{current_decision_node.instruction.strip()}[/italic]")
                 backend_print(f"Decision: [green]{decision}[/green]\n")
+
+            if action_fn is not None:
+                async for result in self._evaluate_action(action_fn, user_prompt, completed, **kwargs):
+                    yield result
 
             if current_decision_node.options[decision]["next"] is None:
                 break

@@ -143,7 +143,7 @@ class QueryExecutor(dspy.Module):
                 backend_print(f"Error executing query code: {e}")
                 return QueryReturn(objects=[]), None, None, False
 
-        return response, prediction.code, prediction.text_return, is_query_possible
+        return response, prediction
 
 class AggregateCollectionExecutor(dspy.Module):
 

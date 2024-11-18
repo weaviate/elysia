@@ -23,7 +23,8 @@ from elysia.api.api_types import (
     NERData, 
     TitleData, 
     SetCollectionsData, 
-    GetObjectData
+    GetObjectData,
+    InitialiseTreeData
 )
 from elysia.util.collection_metadata import (
     get_collection_data_types,
@@ -101,6 +102,19 @@ async def health_check():
     logger.info("Health check requested")
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
+
+@app.post("/api/initialise_tree")
+async def initialise_tree(data: InitialiseTreeData):
+    global tree_manager
+    tree_manager.add_tree(data.user_id, data.conversation_id)
+    return JSONResponse(
+        content={
+            "conversation_id": data.conversation_id,
+            "tree": tree_manager.get_tree(data.user_id, data.conversation_id).tree, 
+            "error": ""
+        }, 
+        status_code=200
+    )
 
 async def process(data: QueryData, websocket: WebSocket):
     global tree_manager

@@ -15,6 +15,10 @@ class GetCollectionData(BaseModel):
     page: int
     pageSize: int
 
+class InitialiseTreeData(BaseModel):
+    user_id: str
+    conversation_id: str
+
 class NERData(BaseModel):
     text: str
 

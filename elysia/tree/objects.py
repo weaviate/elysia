@@ -24,6 +24,14 @@ class Status:
             }
         }
 
+class TreeUpdate:
+
+    def __init__(self, from_node: str, to_node: str, reasoning: str, last: bool = False):
+        self.from_node = from_node
+        self.to_node = to_node
+        self.reasoning = reasoning
+        self.last = last
+
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):
         self.objects = objects

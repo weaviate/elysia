@@ -12,7 +12,7 @@ from elysia.querying.prompt_executors import (
     PropertyGroupingExecutor, 
     ObjectSummaryExecutor
 )
-from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch
+from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch, TreeUpdate
 from elysia.text.objects import Response, Code
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval
 
@@ -90,8 +90,7 @@ class AgenticQuery:
         # -- Step 1: Determine collection and other fields
         Branch({
             "name": "Query Initialiser",
-            "description": "Determine the collection and return type to query.",
-            "returns": "collection_name, return_type, output_type"
+            "description": "Determine the collection and return type to query."
         })
         initialiser = self._initialise_query(user_prompt, previous_reasoning, data_queried, current_message)
 
@@ -99,6 +98,8 @@ class AgenticQuery:
         collection_name = initialiser.collection_name
         return_type = initialiser.return_type
         output_type = initialiser.output_type
+
+        yield TreeUpdate(from_node="query", to_node="query_initialiser", reasoning=reasoning, last = False)
 
         if initialiser.text_return is not None:
             yield Response([{"text": initialiser.text_return}], {})
@@ -119,8 +120,7 @@ class AgenticQuery:
         # -- Step 2: Determine property to group by and aggregate to get information (TODO: somehow cache this)
         Branch({
             "name": "Property Grouper",
-            "description": "Determine the property to group by to get information about the collection.",
-            "returns": "property_name"
+            "description": "Determine the property to group by to get information about the collection."
         })
         property_grouper = self.property_grouper(user_prompt, reference, previous_reasoning, data_fields, example_field, current_message)
         property_name = property_grouper.property_name
@@ -132,15 +132,17 @@ class AgenticQuery:
         except Exception as e:
             aggregation = {}
             yield Warning([f"Aggregation error: {e}"], {})
+
+        yield TreeUpdate(from_node="query_initialiser", to_node="property_grouper", reasoning=property_grouper.reasoning, last = False)
             
         # -- Step 3: Query the collection
         Branch({
             "name": "Query Executor",
-            "description": "Write code and query the collection to retrieve objects.",
-            "returns": "objects, code, text_return, is_query_possible"
+            "description": "Write code and query the collection to retrieve objects."
         })
+    
         yield Status(f"Querying {collection_name}")
-        response, code, text_return, is_query_possible = self.querier(
+        response, prediction = self.querier(
             user_prompt = user_prompt, 
             reference = reference, 
             previous_queries = self.previous_queries, 
@@ -151,16 +153,19 @@ class AgenticQuery:
             collection_name = collection_name,
             current_message = current_message
         )
-        yield Response([{"text": text_return}], {})
-        current_message += " " + text_return
-        yield Code([{"text": code, "language": "python", "title": "Query"}], {})
 
-        if is_query_possible:
+        yield Response([{"text": prediction.text_return}], {})
+        yield Code([{"text": prediction.code, "language": "python", "title": "Query"}], {})
+        yield TreeUpdate(from_node="property_grouper", to_node="query_executor", reasoning=prediction.reasoning, last = output_type != "summary")
+
+        current_message += " " + prediction.text_return
+
+        if bool(prediction.is_query_possible):
 
             yield Status(f"Retrieved {len(response.objects)} objects from {collection_name}")
 
-            if code is not None:
-                self.previous_queries.append(code)
+            if prediction.code is not None:
+                self.previous_queries.append(prediction.code)
 
             objects = []
             for obj in response.objects:
@@ -168,6 +173,13 @@ class AgenticQuery:
                 objects[-1]["uuid"] = obj.uuid.hex
 
             if output_type == "summary":
+
+                Branch({
+                    "name": "Object Summariser",
+                    "description": "Generate itemised summaries of the retrieved objects."
+                })
+
+                yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="Generating itemised summaries of the retrieved objects", last = True)
                 yield Status(f"Generating summaries of the retrieved objects")
                 object_summaries = self.object_summariser(objects)
                 yield Status(f"Summarised {len(object_summaries)} objects")
