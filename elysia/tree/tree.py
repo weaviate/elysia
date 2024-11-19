@@ -340,6 +340,7 @@ class Tree:
         
         # Set the base node information
         tree["name"] = node_id.capitalize().replace("_", " ")
+        tree["id"] = node_id
         if node_id == self.root:
             tree["description"] = ""
         tree["instruction"] = remove_whitespace(decision_node.instruction.replace("\n", ""))
@@ -370,6 +371,7 @@ class Tree:
                             sub_tree["options"] = {}
                         sub_tree["options"][branch_name] = branch
                         sub_tree["options"][branch_name]["name"] = branch["name"]
+                        sub_tree["options"][branch_name]["id"] = branch_name
                         sub_tree["options"][branch_name]["description"] = branch["description"]
                         sub_tree["options"][branch_name]["instruction"] = ""
                         sub_tree["options"][branch_name]["reasoning"] = ""
@@ -378,6 +380,7 @@ class Tree:
                 
                 else:
                     tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                    tree["options"][option]["id"] = option
                     tree["options"][option]["instruction"] = ""
                     tree["options"][option]["reasoning"] = ""
                     tree["options"][option]["options"] = {}
@@ -389,6 +392,7 @@ class Tree:
                 )
             else:
                 tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                tree["options"][option]["id"] = option
                 tree["options"][option]["instruction"] = ""
                 tree["options"][option]["reasoning"] = ""
                 tree["options"][option]["options"] = {}
