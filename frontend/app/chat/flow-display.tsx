@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ReactFlow,
@@ -9,6 +9,8 @@ import {
   Node,
   Edge,
   ConnectionLineType,
+  Position,
+  ReactFlowInstance,
 } from "@xyflow/react";
 import dagre from "dagre";
 
@@ -18,10 +20,10 @@ import DecisionNode from "./nodes/decision";
 import { DecisionTreeNode } from "../types";
 
 interface FlowDisplayProps {
-  currentTree: DecisionTreeNode | null;
+  currentTrees: DecisionTreeNode[];
 }
 
-const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
+const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTrees }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -64,10 +66,8 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
       const nodeWithPosition = dagreGraph.node(node.id);
       const newNode = {
         ...node,
-        targetPosition: isHorizontal ? "left" : "top",
-        sourcePosition: isHorizontal ? "right" : "bottom",
-        // We are shifting the dagre node position (anchor=center center) to the top left
-        // so it matches the React Flow node anchor point (top left).
+        targetPosition: isHorizontal ? Position.Left : Position.Top,
+        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
         position: {
           x: nodeWithPosition.x - nodeWidth / 2,
           y: nodeWithPosition.y - nodeHeight / 2,
@@ -80,11 +80,11 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
     return { nodes: newNodes, edges };
   };
 
-  const createNodesEdges = (tree: DecisionTreeNode) => {
+  const createNodesEdges = (tree: DecisionTreeNode, index: number) => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     let idCounter = 0;
-    const getId = () => `node-${idCounter++}`;
+    const getId = () => `node-${idCounter++}-${index}`;
 
     const traverse = (
       node: DecisionTreeNode,
@@ -101,6 +101,7 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
           description: node.description,
           choosen: node.choosen,
           instruction: node.instruction,
+          reasoning: node.reasoning,
         },
         position: { x: 0, y: 0 },
       });
@@ -128,15 +129,46 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
   };
 
   useEffect(() => {
-    if (currentTree) {
-      const { nodes, edges } = createNodesEdges(currentTree);
-      setNodes(nodes as Node[]);
-      setEdges(edges);
+    if (currentTrees.length > 0) {
+      let allNodes: Node[] = [];
+      let allEdges: Edge[] = [];
+
+      currentTrees.forEach((tree, index) => {
+        // Add horizontal offset for each tree
+        const { nodes, edges } = createNodesEdges(tree, index);
+        const offsetX = index * (nodeWidth + 200); // 400px gap between trees
+
+        const offsetNodes = nodes.map((node) => ({
+          ...node,
+          position: {
+            x: node.position.x + offsetX,
+            y: node.position.y,
+          },
+        }));
+
+        allNodes = [...allNodes, ...offsetNodes];
+        allEdges = [...allEdges, ...edges];
+      });
+
+      setNodes(allNodes);
+      setEdges(allEdges);
     } else {
       setNodes([]);
       setEdges([]);
     }
-  }, [currentTree]);
+  }, [currentTrees]);
+
+  // Store the ReactFlow instance
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance | null>(null);
+  const fitViewCalledRef = useRef(false);
+
+  useEffect(() => {
+    if (reactFlowInstance && nodes.length > 0 && !fitViewCalledRef.current) {
+      reactFlowInstance.fitView({ duration: 1000, minZoom: 0.01 });
+      fitViewCalledRef.current = true;
+    }
+  }, [reactFlowInstance, nodes]);
 
   return (
     <div
@@ -150,9 +182,11 @@ const FlowDisplay: React.FC<FlowDisplayProps> = ({ currentTree }) => {
           onNodesChange={onNodesChange}
           connectionLineType={ConnectionLineType.SmoothStep}
           onEdgesChange={onEdgesChange}
-          fitView
           nodesDraggable={false}
           draggable={false}
+          minZoom={0.001}
+          maxZoom={100}
+          onInit={setReactFlowInstance}
         ></ReactFlow>
       </div>
     </div>

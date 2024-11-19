@@ -47,6 +47,12 @@ function DecisionNode({ data }: { data: any }) {
           <p className="text-xs">{data.instruction}</p>
         </div>
       )}
+      {data.reasoning && (
+        <div className="flex flex-col gap-2">
+          <h3 className="font-bold text-sm">Reasoning:</h3>
+          <p className="text-xs">{data.reasoning}</p>
+        </div>
+      )}
     </div>
   );
 

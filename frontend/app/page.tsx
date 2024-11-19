@@ -64,7 +64,9 @@ export default function Home() {
     setConversationTitle,
     updateTree,
     toggleCollectionEnabled,
+    addTreeToConversation,
     addMessageToConversation,
+    changeBaseToQuery,
   } = useConversations(id || "");
 
   const { socketOnline, sendQuery } = useSocket(
@@ -83,7 +85,9 @@ export default function Home() {
 
   const handleQuery = (query: string, conversationId: string) => {
     sendQuery(id || "", query, conversationId);
+    changeBaseToQuery(conversationId, query);
     setConversationTitle(query, conversationId);
+    addTreeToConversation(conversationId);
   };
 
   return (

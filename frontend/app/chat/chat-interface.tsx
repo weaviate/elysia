@@ -41,7 +41,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [currentStatus, setCurrentStatus] = useState<string>("");
 
   const [mode, setMode] = useState<"chat" | "flow">("chat");
-  const [currentTree, setCurrentTree] = useState<DecisionTreeNode | null>(null);
+  const [currentTrees, setCurrentTrees] = useState<DecisionTreeNode[]>([]);
 
   useEffect(() => {
     setMessages(
@@ -55,10 +55,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         ? conversations.find((c) => c.id === currentConversation)?.current || ""
         : ""
     );
-    setCurrentTree(
+    setCurrentTrees(
       currentConversation && conversations.length > 0
-        ? conversations.find((c) => c.id === currentConversation)?.tree || null
-        : null
+        ? conversations.find((c) => c.id === currentConversation)?.tree || []
+        : []
     );
   }, [currentConversation, conversations]);
 
@@ -124,7 +124,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </>
       ) : (
         <ReactFlowProvider>
-          <FlowDisplay currentTree={currentTree} />
+          <FlowDisplay currentTrees={currentTrees} />
         </ReactFlowProvider>
       )}
     </div>
