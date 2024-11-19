@@ -105,6 +105,7 @@ def construct_query_initialiser_prompt(collection_names: list[str] = None, retur
             Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
             Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
             Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+            You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
             If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
             Use gender neutral language.
             """.strip(),
@@ -202,6 +203,7 @@ def construct_property_grouping_prompt(property_names: list[str]) -> dspy.Signat
             Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
             Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
             Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+            You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
             If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
             Use gender neutral language.
             """.strip(),
@@ -433,6 +435,7 @@ class QueryCreatorPrompt(dspy.Signature):
         Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
         Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
         Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+        You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
         If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
         Use gender neutral language.
         """.strip(),
@@ -599,6 +602,7 @@ class AggregateCollectionPrompt(dspy.Signature):
         Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
         Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
         Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+        You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
         If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
         Use gender neutral language.
         """.strip(),

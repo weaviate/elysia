@@ -37,7 +37,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="what did edward say about elephants in slack",
+    query="hi",
     user_id="2",
     conversation_id="1"
 )
@@ -52,6 +52,7 @@ await process(query_payload.dict(), fake_websocket())
 
 tree_manager.get_tree(conversation_id="1", user_id="2").returns
 tree_manager.get_tree(conversation_id="1", user_id="2").conversation_history
+tree_manager.get_tree(conversation_id="1", user_id="2").tree
 
 test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["example_verba_slack_conversations"].objects
 

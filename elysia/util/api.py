@@ -3,13 +3,14 @@ import uuid
 from elysia.tree.objects import Objects
 from elysia.text.objects import Text
 
-def parse_tree_update(node_id: str, decision: str, reasoning: str, conversation_id: str, reset: bool):
+def parse_tree_update(node_id: str, tree_index: int, decision: str, reasoning: str, conversation_id: str, reset: bool):
     return {
         "type": "tree_update",
         "conversation_id": conversation_id,
         "id": "tre-" + str(uuid.uuid4()),
         "payload": {
             "node": node_id,
+            "tree_index": tree_index,
             "decision": decision,
             "reasoning": reasoning,
             "reset": reset

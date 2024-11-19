@@ -126,8 +126,9 @@ class DecisionNode:
         }
     
 class TreeReturner:
-    def __init__(self, conversation_id: str):
+    def __init__(self, conversation_id: str, tree_index: int = 0):
         self.conversation_id = conversation_id
+        self.tree_index = tree_index
 
     def _parse_error(self, error: str):
         return parse_error(error, self.conversation_id)
@@ -139,7 +140,7 @@ class TreeReturner:
         return status.to_json(self.conversation_id)
     
     def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool):
-        return parse_tree_update(node_id, decision, reasoning, self.conversation_id, reset)
+        return parse_tree_update(node_id, self.tree_index, decision, reasoning, self.conversation_id, reset)
     
     def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
         return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
@@ -221,7 +222,7 @@ class Tree:
         self.decision_history = []
         self.conversation_history = []
         self.previous_reasoning = {}
-
+        self.tree_index = -1
 
         self.returns = Returns(
             retrieved = {}, 
@@ -335,20 +336,20 @@ class Tree:
         decision_node = self.decision_nodes[node_id]
         
         # Define desired key order
-        key_order = ["name", "description", "instruction", "options"]
+        key_order = ["name", "description", "instruction", "reasoning", "options"]
         
         # Set the base node information
         tree["name"] = node_id.capitalize().replace("_", " ")
         if node_id == self.root:
             tree["description"] = ""
         tree["instruction"] = remove_whitespace(decision_node.instruction.replace("\n", ""))
+        tree["reasoning"] = ""
         tree["options"] = {}
 
         # Order the top-level dictionary
         tree = {key: tree[key] for key in key_order if key in tree}
 
         # Initialize all options first with ordered dictionaries
-        option_key_order = ["name", "description", "instruction", "options"]
         for option in decision_node.options:
             tree["options"][option] = {
                 "description": remove_whitespace(decision_node.options[option]["description"].replace("\n", ""))
@@ -371,13 +372,14 @@ class Tree:
                         sub_tree["options"][branch_name]["name"] = branch["name"]
                         sub_tree["options"][branch_name]["description"] = branch["description"]
                         sub_tree["options"][branch_name]["instruction"] = ""
+                        sub_tree["options"][branch_name]["reasoning"] = ""
                         sub_tree = sub_tree["options"][branch_name]
                     sub_tree["options"] = {}
                 
                 else:
                     tree["options"][option]["name"] = option.capitalize().replace("_", " ")
                     tree["options"][option]["instruction"] = ""
-                    tree["options"][option]["description"] = ""
+                    tree["options"][option]["reasoning"] = ""
                     tree["options"][option]["options"] = {}
 
             elif decision_node.options[option]["next"] is not None:
@@ -388,12 +390,12 @@ class Tree:
             else:
                 tree["options"][option]["name"] = option.capitalize().replace("_", " ")
                 tree["options"][option]["instruction"] = ""
-                tree["options"][option]["description"] = ""
+                tree["options"][option]["reasoning"] = ""
                 tree["options"][option]["options"] = {}
             
             # Order each option's dictionary
             tree["options"][option] = {key: tree["options"][option][key] 
-                                     for key in option_key_order 
+                                     for key in key_order 
                                      if key in tree["options"][option]}
         
         return tree
@@ -483,6 +485,9 @@ class Tree:
         self.num_trees_completed = 0
         self.data_queried = {}
 
+        self.tree_index += 1
+        self.returner = TreeReturner(conversation_id=self.conversation_id, tree_index=self.tree_index)
+
     def add_decision_node(self, id: str, instruction: str, options: dict[str, dict[str, str]], root: bool = False):
         decision_node = DecisionNode(id, instruction, options, root, dspy_model = self.dspy_model)
         self.decision_nodes[id] = decision_node
@@ -531,7 +536,7 @@ class Tree:
             self.current_message, message_update = update_current_message(self.current_message, decision.text_return)
             print(f"Decision message: [bold yellow]'{message_update}'[/bold yellow]")
 
-            if message_update != "":
+            if message_update != "" and not (decision.task == "text_response" or decision.task == "summarize"):
                 yield self.returner._parse_text(Response([{"text": message_update}], {}))
             yield self.returner._parse_decision(current_decision_node.id, decision.task, decision.reasoning, current_decision_node.instruction)
             yield self.returner._parse_tree_update(current_decision_node.id, decision.task, decision.reasoning, False)
