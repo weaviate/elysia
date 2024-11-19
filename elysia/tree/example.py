@@ -18,10 +18,10 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "Find all GitHub issues related to pdf ingestion, then write a summary, then search for all messages from edward and check if any issues are related to any message written by Edward"
+        "hi"
     )
 
-    x=1
+    # x=1
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"
     # )

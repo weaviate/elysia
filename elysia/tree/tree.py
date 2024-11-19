@@ -336,7 +336,7 @@ class Tree:
         decision_node = self.decision_nodes[node_id]
         
         # Define desired key order
-        key_order = ["name", "description", "instruction", "reasoning", "options"]
+        key_order = ["name", "id", "description", "instruction", "reasoning", "options"]
         
         # Set the base node information
         tree["name"] = node_id.capitalize().replace("_", " ")
@@ -363,6 +363,7 @@ class Tree:
                 branches = self._get_function_branches(func)
                 if branches:
                     tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+                    tree["options"][option]["id"] = option
                     tree["options"][option]["instruction"] = ""
                     sub_tree = tree["options"][option]
                     for branch in branches:
