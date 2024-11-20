@@ -16,17 +16,41 @@ class Retrieval(Objects):
 
         super().__init__(objects, metadata)
 
-    def to_json(self):
+    def to_json(self, idx: int = None):
+        
+        if idx is not None:
+            self.objects = [self.objects[idx]]
+
         for object in self.objects:
             for key, value in object.items():
+                
                 if isinstance(value, datetime.datetime):
                     object[key] = format_datetime(value)
+
+                elif (
+                    not isinstance(value, str) and 
+                    not isinstance(value, list) and 
+                    not isinstance(value, dict) and 
+                    not isinstance(value, float) and 
+                    not isinstance(value, int) and 
+                    not isinstance(value, bool)
+                ):
+                    object[key] = str(value)
+                
+                if isinstance(object[key], str) and object[key].startswith("[") and object[key].endswith("]"):
+                    object[key] = eval(object[key])
+
         return super().to_json()
     
 class GenericRetrieval(Retrieval):
     def __init__(self, objects: list[dict], metadata: dict):
         super().__init__(objects, metadata)
         self.type = "generic"
+
+class EcommerceRetrieval(Retrieval):
+    def __init__(self, objects: list[dict], metadata: dict):
+        super().__init__(objects, metadata)
+        self.type = "ecommerce"
 
 class TicketRetrieval(GenericRetrieval):
     def __init__(self, objects: list[dict], metadata: dict):
@@ -93,6 +117,19 @@ class ConversationRetrieval(Retrieval):
                 for key, value in message.items():
                     if isinstance(value, datetime.datetime):
                         message[key] = format_datetime(value)
+                        
+                    elif (
+                        not isinstance(value, str) and 
+                        not isinstance(value, list) and 
+                        not isinstance(value, dict) and 
+                        not isinstance(value, float) and 
+                        not isinstance(value, int) and 
+                        not isinstance(value, bool)
+                    ):
+                        message[key] = str(value)
+                
+                    if isinstance(message[key], str) and message[key].startswith("[") and message[key].endswith("]"):
+                        message[key] = eval(message[key])
         return {
             "metadata": self.metadata,
             "objects": self.objects

@@ -11,17 +11,19 @@ from elysia.tree.tree import lm
 if __name__ == "__main__":
 
     tree = Tree(
-        collection_names=["example_verba_github_issues", "example_verba_slack_conversations", "example_verba_email_chains"],
+        collection_names=["example_verba_github_issues", "example_verba_slack_conversations", "example_verba_email_chains", "ecommerce"],
         verbosity=2, 
         break_down_instructions=False, 
         dspy_model=None
     )
 
     tree.process_sync(
-        "hi"
+        "give me 10 random trousers"
     )
 
-    # x=1
+    from rich import print
+    print(tree.returns.retrieved["ecommerce"].to_json())
+    
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"
     # )

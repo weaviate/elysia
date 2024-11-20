@@ -201,10 +201,12 @@ class Tree:
         self.collection_names = collection_names
         self.querier = AgenticQuery(
             collection_names=collection_names, 
+            # TODO: make this adaptive based on the tree.objects file
             return_types={
-                "conversation": "retrieve a full conversation, including all messages and message authors, with timestamps and context of other messages in the conversation.",
-                "message": "retrieve only a single message, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
-                "ticket": "retrieve a single ticket, including all fields of the ticket.",
+                "conversation": "retrieve full conversations, including all messages and message authors, with timestamps and context of other messages in the conversation.",
+                "message": "retrieve individual messages, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
+                "ticket": "retrieve individual tickets, including all fields of the ticket.",
+                "ecommerce": "retrieve individual products, including all fields of the product.",
                 "generic": "retrieve any other type of information that does not fit into the other categories."
             }
         )

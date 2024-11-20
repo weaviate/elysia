@@ -37,7 +37,7 @@ from elysia.api.prompt_executors import TitleCreatorExecutor, ObjectRelevanceExe
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
 
-collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations"]
+collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations", "ecommerce"]
 
 class TreeManager:
     """
