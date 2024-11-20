@@ -63,7 +63,7 @@ def parse_error(error: str, conversation_id: str):
         "type": "error",
         "conversation_id": conversation_id,
         "id": "err-" + str(uuid.uuid4()),
-        "payload": {"error": error}
+        "payload": {"text": error}
     }
 
 def parse_warning(warning: str, conversation_id: str):
@@ -71,5 +71,5 @@ def parse_warning(warning: str, conversation_id: str):
         "type": "warning",
         "conversation_id": conversation_id,
         "id": "war-" + str(uuid.uuid4()),
-        "payload": {"warning": warning}
+        "payload": {"text": warning}
     }
