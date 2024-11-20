@@ -15,7 +15,6 @@ from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace, update_current_message
 from elysia.util.logging import backend_print
 from elysia.util.api import (
-    parse_decision, 
     parse_result, 
     parse_finished, 
     parse_error, 
@@ -142,9 +141,6 @@ class TreeReturner:
     def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool):
         return parse_tree_update(node_id, self.tree_index, decision, reasoning, self.conversation_id, reset)
     
-    def _parse_decision(self, id: str, decision: str, reasoning: str, instruction: str):
-        return parse_decision(decision, reasoning, self.conversation_id, id, instruction, {})
-
     def _parse_result(self, result: Objects):
         return parse_result(result, self.conversation_id)
     
@@ -545,7 +541,6 @@ class Tree:
 
             if message_update != "" and not (decision.task == "text_response" or decision.task == "summarize"):
                 yield self.returner._parse_text(Response([{"text": message_update}], {}))
-            yield self.returner._parse_decision(current_decision_node.id, decision.task, decision.reasoning, current_decision_node.instruction)
             yield self.returner._parse_tree_update(current_decision_node.id, decision.task, decision.reasoning, False)
             
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = decision.reasoning

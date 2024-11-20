@@ -17,20 +17,6 @@ def parse_tree_update(node_id: str, tree_index: int, decision: str, reasoning: s
         }
     }
 
-def parse_decision(decision: str, reasoning: str, conversation_id: str, id: str, instruction: str, tree: dict):
-    return {
-        "type": "decision",
-        "conversation_id": conversation_id,
-        "id": "dec-" + str(uuid.uuid4()),
-        "payload": {
-            "id": id,
-            "decision": decision,
-            "reasoning": reasoning,
-            "instruction": instruction,
-            "tree": tree
-        }
-    }
-
 def parse_text(text: Text, conversation_id: str):
     return {
         "type": "text",

@@ -6,6 +6,7 @@ os.chdir("../..")
 
 from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData
 from elysia.api.app import *
+from rich import print
 
 import json
 
