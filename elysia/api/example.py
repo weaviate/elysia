@@ -6,6 +6,7 @@ os.chdir("../..")
 
 from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData
 from elysia.api.app import *
+from rich import print
 
 import json
 
@@ -37,7 +38,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="hi",
+    query="retrieve 10 random trousers",
     user_id="2",
     conversation_id="1"
 )
@@ -61,7 +62,7 @@ for obj in test_return_objects:
 
 object_relevance_payload = ObjectRelevanceData(
     conversation_id="1",
-    user_prompt="what did edward say about elephants in slack",
+    user_prompt="retrieve 10 random trousers",
     objects=test_return_objects
 )
 object_relevance_response = await object_relevance(object_relevance_payload)

@@ -52,6 +52,15 @@ class AgenticQuery:
             metadata = available_information.retrieved[collection_name].metadata
             if "previous_queries" in metadata:
                 self.previous_queries.extend(metadata["previous_queries"])       
+    
+    def _get_collection_fields(self, collection_name: str):
+        example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
+        for key in example_field:
+            if isinstance(example_field[key], datetime.datetime):
+                example_field[key] = example_field[key].isoformat()
+            elif not isinstance(example_field[key], str):
+                example_field[key] = str(example_field[key])
+        return list(example_field.keys()), example_field
         
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
         
@@ -89,11 +98,7 @@ class AgenticQuery:
 
         # Get some metadata about the collection
         self._find_previous_queries(initialiser.collection_name, available_information)
-        example_field = client.collections.get(initialiser.collection_name).query.fetch_objects(limit=1).objects[0].properties
-        for key in example_field:
-            if isinstance(example_field[key], datetime.datetime):
-                example_field[key] = example_field[key].isoformat()
-        data_fields = list(example_field.keys())
+        data_fields, example_field = self._get_collection_fields(initialiser.collection_name)
 
         # -- Step 2: Determine property to group by and aggregate to get information (TODO: somehow cache this)
         Branch({
@@ -125,6 +130,7 @@ class AgenticQuery:
             yield TreeUpdate(from_node="query_initialiser", to_node="property_grouper", reasoning=grouper.reasoning, last = False)
         
         except Exception as e:
+            collection_metadata = {}
             yield Warning(f"Error in property grouping: {e}")
 
         # -- Step 3: Query the collection
@@ -203,6 +209,7 @@ class AgenticQuery:
 
         # If no summarisation, attach empty strings
         else:
+            yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="This step was skipped because it was determined that the output type was not a summary.", last = True)
             for obj in objects:
                 obj["summary"] = ""
 
