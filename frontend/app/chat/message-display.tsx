@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   ConversationMessage,
@@ -38,21 +38,80 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   const size_control =
     messages.length == 0 ? "h-[0px] pb-0" : "h-[100vh] pb-32";
 
+  const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const mergeMessages = (messages: Message[]) => {
+    let newMessages: Message[] = [];
+    let skip_indices: number[] = [];
+
+    messages.forEach((message, index) => {
+      if (skip_indices.includes(index)) {
+        return;
+      } else if (
+        message.type === "text" &&
+        (message.payload as ResponsePayload).type === "response" &&
+        !(index + 1 == messages.length)
+      ) {
+        let content: string = (message.payload as ResponsePayload).objects[0]
+          .text;
+
+        for (let i = index + 1; i < messages.length; i++) {
+          if (
+            messages[i].type === "text" &&
+            (messages[i].payload as ResponsePayload).type === "response"
+          ) {
+            content +=
+              " " +
+              (
+                (messages[i].payload as ResponsePayload)
+                  .objects as TextPayload[]
+              )[0].text;
+            skip_indices.push(i);
+          } else {
+            break;
+          }
+        }
+
+        const newResponsePayload: ResponsePayload = {
+          type: "response",
+          metadata: (message.payload as ResponsePayload).metadata,
+          objects: [{ text: content }],
+        };
+
+        const newMessage: Message = {
+          ...message,
+          payload: newResponsePayload,
+        };
+
+        newMessages.push(newMessage);
+      } else {
+        // For any other message type, just add it
+        newMessages.push(message);
+      }
+    });
+
+    setDisplayMessages(newMessages);
+  };
+
+  useEffect(() => {
+    mergeMessages(messages);
+  }, [messages]);
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages, current_status]);
+  }, [displayMessages, current_status]);
 
   return (
     <div
       className={`w-[75vw] flex justify-start items-start p-4 overflow-scroll transition-all duration-300 ${size_control}`}
     >
-      <div className="flex flex-col gap-6 w-full">
-        {messages.map((message, index) => (
+      <div className="flex flex-col gap-3 w-full">
+        {displayMessages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
             {message.type === "User" && (
               <UserMessageDisplay
@@ -125,13 +184,13 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             {message.type === "error" && (
               <ErrorMessageDisplay
                 key={`${index}-${message.id}`}
-                error={(message.payload as ErrorPayload).error}
+                error={(message.payload as TextPayload).text}
               />
             )}
             {message.type === "warning" && (
               <WarningDisplay
                 key={`${index}-${message.id}`}
-                payload={(message.payload as ResultPayload).objects as string[]}
+                warning={(message.payload as TextPayload).text}
               />
             )}
           </div>

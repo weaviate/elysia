@@ -22,7 +22,6 @@ export function useConversations(id: string) {
   const [currentConversation, setCurrentConversation] = useState<string | null>(
     null
   );
-
   const [collections, setCollections] = useState<Collection[]>([]);
 
   const addConversation = () => {

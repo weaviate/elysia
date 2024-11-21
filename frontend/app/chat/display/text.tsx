@@ -11,7 +11,7 @@ const TextDisplay: React.FC<TextDisplayProps> = ({ payload }) => {
   return (
     <div className="w-full flex flex-col justify-start items-start">
       {payload.map((text, idx) => (
-        <div key={idx} className="text-sm chat-animation text-white">
+        <div key={idx} className="chat-animation">
           <MarkdownMessageDisplay text={text.text} />
         </div>
       ))}
