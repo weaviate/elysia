@@ -162,9 +162,14 @@ def construct_property_grouping_prompt(property_names: list[str]) -> dspy.Signat
             format = str
         )
 
-        data_fields = dspy.InputField(desc="""
-            A list of fields that are available to search over.
-            ["field_name", ...]
+        data_types = dspy.InputField(desc="""
+            A dictionary of the data types of the fields in the collection.
+            {
+                "field_name": "field_type",
+                ...
+            }
+            Use this to understand the format of the data, and to create your query.
+            Also, use this as a list of fields which you can use in the query, the keys of this dictionary are the names of the fields exactly as they appear.
             """.strip(), 
             format = str
         )
@@ -362,9 +367,14 @@ class QueryCreatorPrompt(dspy.Signature):
         """.strip(), 
         format = str
     )
-    data_fields = dspy.InputField(desc="""
-        A list of fields that are available to search over.
-        ["field_name", ...]
+    data_types = dspy.InputField(desc="""
+        A dictionary of the data types of the fields in the collection.
+        {
+            "field_name": "field_type",
+            ...
+        }
+        Use this to understand the format of the data, and to create your query.
+        Also, use this as a list of fields which you can use in the query, the keys of this dictionary are the names of the fields exactly as they appear.
         """.strip(), 
         format = str
     )
@@ -442,172 +452,6 @@ class QueryCreatorPrompt(dspy.Signature):
         format = str
     )
 
-class AggregateCollectionPrompt(dspy.Signature):
-    """
-    You are an expert at retrieving metadata about data collections.
-    You must write code to aggregate the objects from the collection.
-    Your goal is retrieving metadata about the data collection, such as the number of objects, the fields, and the types of the fields.
-
-    You should base your aggregation on the previous reasoning, and the user prompt mostly. 
-    The information you return from this will be used to query the collection later. 
-    For example, if the user prompt asks for something related to an author, you should be attempting to find the number of objects per author.
-    This will also determine what authors are available to filter on in a later query.
-    Aim to retrieve as much information as possible.
-
-    To do so, you should use the `collection.aggregate` function, assume you have access to the object `collection` which is a Weaviate collection, `GroupByAggregate`, and `Metrics`.
-
-    The `collection.aggregate.over_all` function has the following signature:
-    
-    ___
-
-    collection.aggregate.over_all(*, 
-            filters: Optional[weaviate.collections.classes.filters._Filters] = None, 
-            group_by: Union[str, weaviate.collections.classes.aggregate.GroupByAggregate, NoneType] = None, 
-            total_count: bool = True, 
-            return_metrics: ... = None
-        ) 
-        -> Union[weaviate.collections.classes.aggregate.AggregateReturn, weaviate.collections.classes.aggregate.AggregateGroupByReturn] method of weaviate.collections.aggregate._AggregateCollection instance
-    Aggregate metrics over all the objects in this collection without any vector search.
-
-    Arguments:
-        `filters`
-            The filters to apply to the search.
-        `group_by`
-            The property name to group the aggregation by.
-        `total_count`
-            Whether to include the total number of objects that match the query in the response.
-        `return_metrics`
-            A list of property metrics to aggregate together after the text search.
-
-    Returns:
-        Depending on the presence of the `group_by` argument, either a `AggregateReturn` object or a `AggregateGroupByReturn that includes the aggregation objects.
-
-    ___
-    
-    Each data type has its own set of available aggregated properties. The following table shows the available properties for each data type.
-
-    Data type	Available properties
-    Text	    (count, topOccurrences (value, occurs))
-    Number	    (count, minimum, maximum, mean, median, mode, sum)
-    Integer	    (count, minimum, maximum, mean, median, mode, sum)
-    Boolean	    (count, totalTrue, totalFalse, percentageTrue, percentageFalse)
-    Date	    (count, minimum, maximum, mean, median, mode)
-    ___
-
-    Here are some examples of how this code should be written:
-
-    Example [1]:
-
-    In the following example, the articles are grouped by the property "inPublication", referring to the article's publisher.
-    The "wordCount" is a property of the dataset, and is aggregated by the all possible values (count, maximum, mean, median, minimum, mode, sum).
-
-    ```
-    collection.aggregate.over_all(
-        group_by=GroupByAggregate(prop="inPublication"),
-        total_count=True,
-        return_metrics=Metrics("wordCount").integer(
-            count=True,
-            maximum=True,
-            mean=True,
-            median=True,
-            minimum=True,
-            mode=True,
-            sum_=True,
-        )
-    )
-    ```
-    This returns the total number of articles, and statistics about the word count of the articles, grouped by the publication.
-
-    
-    Example [2]:
-
-    In the following example, github issues are grouped by the property "issue_author", referring to the author of the issue.
-    ```
-    collection.aggregate.over_all(
-        total_count=True,
-        group_by=GroupByAggregate(prop="issue_author")
-    )
-    ```
-    This returns the total number of issues, each unique issue author, and the number of issues per issue author.
-    
-
-    Example [3]:
-
-    In this example, some generic conversations are grouped by the property "conversation_id", referring to the id of the conversation (integer).
-
-    ```
-    collection.aggregate.over_all(
-        total_count=True,
-        group_by=GroupByAggregate(prop="conversation_id")
-    )
-    ```
-    This returns the total number of conversations, each unique conversation id, and the number of conversations per conversation id.
-    """
-
-    user_prompt = dspy.InputField(desc="The user's original query")
-    reference = dspy.InputField(desc="""
-        Information about the state of the world NOW such as the date and time, used to frame the query.
-        """.strip(), 
-        format = str
-    )
-    previous_reasoning = dspy.InputField(
-        desc="""
-        Your reasoning that you have output from previous decisions.
-        This is so you can use the information from previous decisions to help you decide what type of query to create.
-
-        This is a dictionary of the form:
-        {
-            "tree_1": 
-            {
-                "decision_1": "Your reasoning for the decision 1",
-                "decision_2": "Your reasoning for the decision 2",
-                ...
-            },
-            "tree_2": {
-                "decision_1": "Your reasoning for the decision 1",
-                "decision_2": "Your reasoning for the decision 2",
-                ...
-            }
-        }
-        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
-        
-        Use this to base your current action from previous reasoning.
-        """.strip(), 
-        format = str
-    )
-    data_fields = dspy.InputField(desc="""
-        A list of properties within the collection that are available to aggregate over.
-        ["field_name", ...]
-        """.strip(), 
-        format = str
-    )
-    example_field = dspy.InputField(desc="""
-        An example from the collection of what the fields look like, in the following format:
-        {
-            "field_name": "field_value",
-            ...
-        }
-        You should use these to understand the format of the data, and to create your aggregation code.
-        """.strip(), 
-        format = str
-    )
-    code = dspy.OutputField(
-        desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only.",
-        format = str
-    )
-    text_return = dspy.OutputField(
-        desc="""
-        Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
-        You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
-        Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
-        Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
-        Do not ask any questions, and do not ask the user to confirm or approve of your actions.
-        You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
-        If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
-        Use gender neutral language.
-        """.strip(),
-        format = str
-    )
 
 class ObjectSummaryPrompt(dspy.Signature):
     """
