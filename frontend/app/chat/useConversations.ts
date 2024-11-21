@@ -22,7 +22,6 @@ export function useConversations(id: string) {
   const [currentConversation, setCurrentConversation] = useState<string | null>(
     null
   );
-
   const [collections, setCollections] = useState<Collection[]>([]);
 
   const addConversation = () => {
@@ -33,7 +32,7 @@ export function useConversations(id: string) {
         const newConversation = {
           ...initialConversation,
           id: conversation_id,
-          tree: data.tree,
+          tree: [data.tree],
           base_tree: data.tree,
           enabled_collections: collections.reduce(
             (acc, c) => ({ ...acc, [c.name]: true }),
@@ -145,23 +144,25 @@ export function useConversations(id: string) {
       tree: DecisionTreeNode | null,
       base_tree: DecisionTreeNode | null
     ): DecisionTreeNode | null => {
-      if (!tree) return null;
-
-      const tree_name = tree.name.toLowerCase().replace(/\s+/g, "_");
+      if (!tree) {
+        return null;
+      }
 
       // If this is the node we're looking for
-      if (tree_name === payload.node.toLowerCase()) {
+      if (tree.id === payload.node && !tree.blocked) {
         // Update the specific option within tree.options where option.name === payload.decision
         const updatedOptions = Object.entries(tree.options).reduce(
           (acc, [key, option]) => {
-            if (key.toLowerCase() === payload.decision.toLowerCase()) {
+            if (key === payload.decision) {
               acc[key] = {
                 ...option,
                 choosen: true,
-                description: payload.reasoning,
+                reasoning: payload.reasoning,
                 options: payload.reset
-                  ? base_tree?.options || {}
-                  : option.options || {}, // Use option.options instead of acc[key].options
+                  ? base_tree
+                    ? { base: base_tree }
+                    : {}
+                  : option.options || {},
               };
             } else {
               acc[key] = option;
@@ -170,7 +171,7 @@ export function useConversations(id: string) {
           },
           {} as { [key: string]: DecisionTreeNode }
         );
-        return { ...tree, options: updatedOptions };
+        return { ...tree, options: updatedOptions, blocked: true };
       } else if (tree.options && Object.keys(tree.options).length > 0) {
         // Recurse into options
         const updatedOptions = Object.entries(tree.options).reduce(
@@ -183,7 +184,7 @@ export function useConversations(id: string) {
           },
           {} as { [key: string]: DecisionTreeNode }
         );
-        return { ...tree, options: updatedOptions };
+        return { ...tree, options: updatedOptions, blocked: true };
       } else {
         return tree;
       }
@@ -192,7 +193,53 @@ export function useConversations(id: string) {
     setConversations((prevConversations) =>
       prevConversations.map((c) => {
         if (c.id === tree_update_message.conversation_id) {
-          return { ...c, tree: findAndUpdateNode(c.tree, c.base_tree) };
+          const trees = c.tree;
+          const tree = trees[payload.tree_index];
+          const updatedTree = findAndUpdateNode(tree, c.base_tree);
+
+          const newTrees = [...(c.tree || [])];
+          if (updatedTree) {
+            newTrees[payload.tree_index] = updatedTree;
+          }
+          return { ...c, tree: newTrees };
+        }
+        return c;
+      })
+    );
+  };
+
+  const addTreeToConversation = (conversationId: string) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === conversationId && c.base_tree) {
+          return {
+            ...c,
+            tree: [...c.tree, { ...c.base_tree }],
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const changeBaseToQuery = (conversationId: string, query: string) => {
+    const treeIndex =
+      conversations.find((c) => c.id === conversationId)?.tree?.length || 1;
+
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        if (c.id === conversationId) {
+          const newTrees = [...c.tree];
+          if (newTrees[treeIndex - 1]) {
+            newTrees[treeIndex - 1] = {
+              ...newTrees[treeIndex - 1],
+              name: query,
+            };
+          }
+          return {
+            ...c,
+            tree: newTrees,
+          };
         }
         return c;
       })
@@ -245,5 +292,7 @@ export function useConversations(id: string) {
     initializeEnabledCollections,
     toggleCollectionEnabled,
     updateTree,
+    addTreeToConversation,
+    changeBaseToQuery,
   };
 }

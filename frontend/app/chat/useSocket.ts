@@ -32,7 +32,6 @@ export function useSocket(
     localSocket.onmessage = (event) => {
       try {
         const message: Message = JSON.parse(event.data);
-        console.log("Received message", message.type);
         if (message.type === "status") {
           const payload = message.payload as TextPayload;
           setConversationStatus(payload.text, message.conversation_id);

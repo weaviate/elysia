@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  DecisionTreeNode,
   DecisionTreePayload,
   ErrorResponse,
   NERResponse,
@@ -70,9 +71,20 @@ export async function getDecisionTree(
     body: JSON.stringify({ user_id, conversation_id }),
   });
   const data: DecisionTreePayload = await res.json();
-  const data_2 = { ...data, tree: { ...data.tree, choosen: true } };
-  if (data_2.error) {
-    throw new Error(data_2.error);
+  const resetChoosenBlocked = (node: DecisionTreeNode) => {
+    node.choosen = false;
+    node.blocked = false;
+
+    if (node.options) {
+      Object.values(node.options).forEach((option) => {
+        resetChoosenBlocked(option);
+      });
+    }
+  };
+  resetChoosenBlocked(data.tree);
+  data.tree.choosen = true;
+  if (data.error) {
+    throw new Error(data.error);
   }
-  return data_2;
+  return data;
 }

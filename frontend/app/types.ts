@@ -87,6 +87,7 @@ export type ConversationMessage = {
 export type TreeUpdatePayload = {
   node: string;
   decision: string;
+  tree_index: number;
   reasoning: string;
   reset: boolean;
 };
@@ -96,7 +97,7 @@ export type Conversation = {
   enabled_collections: { [key: string]: boolean };
   id: string;
   name: string;
-  tree: DecisionTreeNode | null;
+  tree: DecisionTreeNode[];
   base_tree: DecisionTreeNode | null;
   current: string;
 };
@@ -109,10 +110,13 @@ export type DecisionTreePayload = {
 
 export type DecisionTreeNode = {
   name: string;
+  id: string;
   description: string;
   instruction: string;
+  reasoning: string;
   options: { [key: string]: DecisionTreeNode };
   choosen?: boolean;
+  blocked?: boolean;
 };
 
 export type CollectionPayload = {
@@ -155,7 +159,7 @@ export const initialConversation: Conversation = {
   id: uuidv4(),
   name: "New Conversation",
   enabled_collections: {},
-  tree: null,
+  tree: [],
   base_tree: null,
   current: "",
 };

@@ -19,7 +19,7 @@ const CodeDisplay: React.FC<CodeDisplayProps> = ({ payload }) => {
   };
 
   return (
-    <div className="w-full flex flex-col justify-start items-start my-5">
+    <div className="w-full flex flex-col justify-start items-start mb-4">
       {payload.map((text, idx) => (
         <div key={idx} className="text-sm chat-animation text-white w-full">
           <div
