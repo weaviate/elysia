@@ -7,7 +7,7 @@ os.chdir("../..")
 
 from rich import print
 from elysia.tree.tree import Tree
-from elysia.tree.tree import lm
+from elysia.tree import base_lm, complex_lm
 
 if __name__ == "__main__":
 
@@ -19,12 +19,12 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "what was edward's last message?"
+        "im looking for green pants"
     )
 
     print(tree.conversation_history[-1]["content"])
     print(tree.returns.aggregation["ecommerce"].objects)
-    print(tree.returns.aggregation["ecommerce"].metadata["last_code"])
+    print(tree.returns.retrieved["ecommerce"].metadata["last_code"])
     
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"

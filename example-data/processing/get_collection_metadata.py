@@ -66,7 +66,7 @@ summariser = dspy.ChainOfThought(DataSummariser)
 
 def aggregate_by_data_type(collection, data_type, property, full_response = None):
 
-    out = {}
+    out = {"type": data_type}
     if data_type == "number":
         response = collection.aggregate.over_all(
             return_metrics=[
@@ -210,3 +210,6 @@ def create_elysia_collection_metadata(collection_name):
 
 if __name__ == "__main__":
     create_elysia_collection_metadata("ecommerce")
+    create_elysia_collection_metadata("example_verba_github_issues")
+    create_elysia_collection_metadata("example_verba_slack_conversations")
+    create_elysia_collection_metadata("example_verba_email_chains")
