@@ -30,7 +30,7 @@ export type ResponsePayload = {
 };
 
 export type ResultPayload = {
-  type: "text" | "ticket" | "message" | "conversation";
+  type: "text" | "ticket" | "message" | "conversation" | "ecommerce";
   /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
   code: CodePayload;
@@ -38,7 +38,8 @@ export type ResultPayload = {
     | string[]
     | Ticket[]
     | ConversationMessage[]
-    | ConversationMessage[][]; // A list of lists of ConversationMessages
+    | ConversationMessage[][] // A list of lists of ConversationMessages
+    | Ecommerce[];
 };
 
 export type TextPayload = {
@@ -64,6 +65,24 @@ export type ObjectRelevancyPayload = {
   conversation_id: string;
   any_relevant: boolean;
   error: string;
+};
+
+export type Ecommerce = {
+  subcategory: string;
+  description: string;
+  reviews: string[];
+  collection: string;
+  tags: string[];
+  product_id: string;
+  image_url: string;
+  rating: number;
+  price: number;
+  category: string;
+  colors: string[];
+  brand: string;
+  name: string;
+  uuid: string;
+  summary?: string;
 };
 
 export type Ticket = {

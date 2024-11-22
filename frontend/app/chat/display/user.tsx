@@ -56,10 +56,12 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
         let className = "";
 
         if (activeTypes.has("noun")) {
-          className = "font-bold text-highlight ";
+          className =
+            "font-bold text-highlight [text-shadow:0_0_15px_theme(colors.highlight)] ";
         }
         if (activeTypes.has("entity")) {
-          className = "text-accent font-bold ";
+          className =
+            "text-accent font-bold [text-shadow:0_0_15px_theme(colors.accent)] ";
         }
 
         segments.push(
@@ -86,10 +88,12 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       let className = "";
 
       if (activeTypes.has("noun")) {
-        className = "font-bold text-highlight shine-highlight ";
+        className =
+          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlight)] ";
       }
       if (activeTypes.has("entity")) {
-        className = "text-accent font-bold shine-accent ";
+        className =
+          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accent)] ";
       }
 
       segments.push(
@@ -110,7 +114,7 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       <div className="max-w-3/5">
         <div className="flex flex-grow justify-start items-start chat-animation">
           {!collapsed ? (
-            <p className="text-primary text-2xl">
+            <p className="text-primary text-3xl">
               {renderTextWithHighlights(text)}
             </p>
           ) : (

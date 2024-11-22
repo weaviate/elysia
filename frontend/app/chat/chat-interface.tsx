@@ -103,7 +103,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       {mode === "chat" ? (
         <div className="flex flex-col w-full justify-center items-center">
-          <div className="flex flex-col overflow-scroll w-[75vw] h-[90vh]">
+          <div className="flex flex-col overflow-scroll w-[60vw] h-[90vh]">
             {Object.entries(currentQuery)
               .sort((a, b) => a[1].index - b[1].index)
               .map(([queryId, query], index, array) => (

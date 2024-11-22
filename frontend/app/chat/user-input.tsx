@@ -3,10 +3,11 @@
 import React, { useState } from "react";
 import { FaCircle, FaQuestionCircle } from "react-icons/fa";
 import { IoArrowUpCircleSharp } from "react-icons/io5";
-import { Message } from "../types";
 import { IoDocumentText } from "react-icons/io5";
 import { FaGithub } from "react-icons/fa";
 import { IoChatbubble } from "react-icons/io5";
+import { PiPantsFill } from "react-icons/pi";
+import { GiFishMonster } from "react-icons/gi";
 
 interface QueryInputProps {
   handleSendQuery: (query: string) => void;
@@ -140,6 +141,26 @@ const QueryInput: React.FC<QueryInputProps> = ({
           >
             <IoChatbubble size={16} />
             <p>To whom did Edward last message?</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("I'm looking for green pants");
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <PiPantsFill size={16} />
+            <p>I'm looking for green pants</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery(
+                "I'm into Shrekcore, what are the best products?"
+              );
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <GiFishMonster size={16} />
+            <p>I'm into Shrekcore, what are the best products?</p>
           </button>
         </div>
       )}

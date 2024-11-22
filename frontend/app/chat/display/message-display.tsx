@@ -9,6 +9,7 @@ import {
   SummaryPayload,
   ResultPayload,
   TextPayload,
+  Ecommerce,
 } from "../../types";
 
 import UserMessageDisplay from "./user";
@@ -18,6 +19,7 @@ import TicketsDisplay from "./tickets";
 import WarningDisplay from "./warning";
 import ConversationsDisplay from "./conversations";
 import SummaryDisplay from "./summary";
+import EcommerceDisplay from "./ecommerce";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -48,8 +50,9 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         (message.payload as ResponsePayload).type === "response" &&
         !(index + 1 == messages.length)
       ) {
-        let content: string = (message.payload as ResponsePayload).objects[0]
-          .text;
+        let content: TextPayload[] = [
+          (message.payload as ResponsePayload).objects[0] as TextPayload,
+        ];
         let next_message_id: string = message.id;
 
         for (let i = index + 1; i < messages.length; i++) {
@@ -57,14 +60,10 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             messages[i].type === "text" &&
             (messages[i].payload as ResponsePayload).type === "response"
           ) {
-            content +=
-              " " +
-              (
-                (messages[i].payload as ResponsePayload)
-                  .objects as TextPayload[]
-              )[0].text;
+            content.push(
+              (messages[i].payload as ResponsePayload).objects[0] as TextPayload
+            );
             skip_indices.push(i);
-            next_message_id = messages[i].id;
           } else {
             break;
           }
@@ -73,7 +72,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         const newResponsePayload: ResponsePayload = {
           type: "response",
           metadata: (message.payload as ResponsePayload).metadata,
-          objects: [{ text: content }],
+          objects: content,
         };
 
         const newMessage: Message = {
@@ -100,7 +99,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     <div
       className={`flex justify-start items-start p-4 transition-all duration-300`}
     >
-      <div className="flex flex-col gap-12 w-full">
+      <div className="flex flex-col gap-6 w-full">
         {displayMessages
           .filter((m) => m.type === "User")
           .map((message, index) => (
@@ -129,6 +128,17 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         <TicketsDisplay
                           key={`${index}-${message.id}`}
                           message={message}
+                          routerChangeCollection={routerChangeCollection}
+                        />
+                      )}
+                      {(message.payload as ResultPayload).type ===
+                        "ecommerce" && (
+                        <EcommerceDisplay
+                          key={`${index}-${message.id}`}
+                          payload={
+                            (message.payload as ResultPayload)
+                              .objects as Ecommerce[]
+                          }
                           routerChangeCollection={routerChangeCollection}
                         />
                       )}
