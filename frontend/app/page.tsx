@@ -75,7 +75,8 @@ export default function Home() {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
-    updateTree
+    updateTree,
+    id || ""
   );
 
   useEffect(() => {

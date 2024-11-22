@@ -8,7 +8,7 @@ import { useState } from "react";
 import { FaCopy } from "react-icons/fa";
 
 interface CodeDisplayProps {
-  payload: CodePayload[];
+  payload: CodePayload;
 }
 
 const CodeDisplay: React.FC<CodeDisplayProps> = ({ payload }) => {
@@ -20,40 +20,38 @@ const CodeDisplay: React.FC<CodeDisplayProps> = ({ payload }) => {
 
   return (
     <div className="w-full flex flex-col justify-start items-start mb-4">
-      {payload.map((text, idx) => (
-        <div key={idx} className="text-sm chat-animation text-white w-full">
-          <div
-            onClick={() => setCollapsed((prev) => !prev)}
-            className="flex items-center justify-between gap-2 p-3 border hover:text-accent hover:border-accent transition-all duration-300 text-secondary border-secondary rounded-lg w-full cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <FaCode className="" />
-              <p className="font-bold text-xs">{text.title}</p>
-            </div>
-            <button
-              className="flex items-center gap-2 btn btn-round"
-              onClick={(e) => {
-                e.stopPropagation();
-                copyToClipboard(text.text);
-              }}
-            >
-              <FaCopy size={12} />
-            </button>
+      <div className="text-sm chat-animation text-white w-full">
+        <div
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="flex items-center justify-between gap-2 p-3 border hover:text-accent hover:border-accent transition-all duration-300 text-secondary border-secondary rounded-lg w-full cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <FaCode className="" />
+            <p className="font-bold text-xs">{payload.title}</p>
           </div>
-          {!collapsed && (
-            <SyntaxHighlighter
-              language={text.language}
-              wrapLongLines={true}
-              showLineNumbers={true}
-              style={oneDark}
-              customStyle={{ backgroundColor: "#061026", color: "#ffffff" }}
-              className="rounded-lg p-5 w-full text-sm shadow-xl"
-            >
-              {text.text}
-            </SyntaxHighlighter>
-          )}
+          <button
+            className="flex items-center gap-2 btn btn-round"
+            onClick={(e) => {
+              e.stopPropagation();
+              copyToClipboard(payload.text);
+            }}
+          >
+            <FaCopy size={12} />
+          </button>
         </div>
-      ))}
+        {!collapsed && (
+          <SyntaxHighlighter
+            language={payload.language}
+            wrapLongLines={true}
+            showLineNumbers={true}
+            style={oneDark}
+            customStyle={{ backgroundColor: "#061026", color: "#ffffff" }}
+            className="rounded-lg p-5 w-full text-sm shadow-xl"
+          >
+            {payload.text}
+          </SyntaxHighlighter>
+        )}
+      </div>
     </div>
   );
 };

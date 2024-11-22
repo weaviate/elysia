@@ -33,7 +33,7 @@ export type ResultPayload = {
   type: "text" | "ticket" | "message" | "conversation";
   /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
-  code: CodePayload[];
+  code: CodePayload;
   objects:
     | string[]
     | Ticket[]
@@ -57,6 +57,12 @@ export type CodePayload = {
 };
 
 export type ErrorPayload = {
+  error: string;
+};
+
+export type ObjectRelevancyPayload = {
+  conversation_id: string;
+  any_relevant: boolean;
   error: string;
 };
 

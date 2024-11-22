@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FaQuestionCircle } from "react-icons/fa";
+import { FaCircle, FaQuestionCircle } from "react-icons/fa";
 import { IoArrowUpCircleSharp } from "react-icons/io5";
 import { Message } from "../types";
 import { IoDocumentText } from "react-icons/io5";
@@ -11,11 +11,13 @@ import { IoChatbubble } from "react-icons/io5";
 interface QueryInputProps {
   handleSendQuery: (query: string) => void;
   query_length: number;
+  currentStatus: string;
 }
 
 const QueryInput: React.FC<QueryInputProps> = ({
   handleSendQuery,
   query_length,
+  currentStatus,
 }) => {
   const width_control = query_length == 0 ? "w-[40vw]" : "w-[60vw]";
 
@@ -34,6 +36,12 @@ const QueryInput: React.FC<QueryInputProps> = ({
       >
         Ask anything!
       </p>
+      {currentStatus != "" && (
+        <div className="w-full flex justify-start items-center gap-2">
+          <FaCircle className="text-secondary text-sm pulsing" />
+          <p className="text-sm shine">{currentStatus}</p>
+        </div>
+      )}
       <div
         className={`w-full flex gap-2 ${
           query_length === 0 ? "rounded-xl" : "rounded-full"
