@@ -109,19 +109,31 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         #     """.strip(),
         #     format = str
         # )
-        collection_names = dspy.InputField(
+        # collection_names = dspy.InputField(
+        #     description="""
+        #     A list of the names of the collections that exist to be queried. 
+        #     Use this to determine if all (necessary) collections have been queried, combined with the data_queried field.
+        #     This should inform your decision on whether to query another collection or not.
+        #     """.strip(),
+        #     format = str
+        # )
+        tree_count = dspy.InputField(
             description="""
-            A list of the names of the collections that exist to be queried. 
-            Use this to determine if all (necessary) collections have been queried, combined with the data_queried field.
-            This should inform your decision on whether to query another collection or not.
+            Currently, the number of completed decision trees that you have run through.
+            Each tree is a separate pass through the decision tree, so this number informs you of how many times you have gone through the decision tree already.
+            Each separate pass through the decision tree has had the opportunity to query collections or respond to the user, so this number informs you of how many attempts have been made to query collections or respond to the user.
+            This is a cumulative number out of a total number of recursions (e.g. X/Y), so you know how many attempts have been made in total.
+            Use this to evaluate based on how many attempts have been made, and how many more you have left, whether you should continue or not.
+            As you approach a larger number of recursions, you should start to consider whether it is possible to continue, as making the same decision over and over is pointless.
             """.strip(),
-            format = str
+            format = int
         )
         data_queried = dspy.InputField(
             description="""
             A list of items, showing whether a query has been completed or not.
             This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.
             If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.
+            The information retrieved is in the available_information field.
             """.strip(),
             format = str
         )

@@ -4,7 +4,6 @@ from typing import Any, Generator
 
 from weaviate.classes.query import Filter, Sort
 from weaviate.collections.classes.internal import QueryReturn
-from weaviate.collections.classes.aggregate import AggregateGroupByReturn, AggregateReturn
 from weaviate.classes.aggregate import GroupByAggregate
 
 from typing import Callable
@@ -15,8 +14,7 @@ from elysia.globals.reference import create_reference
 from elysia.querying.prompt_templates import (
     construct_query_initialiser_prompt, 
     QueryCreatorPrompt, 
-    ObjectSummaryPrompt, 
-    AggregateCollectionPrompt, 
+    ObjectSummaryPrompt,  
     construct_property_grouping_prompt
 )
 from elysia.util.logging import backend_print
@@ -30,17 +28,13 @@ class QueryInitialiserExecutor(dspy.Module):
         self.available_collections = collection_names
         self.available_return_types = return_types
 
-    def forward(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str], current_message: str) -> str:
-        
-        data_queried_str = ""
-        for collection_name, num_items in data_queried.items():
-            data_queried_str += f" - {collection_name}: {num_items} objects retrieved {'(empty - either no objects for this prompt or incorrect query)' if num_items == 0 else ''}\n"
+    def forward(self, user_prompt: str, previous_reasoning: dict, data_queried: str, current_message: str) -> str:
         
         prediction = self.query_initialiser_prompt(
             user_prompt=user_prompt,
             reference=create_reference(),
             previous_reasoning=previous_reasoning,
-            data_queried=data_queried_str,
+            data_queried=data_queried,
             available_collections=self.available_collections,
             available_return_types=self.available_return_types,
             current_message=current_message
@@ -79,7 +73,7 @@ class PropertyGroupingExecutor(dspy.Module):
         self, 
         user_prompt: str, 
         previous_reasoning: dict, 
-        data_fields: list[str], 
+        data_types: list[str], 
         example_field: dict,
         current_message: str
     ) -> str:
@@ -88,7 +82,7 @@ class PropertyGroupingExecutor(dspy.Module):
             user_prompt=user_prompt,
             reference=create_reference(),
             previous_reasoning=previous_reasoning,
-            data_fields=data_fields,
+            data_types=data_types,
             example_field=example_field,
             current_message=current_message
         )
@@ -125,7 +119,7 @@ class QueryExecutor(dspy.Module):
         self, 
         user_prompt: str, 
         previous_queries: list, 
-        data_fields: list, 
+        data_types: list, 
         example_field: dict, 
         previous_reasoning: dict,
         collection_name: str,
@@ -138,7 +132,7 @@ class QueryExecutor(dspy.Module):
             prediction = self.query_creator_prompt(
                 user_prompt=user_prompt, 
                 reference=create_reference(),
-                data_fields=data_fields, 
+                data_types=data_types, 
                 example_field=example_field, 
                 previous_queries=previous_queries,
                 previous_reasoning=previous_reasoning,
@@ -184,55 +178,6 @@ class QueryExecutor(dspy.Module):
                 return QueryReturn(objects=[]), None
 
         return response, prediction
-
-class AggregateCollectionExecutor(dspy.Module):
-
-    def __init__(self):
-        super().__init__()
-        self.aggregate_collection_prompt = dspy.ChainOfThought(AggregateCollectionPrompt)
-
-    def _execute_code(self, aggregation_code: str, collection_name: str) -> dict:
-
-        collection = client.collections.get(collection_name)
-
-        if aggregation_code.startswith("```python") and aggregation_code.endswith("```"):
-            aggregation_code = aggregation_code[8:-3]
-        elif aggregation_code.startswith("```") and aggregation_code.endswith("```"):
-            aggregation_code = aggregation_code[3:-3]
-   
-        return eval(aggregation_code)
-
-    def forward(
-        self, 
-        user_prompt: str, 
-        data_fields: list, 
-        example_field: dict, 
-        previous_reasoning: dict, 
-        collection_name: str
-    ) -> str:
-        
-        prediction = self.aggregate_collection_prompt(
-            user_prompt=user_prompt, 
-            reference=create_reference(), 
-            previous_reasoning=previous_reasoning,
-            data_fields=data_fields, 
-            example_field=example_field, 
-        )
-
-        # catch any errors in query execution for dspy assert
-        try:
-            response = self._execute_code(prediction.code, collection_name)
-        except Exception as e:
-
-            try:
-                # assert will raise an error if its failed multiple times
-                dspy.Assert(False, f"Error executing aggregation code:\n{prediction.code}\nERROR: {e}", target_module=self.aggregate_collection_prompt)
-            except Exception as e:
-                # in which case we just print the error and return 0 objects
-                backend_print(f"Error executing aggregation code: {e}")
-                return AggregateReturn(properties={}, total_count=0), None, None
-            
-        return response, prediction.code, prediction.text_return
 
 class ObjectSummaryExecutor(dspy.Module):
 

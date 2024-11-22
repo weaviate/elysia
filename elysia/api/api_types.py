@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 class QueryData(BaseModel):
     user_id: str
     conversation_id: str
+    query_id: str
     query: str
 
 class GetCollectionsData(BaseModel):
@@ -36,6 +37,7 @@ class GetObjectData(BaseModel):
     uuid: str
 
 class ObjectRelevanceData(BaseModel):
+    user_id: str
     conversation_id: str
-    user_prompt: str
+    query_id: str
     objects: list[dict]

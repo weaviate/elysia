@@ -18,11 +18,17 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "give me 10 random trousers"
+        "Summarize the last 10 GitHub Tickets"
+    )
+
+    tree.process_sync(
+        "thanks, related to issue 308, what are people saying in emails about this?"
     )
 
     from rich import print
-    print(tree.returns.retrieved["ecommerce"].to_json())
+    print(tree.returns.retrieved["example_verba_slack_conversations"].to_json())
+
+    print(tree.returns.to_str())
     
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"

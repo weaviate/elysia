@@ -120,10 +120,11 @@ async def initialise_tree(data: InitialiseTreeData):
 async def process(data: QueryData, websocket: WebSocket):
     global tree_manager
     user_prompt = data["query"]
+    query_id = data["query_id"]
     tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
     tree.soft_reset()
     try:
-        async for yielded_result in tree.process(user_prompt):
+        async for yielded_result in tree.process(user_prompt, query_id=query_id):
             await websocket.send_json(yielded_result)
             await asyncio.sleep(0)
     except RecursionLimitException:
@@ -318,7 +319,10 @@ async def object_relevance(data: ObjectRelevanceData):
     error = ""
     object_relevance = ObjectRelevanceExecutor()
     try:
-        prediction = object_relevance(data.user_prompt, data.objects)
+        tree = tree_manager.get_tree(data.user_id, data.conversation_id)
+        user_prompt = tree.query_id_to_prompt[data.query_id]
+        print(user_prompt)
+        prediction = object_relevance(user_prompt, data.objects)
         any_relevant = eval(prediction.any_relevant)
         assert isinstance(any_relevant, bool)
     except Exception as e:

@@ -1,12 +1,13 @@
 import datetime
 import dspy
 
-from weaviate.classes.aggregate import GroupByAggregate
 
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
 from elysia.util.parsing import update_current_message
+from elysia.util.collection_metadata import get_collection_data_types
+
 from elysia.querying.prompt_executors import (
     QueryExecutor, 
     QueryInitialiserExecutor, 
@@ -16,7 +17,6 @@ from elysia.querying.prompt_executors import (
 from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch, TreeUpdate
 from elysia.text.objects import Response, Code
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval
-
 class AgenticQuery:
 
     def __init__(self, 
@@ -51,7 +51,7 @@ class AgenticQuery:
         if collection_name in available_information.retrieved:
             metadata = available_information.retrieved[collection_name].metadata
             if "previous_queries" in metadata:
-                self.previous_queries.extend(metadata["previous_queries"])       
+                self.previous_queries.extend(metadata["previous_queries"])  
     
     def _get_collection_fields(self, collection_name: str):
         example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
@@ -60,12 +60,16 @@ class AgenticQuery:
                 example_field[key] = example_field[key].isoformat()
             elif not isinstance(example_field[key], str):
                 example_field[key] = str(example_field[key])
-        return list(example_field.keys()), example_field
+
+        data_types = get_collection_data_types(collection_name)
+
+        return data_types, example_field
         
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
         
         data_queried = kwargs.get("data_queried", [])
         current_message = kwargs.get("current_message", "")
+
 
         # -- Step 1: Determine collection and other fields
         Branch({
@@ -98,7 +102,7 @@ class AgenticQuery:
 
         # Get some metadata about the collection
         self._find_previous_queries(initialiser.collection_name, available_information)
-        data_fields, example_field = self._get_collection_fields(initialiser.collection_name)
+        data_types, example_field = self._get_collection_fields(initialiser.collection_name)
 
         # -- Step 2: Determine property to group by and aggregate to get information (TODO: somehow cache this)
         Branch({
@@ -109,11 +113,11 @@ class AgenticQuery:
 
         try:
             # Run the property grouper
-            property_grouper = PropertyGroupingExecutor(data_fields, initialiser.collection_name)
+            property_grouper = PropertyGroupingExecutor(data_types, initialiser.collection_name)
             collection_metadata, grouper = property_grouper(
                 user_prompt=user_prompt,
                 previous_reasoning=previous_reasoning,
-                data_fields=data_fields,
+                data_types=data_types,
                 example_field=example_field,
                 current_message=current_message
             )
@@ -146,7 +150,7 @@ class AgenticQuery:
             response, query = self.querier(
                 user_prompt = user_prompt, 
                 previous_queries = self.previous_queries, 
-                data_fields = data_fields, 
+                data_types = data_types, 
                 example_field = example_field, 
                 collection_metadata = collection_metadata,
                 previous_reasoning = previous_reasoning,
@@ -216,7 +220,8 @@ class AgenticQuery:
         metadata = {
             "previous_queries": [query.code], 
             "collection_name": initialiser.collection_name,
-            "collection_metadata": collection_metadata
+            "collection_metadata": collection_metadata,
+            "last_code": query.code
         }
 
         if initialiser.return_type == "conversation":

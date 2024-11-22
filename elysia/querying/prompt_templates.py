@@ -162,9 +162,14 @@ def construct_property_grouping_prompt(property_names: list[str]) -> dspy.Signat
             format = str
         )
 
-        data_fields = dspy.InputField(desc="""
-            A list of fields that are available to search over.
-            ["field_name", ...]
+        data_types = dspy.InputField(desc="""
+            A dictionary of the data types of the fields in the collection.
+            {
+                "field_name": "field_type",
+                ...
+            }
+            Use this to understand the format of the data, and to create your query.
+            Also, use this as a list of fields which you can use in the query, the keys of this dictionary are the names of the fields exactly as they appear.
             """.strip(), 
             format = str
         )
@@ -224,31 +229,50 @@ class QueryCreatorPrompt(dspy.Signature):
 
     Here are some examples of how this code should be written:
 
-    # Basic query
+    # Semantic search query
+    This query uses semantic search _only_.
     ```
     collection.query.near_text(
         query="fashion icons",
         limit=3
     )
     ```
-    The `limit` parameter controls the number of results returned.
+    Use semantic search if the user prompt requests a search that needs to be based on a specific meaning, and not just a keyword.
+    The `query` argument is the search term, and the `limit` argument is the number of results to return.
+    The search term searches the _content_ of the documents, and should only contain words or meanings of words that will be in the text of the searched database, NOT the categories or properties.
 
-    # Basic hybrid search
+    # Keyword search query
+    This query uses keyword search _only_.
+    ```
+    collection.query.bm25(
+        query="food",
+        limit=3
+    )
+    ```
+    Use keyword search if the user prompt requests a search that needs a specific keyword.
+    The search term in `query` argument searches the _content_ of the documents for keywords ONLY, not the categories or properties of the data.
+
+    # Hybrid search query
+    This query uses hybrid search, a combination of semantic search and keyword search.
     ```
     collection.query.hybrid(
         query="fashion icons",
         limit=3
     )
     ```
+    Use hybrid search if the user prompt requests a search that needs a combination of semantic search and keyword search.
+    The `query` argument searches the _content_ of the documents for keywords and meaning ONLY, not the categories or properties of the data.
 
-    # Basic filter with one condition
+    # Fetch objects query
+    This query uses filters to retrieve objects from the collection.
+    Use fetch objects if the user prompt requests a search that needs to be based on certain properties of the data, and not just a keyword.
     ```
     collection.query.fetch_objects(
         filters=Filter.by_property("round").equal("Double Jeopardy!"),
         limit=3
     )
     ```
-    The above is used to retrieve objects from the collection _only_ using filters, no searching.
+    This does not use any searching, it only uses filters, similar to an SQL based query.
 
     # Filter with multiple conditions
     ```
@@ -260,7 +284,6 @@ class QueryCreatorPrompt(dspy.Signature):
         limit=3
     )
     ```
-    The above is also used to retrieve objects from the collection _only_ using filters, no searching. 
     You can also use `|` for OR.
 
     # Nested filters
@@ -277,16 +300,7 @@ class QueryCreatorPrompt(dspy.Signature):
     - Inside an operand expression, set operator equal to And or Or to add the nested group.
     - Add operands to the nested group as needed.
 
-    # Combining filters and search
-    ```
-    collection.query.near_text(
-        query="fashion icons",
-        filters=Filter.by_property("points").greater_than(200),
-        limit=3
-    )
-    ```
-    This performs vector search and also filters the results.
-
+    # Filter with contains any
     ```
     collection.query.fetch_objects(
         filters=Filter.by_property("answer").contains_any(["australia", "india"]),
@@ -295,6 +309,16 @@ class QueryCreatorPrompt(dspy.Signature):
     ```
     This is used to retrieve objects where the `answer` property in the data contains any of the strings in `["australia", "india"]`.
 
+    # Combining filters and search
+    This query performs vector search and also filters the results.
+    ```
+    collection.query.near_text(
+        query="fashion icons",
+        filters=Filter.by_property("points").greater_than(200),
+        limit=3
+    )
+    ```
+    # Combining filter with hybrid search
     ```
     collection.query.hybrid(
         query="shoes",
@@ -303,7 +327,9 @@ class QueryCreatorPrompt(dspy.Signature):
     )
     ```
     If the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.
+    This can be on `bm25` also.
 
+    # Sorting results
     You can also sort the results using the `sort` parameter, but only when using `fetch_objects`.
     So you CANNOT use it with `near_text` or `hybrid`.
 
@@ -315,12 +341,28 @@ class QueryCreatorPrompt(dspy.Signature):
         limit=3
     )
     ```
+
+    # Next level queries
+    If the user has already queried and received results, and is either asking a follow up question or you are performing a follow up query,
+    you can use the results from the previous query to help you create the next query.
+    For example, look for specific IDs or categories in the collection which you can use as filters, such as using .equal() or .contains_any() to find
+    other results with the same ID or category, but with different properties and modifying the query to the new request.
+    E.g.
+    ```
+    collection.query.fetch_objects(
+        filters=Filter.by_property("id").equal("123"),
+        limit=3
+    )
+    ```
     
+    ___ 
+
     Remember the most important distinction between the three types of queries:
     - `near_text` and `hybrid` have the `query` argument, which you use for _searching_ the database. These _can_ use `filters` but they CANNOT use `sort`.
     - `fetch_objects` is for retrieving objects that does not need and sort of search (and only using filters/sorting). This has the `filters` argument, and `sort` argument.
 
-    So, if the user prompt requires a search, you should use `near_text` or `hybrid`. But if it is only asking for objects based on certain properties, you should use `fetch_objects`.
+    So, if the user prompt requires a search, you should use `near_text`, `hybrid` or `bm25`. 
+    But if it is only asking for objects based on certain properties, something you can achieve by ONLY filtering, you should use `fetch_objects`.
 
     Use the above examples to guide you, but create your own query that is specific to the user prompt.
     You should not use one of the above examples directly, but rather use them as a guide to create your own query.
@@ -362,9 +404,14 @@ class QueryCreatorPrompt(dspy.Signature):
         """.strip(), 
         format = str
     )
-    data_fields = dspy.InputField(desc="""
-        A list of fields that are available to search over.
-        ["field_name", ...]
+    data_types = dspy.InputField(desc="""
+        A dictionary of the data types of the fields in the collection.
+        {
+            "field_name": "field_type",
+            ...
+        }
+        Use this to understand the format of the data, and to create your query.
+        Also, use this as a list of fields which you can use in the query, the keys of this dictionary are the names of the fields exactly as they appear.
         """.strip(), 
         format = str
     )
@@ -421,11 +468,11 @@ class QueryCreatorPrompt(dspy.Signature):
 
     current_message = dspy.InputField(
         description="""
-            The current message you, the assistant, have written to send to the user. 
-            This message has not been sent yet, you will add text to it, to be sent to the user later.
-            In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
-            """.strip(),
-            format = str
+        The current message you, the assistant, have written to send to the user. 
+        This message has not been sent yet, you will add text to it, to be sent to the user later.
+        In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+        """.strip(),
+        format = str
         )
     
     text_return = dspy.OutputField(
@@ -442,172 +489,6 @@ class QueryCreatorPrompt(dspy.Signature):
         format = str
     )
 
-class AggregateCollectionPrompt(dspy.Signature):
-    """
-    You are an expert at retrieving metadata about data collections.
-    You must write code to aggregate the objects from the collection.
-    Your goal is retrieving metadata about the data collection, such as the number of objects, the fields, and the types of the fields.
-
-    You should base your aggregation on the previous reasoning, and the user prompt mostly. 
-    The information you return from this will be used to query the collection later. 
-    For example, if the user prompt asks for something related to an author, you should be attempting to find the number of objects per author.
-    This will also determine what authors are available to filter on in a later query.
-    Aim to retrieve as much information as possible.
-
-    To do so, you should use the `collection.aggregate` function, assume you have access to the object `collection` which is a Weaviate collection, `GroupByAggregate`, and `Metrics`.
-
-    The `collection.aggregate.over_all` function has the following signature:
-    
-    ___
-
-    collection.aggregate.over_all(*, 
-            filters: Optional[weaviate.collections.classes.filters._Filters] = None, 
-            group_by: Union[str, weaviate.collections.classes.aggregate.GroupByAggregate, NoneType] = None, 
-            total_count: bool = True, 
-            return_metrics: ... = None
-        ) 
-        -> Union[weaviate.collections.classes.aggregate.AggregateReturn, weaviate.collections.classes.aggregate.AggregateGroupByReturn] method of weaviate.collections.aggregate._AggregateCollection instance
-    Aggregate metrics over all the objects in this collection without any vector search.
-
-    Arguments:
-        `filters`
-            The filters to apply to the search.
-        `group_by`
-            The property name to group the aggregation by.
-        `total_count`
-            Whether to include the total number of objects that match the query in the response.
-        `return_metrics`
-            A list of property metrics to aggregate together after the text search.
-
-    Returns:
-        Depending on the presence of the `group_by` argument, either a `AggregateReturn` object or a `AggregateGroupByReturn that includes the aggregation objects.
-
-    ___
-    
-    Each data type has its own set of available aggregated properties. The following table shows the available properties for each data type.
-
-    Data type	Available properties
-    Text	    (count, topOccurrences (value, occurs))
-    Number	    (count, minimum, maximum, mean, median, mode, sum)
-    Integer	    (count, minimum, maximum, mean, median, mode, sum)
-    Boolean	    (count, totalTrue, totalFalse, percentageTrue, percentageFalse)
-    Date	    (count, minimum, maximum, mean, median, mode)
-    ___
-
-    Here are some examples of how this code should be written:
-
-    Example [1]:
-
-    In the following example, the articles are grouped by the property "inPublication", referring to the article's publisher.
-    The "wordCount" is a property of the dataset, and is aggregated by the all possible values (count, maximum, mean, median, minimum, mode, sum).
-
-    ```
-    collection.aggregate.over_all(
-        group_by=GroupByAggregate(prop="inPublication"),
-        total_count=True,
-        return_metrics=Metrics("wordCount").integer(
-            count=True,
-            maximum=True,
-            mean=True,
-            median=True,
-            minimum=True,
-            mode=True,
-            sum_=True,
-        )
-    )
-    ```
-    This returns the total number of articles, and statistics about the word count of the articles, grouped by the publication.
-
-    
-    Example [2]:
-
-    In the following example, github issues are grouped by the property "issue_author", referring to the author of the issue.
-    ```
-    collection.aggregate.over_all(
-        total_count=True,
-        group_by=GroupByAggregate(prop="issue_author")
-    )
-    ```
-    This returns the total number of issues, each unique issue author, and the number of issues per issue author.
-    
-
-    Example [3]:
-
-    In this example, some generic conversations are grouped by the property "conversation_id", referring to the id of the conversation (integer).
-
-    ```
-    collection.aggregate.over_all(
-        total_count=True,
-        group_by=GroupByAggregate(prop="conversation_id")
-    )
-    ```
-    This returns the total number of conversations, each unique conversation id, and the number of conversations per conversation id.
-    """
-
-    user_prompt = dspy.InputField(desc="The user's original query")
-    reference = dspy.InputField(desc="""
-        Information about the state of the world NOW such as the date and time, used to frame the query.
-        """.strip(), 
-        format = str
-    )
-    previous_reasoning = dspy.InputField(
-        desc="""
-        Your reasoning that you have output from previous decisions.
-        This is so you can use the information from previous decisions to help you decide what type of query to create.
-
-        This is a dictionary of the form:
-        {
-            "tree_1": 
-            {
-                "decision_1": "Your reasoning for the decision 1",
-                "decision_2": "Your reasoning for the decision 2",
-                ...
-            },
-            "tree_2": {
-                "decision_1": "Your reasoning for the decision 1",
-                "decision_2": "Your reasoning for the decision 2",
-                ...
-            }
-        }
-        where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.
-        
-        Use this to base your current action from previous reasoning.
-        """.strip(), 
-        format = str
-    )
-    data_fields = dspy.InputField(desc="""
-        A list of properties within the collection that are available to aggregate over.
-        ["field_name", ...]
-        """.strip(), 
-        format = str
-    )
-    example_field = dspy.InputField(desc="""
-        An example from the collection of what the fields look like, in the following format:
-        {
-            "field_name": "field_value",
-            ...
-        }
-        You should use these to understand the format of the data, and to create your aggregation code.
-        """.strip(), 
-        format = str
-    )
-    code = dspy.OutputField(
-        desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only.",
-        format = str
-    )
-    text_return = dspy.OutputField(
-        desc="""
-        Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
-        You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
-        Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
-        Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
-        Do not ask any questions, and do not ask the user to confirm or approve of your actions.
-        You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
-        If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
-        Use gender neutral language.
-        """.strip(),
-        format = str
-    )
 
 class ObjectSummaryPrompt(dspy.Signature):
     """

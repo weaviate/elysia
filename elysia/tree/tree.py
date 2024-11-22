@@ -83,6 +83,7 @@ class DecisionNode:
                data_queried: dict,
                collection_names: list[str],
                current_message: str = "",
+               tree_count: str = "",
                **kwargs):
         
         output, self.completed = self.decision_executor(
@@ -129,26 +130,26 @@ class TreeReturner:
         self.conversation_id = conversation_id
         self.tree_index = tree_index
 
-    def _parse_error(self, error: str):
-        return parse_error(error, self.conversation_id)
+    def _parse_error(self, error: str, query_id: str):
+        return parse_error(error, self.conversation_id, query_id)
     
-    def _parse_warning(self, warning: str):
-        return parse_warning(warning, self.conversation_id)
+    def _parse_warning(self, warning: str, query_id: str):
+        return parse_warning(warning, self.conversation_id, query_id)
 
-    def _parse_status(self, status: Status):
-        return status.to_json(self.conversation_id)
+    def _parse_status(self, status: Status, query_id: str):
+        return status.to_json(self.conversation_id, query_id)
     
-    def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool):
-        return parse_tree_update(node_id, self.tree_index, decision, reasoning, self.conversation_id, reset)
+    def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool, query_id: str):
+        return parse_tree_update(node_id, self.tree_index, decision, reasoning, self.conversation_id, reset, query_id)
     
-    def _parse_result(self, result: Objects):
-        return parse_result(result, self.conversation_id)
+    def _parse_result(self, result: Objects, code: str, query_id: str):
+        return parse_result(result, code, self.conversation_id, query_id)
     
-    def _parse_finished(self):
-        return parse_finished(self.conversation_id)
+    def _parse_finished(self, query_id: str):
+        return parse_finished(self.conversation_id, query_id)
     
-    def _parse_text(self, text: Text):
-        return parse_text(text, self.conversation_id)
+    def _parse_text(self, text: Text, query_id: str):
+        return parse_text(text, self.conversation_id, query_id)
 
 class BranchVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -207,15 +208,19 @@ class Tree:
             }
         )
         self.current_message = ""
+        self.query_id_to_prompt = {}
+        self.prompt_to_query_id = {}
 
         # for training purposes, we may want to run the tree until a certain node and a certain number of times
         self.run_until_node_id = run_until_node_id
         self.run_num_trees = run_num_trees
         self.num_trees_completed = 0
+        self.max_recursions = 5
 
         self.decision_nodes = {}
 
         self.data_queried = {}
+        self.data_queried_str = ""
         self.previous_info = []
         self.decision_history = []
         self.conversation_history = []
@@ -272,8 +277,8 @@ class Tree:
             id = "search",
             instruction = """
             Choose between querying the knowledge base via semantic search, or aggregating information from the knowledge base.
-            Querying is when the user is looking for specific information related to the content of the dataset.
-            Aggregating is when the user is looking for a high-level overview of the dataset, such as a summary of the quantity of some items.
+            Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query.
+            Aggregating is when the user is looking for a high-level overview of the dataset, such as summary statistics of the quantity of some items. Aggregation can also include grouping information by some property and returning statistics about the groups.
             """,
             options = {
                 "query": {
@@ -409,9 +414,21 @@ class Tree:
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
 
             if action_result.metadata["collection_name"] not in self.data_queried:
-                self.data_queried[action_result.metadata["collection_name"]] = len(action_result.objects)
+                self.data_queried[action_result.metadata["collection_name"]] = [{
+                    "count": len(action_result.objects),
+                    "prompt": user_prompt
+                }]
             else:
-                self.data_queried[action_result.metadata["collection_name"]] += len(action_result.objects)
+                self.data_queried[action_result.metadata["collection_name"]].append({
+                    "count": len(action_result.objects),
+                    "prompt": user_prompt
+                })
+            
+            # format data queried
+            self.data_queried_str = ""
+            for collection_name, properties in self.data_queried.items():
+                for property in properties:
+                    self.data_queried_str += f" - For query '{property['prompt']}', queried '{collection_name}' and retrieved {property['count']} objects {'(empty - either no objects for this prompt or incorrect query)' if property['count'] == 0 else ''}\n"
 
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
 
@@ -419,25 +436,35 @@ class Tree:
             user_prompt=user_prompt, 
             available_information=self.returns, 
             previous_reasoning=self.previous_reasoning,
-            data_queried=self.data_queried,
+            data_queried=self.data_queried_str,
             current_message=self.current_message,
             conversation_history=self.conversation_history,
             **kwargs
         ):
             if isinstance(result, Status):
-                yield self.returner._parse_status(result)
+                yield self.returner._parse_status(result, query_id = self.prompt_to_query_id[user_prompt])
 
             if isinstance(result, TreeUpdate):
-                yield self.returner._parse_tree_update(result.from_node, result.to_node, result.reasoning, result.last and not completed)
+                yield self.returner._parse_tree_update(
+                    result.from_node, 
+                    result.to_node, 
+                    result.reasoning, 
+                    result.last and not completed,
+                    query_id = self.prompt_to_query_id[user_prompt]
+                )
 
             if isinstance(result, Objects):
                 self._update_returns(result, user_prompt)
 
                 if len(result.objects) > 0:
-                    yield self.returner._parse_result(result)
+                    yield self.returner._parse_result(
+                        result, 
+                        code=result.metadata["last_code"], 
+                        query_id = self.prompt_to_query_id[user_prompt]
+                    )
 
             if isinstance(result, Text):
-                yield self.returner._parse_text(result)
+                yield self.returner._parse_text(result, query_id = self.prompt_to_query_id[user_prompt])
 
             if isinstance(result, Response): 
                 self.current_message, message_update = update_current_message(self.current_message, result.objects[0]["text"])
@@ -449,11 +476,11 @@ class Tree:
                 self._update_conversation_history("assistant", result.objects[0]["text"], append_to_previous=False)
 
             if isinstance(result, Error):
-                yield self.returner._parse_error(result.text)
+                yield self.returner._parse_error(result.text, query_id = self.prompt_to_query_id[user_prompt])
                 raise Exception(result.text)
 
             if isinstance(result, Warning):
-                yield self.returner._parse_warning(result.text)
+                yield self.returner._parse_warning(result.text, query_id = self.prompt_to_query_id[user_prompt])
 
     def _remove_collection_from_data(self, collection_name: str):
         if collection_name in self.data_queried:
@@ -496,16 +523,19 @@ class Tree:
         self.decision_nodes[id] = decision_node
         return decision_node
 
-    async def process(self, user_prompt: str, recursion_counter: int = 0, first_run: bool = True, **kwargs):
+    async def process(self, user_prompt: str, query_id: str = "1", recursion_counter: int = 0, first_run: bool = True, **kwargs):
 
         if recursion_counter > 5:
             backend_print(f"[bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
-            yield self.returner._parse_warning("Recursion limit reached!")
+            yield self.returner._parse_warning("Recursion limit reached!", query_id = self.prompt_to_query_id[user_prompt])
             raise RecursionLimitException("Recursion limit reached!")  # Force exit from the async function by raising an exception
 
         self.previous_reasoning[f"tree_{self.num_trees_completed+1}"] = {}
 
         if first_run:
+
+            self.query_id_to_prompt[query_id] = user_prompt
+            self.prompt_to_query_id[user_prompt] = query_id
 
             if self.break_down_instructions:
                 user_prompt = self.input_executor(user_prompt)
@@ -528,11 +558,12 @@ class Tree:
                 completed_tasks=self.previous_info,
                 available_information=self.returns,
                 conversation_history=self.conversation_history,
-                data_queried=self.data_queried,
+                data_queried=self.data_queried_str,
                 decision_tree=self.tree,
                 previous_reasoning=self.previous_reasoning,
                 collection_names=self.collection_names,
                 current_message=self.current_message,
+                tree_count=f"{self.num_trees_completed}/{self.max_recursions}",
                 idx=self.num_trees_completed
             )
 
@@ -540,8 +571,8 @@ class Tree:
             print(f"Decision message: [bold yellow]'{message_update}'[/bold yellow]")
 
             if message_update != "" and not (decision.task == "text_response" or decision.task == "summarize"):
-                yield self.returner._parse_text(Response([{"text": message_update}], {}))
-            yield self.returner._parse_tree_update(current_decision_node.id, decision.task, decision.reasoning, False)
+                yield self.returner._parse_text(Response([{"text": message_update}], {}), query_id = self.prompt_to_query_id[user_prompt])
+            yield self.returner._parse_tree_update(current_decision_node.id, decision.task, decision.reasoning, False, query_id = self.prompt_to_query_id[user_prompt])
             
             self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = decision.reasoning
             self.decision_history.append(decision.task)
@@ -569,7 +600,7 @@ class Tree:
 
             # recursive call to restart the tree since the goal was not completed
             self.num_trees_completed += 1
-            async for result in self.process(user_prompt, recursion_counter + 1, first_run=False, **kwargs):
+            async for result in self.process(user_prompt, query_id, recursion_counter + 1, first_run=False, **kwargs):
                 yield result
 
         # end of all trees
@@ -578,7 +609,7 @@ class Tree:
             self.num_trees_completed += 1
             self.current_message = ""
 
-            yield self.returner._parse_finished()
+            yield self.returner._parse_finished(query_id = self.prompt_to_query_id[user_prompt])
 
             if self.verbosity >= 1:
                 backend_print(f"[bold green]Model identified overall goal as completed![/bold green]")
@@ -587,14 +618,14 @@ class Tree:
                 for i, info in enumerate(self.previous_info):
                     backend_print(f"[Decision {i} ({info['id']})]: [bold]Instruction:[/bold] [cyan italic]{info['instruction']}[/cyan italic] -> [bold]Result:[/bold] [green]{info['decision']}[/green]")
 
-    def process_sync(self, user_prompt: str, recursion_counter: int = 0, first_run: bool = True, **kwargs):
+    def process_sync(self, user_prompt: str, query_id: str = "1", recursion_counter: int = 0, first_run: bool = True, **kwargs):
         """Synchronous version of process() for testing purposes"""
         
         nest_asyncio.apply()
 
         async def run_process():
             results = []
-            async for result in self.process(user_prompt, recursion_counter, first_run, **kwargs):
+            async for result in self.process(user_prompt, query_id, recursion_counter, first_run, **kwargs):
                 results.append(result)
             return results
             
