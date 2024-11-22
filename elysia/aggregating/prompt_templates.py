@@ -2,6 +2,77 @@ import dspy
 
 from typing import Literal, get_args, Union
 
+___filtering = """
+    # Example [6]:
+
+    In this example, an ecommerce collection is grouped by the property name "collection", referring to the collection of the product.
+    Only collections with a rating greater than 4 are returned.
+
+    ```
+    response = collection.aggregate.over_all(
+        group_by=GroupByAggregate(prop="collection"),
+        filters=Filter.by_property("rating").greater_than(4.),
+    )
+    ```
+
+    Note that the `filters` argument is used to filter the results after the aggregation has been performed.
+    
+    Also note that the `4.` is used with the full stop `.` to convert the integer 4 to a float. This is based on the data type of the property, which is a number.
+    If it was an integer, then you would use `4` without the full stop.
+
+    The `Filter` class has the following methods:
+    |  .all_of(filters: List[weaviate.collections.classes.filters._Filters]) -> weaviate.collections.classes.filters._Filters
+    |      Combine all filters in the input list with an AND operator.
+    |
+    |  .any_of(filters: List[weaviate.collections.classes.filters._Filters]) -> weaviate.collections.classes.filters._Filters
+    |      Combine all filters in the input list with an OR operator.
+    |
+    |  .by_property(name: str, length: bool = False) -> weaviate.collections.classes.filters._FilterByProperty
+    |      Define a filter based on a property to be used when querying and deleting from a collection.
+
+    Most of the time when using filters, you will be using the `.by_property` method.
+    The `.by_property` method has the following methods:
+    |  .contains_all(self, val: Union[Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property contains all of the given values.
+    |
+    |  .contains_any(self, val: Union[Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property contains any of the given values.
+    |
+    |  .equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is equal to the given value.
+    |
+    |  .greater_or_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is greater than or equal to the given value.
+    |
+    |  .greater_than(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is greater than the given value.
+    |
+    |  .is_none(self, val: bool) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is `None`.
+    |
+    |  .less_or_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is less than or equal to the given value.
+    |
+    |  .less_than(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is less than the given value.
+    |
+    |  .like(self, val: str) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is like the given value.
+    |
+    |      This filter can make use of `*` and `?` as wildcards. 
+    |
+    |  .not_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+    |      Filter on whether the property is not equal to the given value.
+    
+    ___
+
+    Do NOT assume any information about the contents of the collection when filtering, only use what information you have.
+    For example, if the user prompt asks for the number of articles by a particular author, you do not know how the authors name is spelled, so you should not use the `.equal` method.
+    Instead, you should first aggregate by the data field that likely contains the author field, and then the information will be grouped by the author field, and can be parsed later.
+    
+    ONLY use filter if the data type is numerical, in which case the user prompt should specify exactly the numerical value to filter on.
+"""
+
 def construct_aggregate_initialiser_prompt(collection_names: list[str] = None) -> dspy.Signature:
 
     # Create dynamic Literal type from the list, or use str if None
@@ -58,11 +129,6 @@ def construct_aggregate_initialiser_prompt(collection_names: list[str] = None) -
             description="A list of the collections that you have access to.",
             format = str
         )
-        
-        collection_name: CollectionLiteral = dspy.OutputField(
-            desc="The name of the collection to aggregate. Only provide the name exactly as it appears.",
-            format = str
-        )
 
         current_message = dspy.InputField(
             description="""
@@ -70,6 +136,11 @@ def construct_aggregate_initialiser_prompt(collection_names: list[str] = None) -
             This message has not been sent yet, you will add text to it, to be sent to the user later.
             In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
             """.strip(),
+            format = str
+        )
+        
+        collection_name: CollectionLiteral = dspy.OutputField(
+            desc="The name of the collection to aggregate. Only provide the name exactly as it appears.",
             format = str
         )
         text_return = dspy.OutputField(
@@ -107,7 +178,6 @@ class AggregatePrompt(dspy.Signature):
     ___
 
     collection.aggregate.over_all(*, 
-            filters: Optional[weaviate.collections.classes.filters._Filters] = None, 
             group_by: Union[str, weaviate.collections.classes.aggregate.GroupByAggregate, NoneType] = None, 
             total_count: bool = True, 
             return_metrics: ... = None
@@ -116,8 +186,6 @@ class AggregatePrompt(dspy.Signature):
     Aggregate metrics over all the objects in this collection without any vector search.
 
     Arguments:
-        `filters`
-            The filters to apply to the search.
         `group_by`
             The property name to group the aggregation by.
         `total_count`
@@ -237,27 +305,8 @@ class AggregatePrompt(dspy.Signature):
     ```
     Note the underscore `_` after the `sum` argument. This is intended and required.
 
-    # Example [6]:
-
-    In this example, an ecommerce collection is grouped by the property name "collection", referring to the collection of the product.
-    Only collections with a rating greater than 4 are returned.
-
-    ```
-    response = collection.aggregate.over_all(
-        group_by=GroupByAggregate(prop="collection"),
-        filters=Filter.by_property("rating").greater_than(4.),
-    )
-    ```
-
-    Note that the `filters` argument is used to filter the results after the aggregation has been performed.
-    Also note that the `4.` is used with the full stop `.` to convert the integer 4 to a float. This is based on the data type of the property, which is a number.
-    If it was an integer, then you would use `4` without the full stop.
-
-    ___
-
     Use the above examples to guide you, but create your own aggregation function that is specific to the user prompt.
     You should not use one of the above examples directly, but rather use them as a guide to create your own aggregation function.
-    Filters, GroupBy, and return_metrics are optional, you should use them if the user prompt requires it.
     """
 
     user_prompt = dspy.InputField(desc="The user's original query")
@@ -291,9 +340,14 @@ class AggregatePrompt(dspy.Signature):
         """.strip(), 
         format = str
     )
-    data_fields = dspy.InputField(desc="""
-        A list of properties within the collection that are available to aggregate over.
-        ["field_name", ...]
+    data_types = dspy.InputField(desc="""
+        A dictionary of the data types of the fields in the collection.
+        {
+            "field_name": "field_type",
+            ...
+        }
+        Use this to understand the format of the data, and to create your query.
+        Also, use this as a list of fields which you can use in the query, the keys of this dictionary are the names of the fields exactly as they appear.
         """.strip(), 
         format = str
     )
@@ -323,10 +377,10 @@ class AggregatePrompt(dspy.Signature):
     #     """.strip(),
     #     format = str
     # )
-    # description = dspy.OutputField(
-    #     desc="A description of the aggregation you are performing, concise and informative.",
-    #     format = str
-    # )
+    description = dspy.OutputField(
+        desc="A description of the aggregation you are performing, concise and informative.",
+        format = str
+    )
     is_aggregation_possible = dspy.OutputField(
         desc="""
         A boolean value indicating whether the aggregation is able to return any information. (True/False). Return True if the aggregation is able to return information, and False otherwise.

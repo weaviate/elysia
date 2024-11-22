@@ -221,7 +221,11 @@ class AgenticQuery:
             "previous_queries": [query.code], 
             "collection_name": initialiser.collection_name,
             "collection_metadata": collection_metadata,
-            "last_code": query.code
+            "last_code": {
+                "language": "python",
+                "title": "Query",
+                "text": query.code
+            }
         }
 
         if initialiser.return_type == "conversation":

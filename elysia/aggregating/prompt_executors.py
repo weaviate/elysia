@@ -5,10 +5,14 @@ from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
 from elysia.aggregating.prompt_templates import AggregatePrompt, construct_aggregate_initialiser_prompt
 
+from weaviate.classes.query import Filter, Sort, Metrics
+from weaviate.classes.aggregate import GroupByAggregate
+
 class AggregateInitialiserExecutor(dspy.Module):
     
     def __init__(self, collection_names: list[str]):
-        self.aggregate_initialiser_prompt = construct_aggregate_initialiser_prompt(collection_names)
+        self.aggregate_initialiser_prompt = dspy.ChainOfThought(construct_aggregate_initialiser_prompt(collection_names))
+        self.collection_names = collection_names
 
     def forward(self,
             user_prompt: str, 
@@ -67,7 +71,7 @@ class AggregateExecutor(dspy.Module):
             assert isinstance(is_aggregation_possible, bool)
         except Exception as e:
             try:
-                dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_creator_prompt)
+                dspy.Assert(False, f"Error getting is_aggregation_possible: {e}", target_module=self.aggregate_prompt)
             except Exception as e:
                 backend_print(f"Error getting is_aggregation_possible: {e}")
                 # Return empty values when there's an error
@@ -89,10 +93,10 @@ class AggregateExecutor(dspy.Module):
 
             try:
                 # assert will raise an error if its failed multiple times
-                dspy.Assert(False, f"Error executing aggregation code:\n{prediction.code}\nERROR: {e}", target_module=self.aggregate_collection_prompt)
+                dspy.Assert(False, f"Error executing aggregation code:\n{prediction.code}\nERROR: {e}", target_module=self.aggregate_prompt)
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing aggregation code: {e}")
-                return None, None, None
+                return None, None
             
         return response, prediction

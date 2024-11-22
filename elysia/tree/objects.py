@@ -102,9 +102,10 @@ class SelfInfo(Objects):
         self.type = "self_info"
 
 class Returns:
-    def __init__(self, retrieved: dict, text: Text):
+    def __init__(self, retrieved: dict, aggregation: dict, text: Text):
         self.self_info = SelfInfo()
         self.retrieved = retrieved
+        self.aggregation = aggregation
         self.text = text
     
     def add_retrieval(self, collection_name: str, objects: Objects):
@@ -113,12 +114,19 @@ class Returns:
         else:
             self.retrieved[collection_name].add(objects.objects, objects.metadata)
 
+    def add_aggregation(self, collection_name: str, objects: Objects):
+        if collection_name not in self.aggregation:
+            self.aggregation[collection_name] = objects
+        else:
+            self.aggregation[collection_name].add(objects.objects, objects.metadata)
+
     def add_text(self, objects: Objects):
         self.text.add(objects.objects)
 
     def to_json(self):
         return {
             "retrieval": {collection_name: self.retrieved[collection_name].to_json() for collection_name in self.retrieved},
+            "aggregation": {collection_name: self.aggregation[collection_name].to_json() for collection_name in self.aggregation},
             "text": self.text.to_json(),
             "self_info": self.self_info.to_json()
         }
@@ -126,6 +134,7 @@ class Returns:
     def to_str(self):
         return json.dumps({
             "retrieval": {collection_name: self.retrieved[collection_name].to_str() for collection_name in self.retrieved},
+            "aggregation": {collection_name: self.aggregation[collection_name].to_str() for collection_name in self.aggregation},
             "text": self.text.to_str(),
             "self_info": self.self_info.to_str()
         })
@@ -133,6 +142,7 @@ class Returns:
     def to_llm_str(self):
         return json.dumps({
             "retrieval": {collection_name: self.retrieved[collection_name].to_llm_str() for collection_name in self.retrieved},
+            "aggregation": {collection_name: self.aggregation[collection_name].to_llm_str() for collection_name in self.aggregation},
             "text": self.text.to_llm_str(),
             "self_info": self.self_info.to_llm_str()
         })
@@ -143,6 +153,11 @@ class Returns:
         if "retrieval" in json_dict:
             for collection_name in json_dict["retrieval"]:
                 retrieved[collection_name] = Objects(json_dict["retrieval"][collection_name]["objects"], json_dict["retrieval"][collection_name]["metadata"])
+
+        aggregation = {}
+        if "aggregation" in json_dict:
+            for collection_name in json_dict["aggregation"]:
+                aggregation[collection_name] = Objects(json_dict["aggregation"][collection_name]["objects"], json_dict["aggregation"][collection_name]["metadata"])
 
         text = []
         if "text" in json_dict:
@@ -165,6 +180,16 @@ class Returns:
             return self.retrieved[collection_name]
         else:
             return self.retrieved[collection_name].return_value(idx)
+        
+    def return_aggregation(self, collection_name: str = "", idx = None):
+        if collection_name == "":
+            collection_name = list(self.aggregation.keys())[0]
+            print(f"[bold yellow]No collection name specified, defaulting to {collection_name}[/bold yellow]")
+
+        if idx is None:
+            return self.aggregation[collection_name]
+        else:
+            return self.aggregation[collection_name].return_value(idx)
     
     def return_text(self, idx=None):
         if idx is None:
