@@ -9,12 +9,6 @@ from elysia.util.logging import backend_print
 from elysia.util.parsing import update_current_message, format_aggregation_response
 from elysia.util.collection_metadata import get_collection_data_types
 
-from elysia.querying.prompt_executors import (
-    QueryExecutor, 
-    QueryInitialiserExecutor, 
-    PropertyGroupingExecutor, 
-    ObjectSummaryExecutor
-)
 from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch, TreeUpdate
 from elysia.text.objects import Response, Code
 from elysia.querying.objects import GenericRetrieval

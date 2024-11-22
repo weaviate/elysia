@@ -27,6 +27,7 @@ from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate, Er
 from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 from elysia.aggregating.objects import Aggregation
+from elysia.globals.weaviate_client import client
 
 import dspy
 from dspy.primitives.assertions import assert_transform_module, backtrack_handler
@@ -34,7 +35,8 @@ from dspy.primitives.assertions import assert_transform_module, backtrack_handle
 
 # lm = dspy.LM(model="gpt-4o-mini", max_tokens=8000)
 global lm
-lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+# lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=8000)
+lm = dspy.LM(model="claude-3-5-sonnet-20241022", max_tokens=8000)
 # lm = dspy.LM("groq/llama-3.2-3b-preview", max_tokens=8192)
 # lm = dspy.LM(model="ollama/llama3.2")
 
@@ -309,6 +311,14 @@ class Tree:
         self.tree = {}
         self._construct_tree(self.root, self.tree)
 
+        # Get collection metadata
+        self.collection_information = []
+        for collection_name in self.collection_names:
+            metadata_name = f"ELYSIA_METADATA_{collection_name}__"
+            if client.collections.exists(metadata_name):
+                metadata = client.collections.get(metadata_name).query.fetch_objects(limit=1)
+                self.collection_information.append(metadata.objects[0].properties)
+        
         if verbosity > 1:
             backend_print("Initialised tree with the following decision nodes:")
             for decision_node in self.decision_nodes.values():
@@ -462,6 +472,7 @@ class Tree:
             data_queried=self.data_queried_str,
             current_message=self.current_message,
             conversation_history=self.conversation_history,
+            collection_information=self.collection_information,
             **kwargs
         ):
             if isinstance(result, Status):
