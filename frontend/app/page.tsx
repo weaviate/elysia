@@ -6,12 +6,13 @@ import { useEffect, useState } from "react";
 
 import { generateIdFromIp } from "./util";
 
-import { DecisionTreeNode, initialConversation } from "./types";
+import { v4 as uuidv4 } from "uuid";
 import { useConversations } from "./chat/useConversations";
 import { useSocket } from "./chat/useSocket";
 import { useCollections } from "./explorer/useCollections";
 import DataExplorer from "./explorer/data-explorer";
 import { useRouting } from "./navigation/useRouting";
+import { Message } from "./types";
 
 export default function Home() {
   const [mode, setMode] = useState<"home" | "data-explorer">("home");
@@ -67,6 +68,7 @@ export default function Home() {
     addTreeToConversation,
     addMessageToConversation,
     changeBaseToQuery,
+    addQueryToConversation,
   } = useConversations(id || "");
 
   const { socketOnline, sendQuery } = useSocket(
@@ -84,10 +86,14 @@ export default function Home() {
   }, []);
 
   const handleQuery = (query: string, conversationId: string) => {
-    sendQuery(id || "", query, conversationId);
-    changeBaseToQuery(conversationId, query);
-    setConversationTitle(query, conversationId);
+    if (query.trim() === "") return;
+    const trimmedQuery = query.trim();
+    const query_id = uuidv4();
+    sendQuery(id || "", trimmedQuery, conversationId, query_id);
+    changeBaseToQuery(conversationId, trimmedQuery);
+    setConversationTitle(trimmedQuery, conversationId);
     addTreeToConversation(conversationId);
+    addQueryToConversation(conversationId, trimmedQuery, query_id);
   };
 
   return (
@@ -112,7 +118,6 @@ export default function Home() {
           currentConversation={currentConversation || ""}
           conversations={conversations}
           toggleCollectionEnabled={toggleCollectionEnabled}
-          addMessageToConversation={addMessageToConversation}
           handleQuery={handleQuery}
           routerChangeCollection={routerChangeCollection}
         />

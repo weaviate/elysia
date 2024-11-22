@@ -5,7 +5,8 @@ import { getWebsocketHost } from "../api";
 export function useSocket(
   addMessageToConversation: (
     message: Message[],
-    conversation_id: string
+    conversation_id: string,
+    query_id: string
   ) => void,
   setConversationStatus: (status: string, conversationId: string) => void,
   setAllConversationStatuses: (status: string) => void,
@@ -32,6 +33,7 @@ export function useSocket(
     localSocket.onmessage = (event) => {
       try {
         const message: Message = JSON.parse(event.data);
+        console.log(message.type);
         if (message.type === "status") {
           const payload = message.payload as TextPayload;
           setConversationStatus(payload.text, message.conversation_id);
@@ -40,8 +42,11 @@ export function useSocket(
         } else if (message.type === "tree_update") {
           updateTree(message);
         } else {
-          const newMessage = { ...message, collapsed: true };
-          addMessageToConversation([newMessage], newMessage.conversation_id);
+          addMessageToConversation(
+            [message],
+            message.conversation_id,
+            message.query_id
+          );
         }
       } catch (error) {
         console.error(error);
@@ -74,11 +79,11 @@ export function useSocket(
   const sendQuery = (
     user_id: string,
     query: string,
-    conversation_id: string
+    conversation_id: string,
+    query_id: string
   ) => {
-    //fakeQuery(conversation_id);
     setConversationStatus("Thinking...", conversation_id);
-    socket?.send(JSON.stringify({ user_id, query, conversation_id }));
+    socket?.send(JSON.stringify({ user_id, query, conversation_id, query_id }));
   };
 
   return { socketOnline, sendQuery };

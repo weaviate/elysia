@@ -5,6 +5,7 @@ import {
   DecisionTreeNode,
   initialConversation,
   Message,
+  Query,
   TreeUpdatePayload,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
@@ -90,12 +91,22 @@ export function useConversations(id: string) {
 
   const addMessageToConversation = (
     messages: Message[],
-    conversationId: string
+    conversationId: string,
+    queryId: string
   ) => {
     setConversations((prevConversations) =>
       prevConversations.map((c) => {
-        if (c.id === conversationId) {
-          return { ...c, messages: [...(c.messages || []), ...messages] };
+        if (c.id === conversationId && c.queries[queryId]) {
+          return {
+            ...c,
+            queries: {
+              ...c.queries,
+              [queryId]: {
+                ...c.queries[queryId],
+                messages: [...c.queries[queryId].messages, ...messages],
+              },
+            },
+          };
         }
         return c;
       })
@@ -246,6 +257,42 @@ export function useConversations(id: string) {
     );
   };
 
+  const addQueryToConversation = (
+    conversationId: string,
+    query: string,
+    query_id: string
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) => {
+        const newMessage: Message = {
+          type: "User",
+          id: uuidv4(),
+          query_id: query_id,
+          conversation_id: conversationId,
+          payload: {
+            type: "text",
+            metadata: {},
+            code: [],
+            objects: [query],
+          },
+        };
+        const newQuery: Query = {
+          id: query_id,
+          query: query,
+          index:
+            prevConversations.find((c) => c.id === conversationId)?.queries[
+              query_id
+            ]?.index || 0,
+          messages: [newMessage],
+        };
+        if (c.id === conversationId) {
+          return { ...c, queries: { ...c.queries, [query_id]: newQuery } };
+        }
+        return c;
+      })
+    );
+  };
+
   useEffect(() => {
     if (!collections) return;
     setConversations((prevConversations) =>
@@ -294,5 +341,6 @@ export function useConversations(id: string) {
     updateTree,
     addTreeToConversation,
     changeBaseToQuery,
+    addQueryToConversation,
   };
 }

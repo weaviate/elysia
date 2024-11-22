@@ -6,6 +6,7 @@ import { Message, ResultPayload, Ticket } from "../../types";
 import TicketMessageDisplay from "./ticket";
 import { FaDatabase } from "react-icons/fa";
 import CollectionDisplay from "./collection";
+import CodeDisplay from "./code";
 
 interface TicketsDisplayProps {
   message: Message;
@@ -31,6 +32,7 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
 
   return (
     <div className="w-full flex flex-col justify-start items-start gap-3 ">
+      {payload.code && <CodeDisplay payload={payload.code} />}
       {payload.metadata["collection_name"] && (
         <CollectionDisplay
           collection_name={payload.metadata["collection_name"]}

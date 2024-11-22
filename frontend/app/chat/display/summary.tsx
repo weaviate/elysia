@@ -15,7 +15,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ payload }) => {
           key={idx}
           className="text-sm chat-animation text-white flex flex-col gap-4"
         >
-          <p className="font-bold text-2xl text-white">{text.title}</p>
+          <p className="font-bold text-xl text-white">{text.title}</p>
           <MarkdownMessageDisplay text={text.text} />
         </div>
       ))}
