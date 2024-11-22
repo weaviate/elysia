@@ -14,10 +14,11 @@ class Status:
     def __init__(self, status: str):
         self.status = status
 
-    def to_json(self, conversation_id: str):
+    def to_json(self, conversation_id: str, query_id: str = None):
         return {
             "type": "status",
             "conversation_id": conversation_id,
+            "query_id": query_id,
             "id": "sta-" + str(uuid.uuid4()),
             "payload": {
                 "text": self.status
@@ -49,11 +50,11 @@ class Objects:
         self.objects.extend(objects)
         for key, value in metadata.items():
 
-            if key not in self.metadata:
-                self.metadata[key] = value
-            elif isinstance(self.metadata[key], list):
+            if isinstance(self.metadata[key], list):
+                # metadata = list means append new entries
                 self.metadata[key].extend(value)
             else:
+                # metadata = not list means overwrite
                 self.metadata[key] = value
 
     def to_json(self):

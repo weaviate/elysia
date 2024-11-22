@@ -51,7 +51,7 @@ class AgenticQuery:
         if collection_name in available_information.retrieved:
             metadata = available_information.retrieved[collection_name].metadata
             if "previous_queries" in metadata:
-                self.previous_queries.extend(metadata["previous_queries"])       
+                self.previous_queries.extend(metadata["previous_queries"])  
     
     def _get_collection_fields(self, collection_name: str):
         example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
@@ -220,7 +220,8 @@ class AgenticQuery:
         metadata = {
             "previous_queries": [query.code], 
             "collection_name": initialiser.collection_name,
-            "collection_metadata": collection_metadata
+            "collection_metadata": collection_metadata,
+            "last_code": query.code
         }
 
         if initialiser.return_type == "conversation":

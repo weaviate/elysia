@@ -18,11 +18,11 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "what was edward's last message?"
+        "Summarize the last 10 GitHub Tickets"
     )
 
     tree.process_sync(
-        "search again using that specific conversation id to find who else was in the conversation?"
+        "thanks, related to issue 308, what are people saying in emails about this?"
     )
 
     from rich import print
