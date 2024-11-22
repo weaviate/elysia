@@ -1,7 +1,6 @@
 import datetime
 import dspy
 
-
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
@@ -12,6 +11,7 @@ from elysia.querying.prompt_executors import (
     QueryExecutor, 
     ObjectSummaryExecutor
 )
+from elysia.tree import complex_lm
 from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch, TreeUpdate
 from elysia.text.objects import Response, Code
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval, EcommerceRetrieval
@@ -43,18 +43,6 @@ class AgenticQuery:
                 metadata = available_information.retrieved[collection_name].metadata
                 if "previous_queries" in metadata:
                     self.previous_queries.append({"collection_name": collection_name, "previous_queries": metadata["previous_queries"]})  
-    
-    def _get_collection_fields(self, collection_name: str):
-        example_field = client.collections.get(collection_name).query.fetch_objects(limit=1).objects[0].properties
-        for key in example_field:
-            if isinstance(example_field[key], datetime.datetime):
-                example_field[key] = example_field[key].isoformat()
-            elif not isinstance(example_field[key], str):
-                example_field[key] = str(example_field[key])
-
-        data_types = get_collection_data_types(collection_name)
-
-        return data_types, example_field
         
     async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
         
@@ -73,15 +61,17 @@ class AgenticQuery:
         yield Status(f"Writing query")
 
         try:
-            # Run the query executor (write and execute the query)
-            response, query = self.querier(
-                user_prompt = user_prompt, 
-                previous_queries = self.previous_queries, 
-                data_queried = data_queried,
-                collection_information = collection_information,
-                previous_reasoning = previous_reasoning,
-                current_message = current_message
-            )
+            with dspy.context(lm = complex_lm):
+
+                # Run the query executor (write and execute the query)
+                response, query = self.querier(
+                    user_prompt = user_prompt, 
+                    previous_queries = self.previous_queries, 
+                    data_queried = data_queried,
+                    collection_information = collection_information,
+                    previous_reasoning = previous_reasoning,
+                    current_message = current_message
+                )
 
         except Exception as e:
             yield Error(f"Error in query execution: {e}")

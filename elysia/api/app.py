@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.websockets import WebSocketDisconnect
 
-from elysia.tree.tree import Tree, lm, RecursionLimitException
+from elysia.tree.tree import Tree, RecursionLimitException
 from elysia.util.logging import backend_print
 from elysia.util.api import parse_error
 from elysia.api.api_types import (

@@ -43,10 +43,28 @@ class TreeUpdate:
 
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):
-        self.objects = objects
+        self.objects = self._remove_duplicates(objects)
         self.metadata = metadata
 
+    def _remove_duplicates(self, objects: list[dict | str]):
+        unique_objects = []
+        seen = set()
+        
+        for obj in objects:
+            if isinstance(obj, dict):
+                # Convert dict to a string representation for comparison
+                obj_str = str(sorted(obj.items()))
+            else:
+                obj_str = str(obj)
+                
+            if obj_str not in seen:
+                seen.add(obj_str)
+                unique_objects.append(obj)
+                
+        return unique_objects
+
     def add(self, objects: list[dict], metadata: dict = {}):
+        objects = self._remove_duplicates(objects)
         self.objects.extend(objects)
         for key, value in metadata.items():
 

@@ -12,7 +12,7 @@ from dspy.teleprompt import LabeledFewShot, BootstrapFewShotWithRandomSearch
 
 from elysia.tree.objects import Returns
 from elysia.util.parsing import format_datetime
-from elysia.tree.tree import Tree, lm
+from elysia.tree.tree import Tree
 from elysia.tree.prompt_executors import DecisionExecutor
 
 def remove_whitespace(text: str) -> str:

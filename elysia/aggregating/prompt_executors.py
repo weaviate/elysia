@@ -3,38 +3,16 @@ import dspy
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
-from elysia.aggregating.prompt_templates import AggregatePrompt, construct_aggregate_initialiser_prompt
+from elysia.aggregating.prompt_templates import construct_aggregate_prompt
 
 from weaviate.classes.query import Filter, Sort, Metrics
 from weaviate.classes.aggregate import GroupByAggregate
 
-class AggregateInitialiserExecutor(dspy.Module):
-    
-    def __init__(self, collection_names: list[str]):
-        self.aggregate_initialiser_prompt = dspy.ChainOfThought(construct_aggregate_initialiser_prompt(collection_names))
-        self.collection_names = collection_names
-
-    def forward(self,
-            user_prompt: str, 
-            data_queried: list,
-            current_message: str,
-            previous_reasoning: dict
-        ) -> str:
-        
-        return self.aggregate_initialiser_prompt(
-            user_prompt=user_prompt, 
-            reference=create_reference(),
-            previous_reasoning=previous_reasoning,
-            data_queried=data_queried,
-            available_collections=self.collection_names,
-            current_message=current_message,
-        )
-
 class AggregateExecutor(dspy.Module):
 
-    def __init__(self):
-        super().__init__()
-        self.aggregate_prompt = dspy.ChainOfThought(AggregatePrompt)
+    def __init__(self, collection_names: list[str]):
+        self.aggregate_prompt = dspy.ChainOfThought(construct_aggregate_prompt(collection_names))
+        self.collection_names = collection_names
 
     def _execute_code(self, aggregation_code: str, collection_name: str) -> dict:
 
@@ -50,21 +28,19 @@ class AggregateExecutor(dspy.Module):
     def forward(
         self, 
         user_prompt: str, 
-        data_types: list, 
-        example_field: dict, 
+        data_queried: list, 
+        collection_information: list,
         previous_reasoning: dict, 
-        previous_aggregations: list,
-        collection_name: str
+        previous_aggregations: list
     ) -> str:
         
         prediction = self.aggregate_prompt(
             user_prompt=user_prompt, 
             reference=create_reference(), 
             previous_reasoning=previous_reasoning,
-            data_types=data_types, 
-            example_field=example_field, 
+            data_queried=data_queried,
+            collection_information=collection_information
         )
-
 
         try:
             is_aggregation_possible = eval(prediction.is_aggregation_possible)
@@ -88,7 +64,7 @@ class AggregateExecutor(dspy.Module):
 
         # catch any errors in query execution for dspy assert
         try:
-            response = self._execute_code(prediction.code, collection_name)
+            response = self._execute_code(prediction.code, prediction.collection_name)
         except Exception as e:
 
             try:

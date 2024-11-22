@@ -146,11 +146,10 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
 def add_ecommerce_to_weaviate(client, df: pd.DataFrame, collection_name: str, force: bool = False):
 
     if force:
-        collection = force_create_collection(client, collection_name, ["name", "description"])
+        collection = force_create_collection(client, collection_name, ["description"])
     else:
-        collection = soft_create_collection(client, collection_name, ["name", "description"])
+        collection = soft_create_collection(client, collection_name, ["description"])
 
-    
     # add data to collection
     for i, row in tqdm(df.iterrows(), total=len(df), desc=f"Adding {collection_name} to Weaviate"):
 
