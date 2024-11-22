@@ -11,6 +11,7 @@ import nest_asyncio
 # from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
 from elysia.text.text import Summarizer, TextResponse
 from elysia.querying.agentic_query import AgenticQuery
+from elysia.aggregating.aggregate import AgenticAggregate
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
 from elysia.util.parsing import remove_whitespace, update_current_message
 from elysia.util.logging import backend_print
@@ -25,6 +26,7 @@ from elysia.util.api import (
 from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate, Error, Warning
 from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
+from elysia.aggregating.objects import Aggregation
 
 import dspy
 from dspy.primitives.assertions import assert_transform_module, backtrack_handler
@@ -207,6 +209,11 @@ class Tree:
                 "generic": "retrieve any other type of information that does not fit into the other categories."
             }
         )
+
+        self.aggregator = AgenticAggregate(
+            collection_names=collection_names
+        )
+
         self.current_message = ""
         self.query_id_to_prompt = {}
         self.prompt_to_query_id = {}
@@ -229,6 +236,7 @@ class Tree:
 
         self.returns = Returns(
             retrieved = {}, 
+            aggregation = {},
             text = Text(objects=[], metadata={})
         )
 
@@ -282,15 +290,15 @@ class Tree:
             """,
             options = {
                 "query": {
-                    "description": "Query the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future": "",
+                    "description": "Query the knowledge base based on searching with a specific query.",
+                    "future": "You will be given information about the collection, such as the fields and types of the data. Then, query with semantic search, keyword search, or a combination of both.",
                     "action": self.querier,
                     "next": None,
                 },
                 "aggregate": {
-                    "description": "Do NOT under any circumstances pick this option.",
-                    "future": "",
-                    "action": None,
+                    "description": "Perform functions such as counting, averaging, summing, etc. on the data, grouping by some property and returning metrics/statistics about different categories. Or providing a high level overview of the dataset.",
+                    "future": "You will be given information about the collection, such as the fields and types of the data. Then, aggregate over different categories of the collection, with operations: top_occurences, count, sum, average, min, max, median, mode, group_by.",
+                    "action": self.aggregator,
                     "next": None    # next=None represents the end of the tree
                 }
             },
@@ -415,21 +423,36 @@ class Tree:
 
             if action_result.metadata["collection_name"] not in self.data_queried:
                 self.data_queried[action_result.metadata["collection_name"]] = [{
+                    "type": "retrieval",
                     "count": len(action_result.objects),
                     "prompt": user_prompt
                 }]
             else:
                 self.data_queried[action_result.metadata["collection_name"]].append({
+                    "type": "retrieval",
                     "count": len(action_result.objects),
                     "prompt": user_prompt
                 })
+            self.data_queried_str += f" - For query '{user_prompt}', queried '{action_result.metadata['collection_name']}' and retrieved {len(action_result.objects)} objects\n"
             
-            # format data queried
-            self.data_queried_str = ""
-            for collection_name, properties in self.data_queried.items():
-                for property in properties:
-                    self.data_queried_str += f" - For query '{property['prompt']}', queried '{collection_name}' and retrieved {property['count']} objects {'(empty - either no objects for this prompt or incorrect query)' if property['count'] == 0 else ''}\n"
 
+        if isinstance(action_result, Aggregation):
+            self.returns.add_aggregation(collection_name=action_result.metadata["collection_name"], objects=action_result)
+
+            if action_result.metadata["collection_name"] not in self.data_queried:
+                self.data_queried[action_result.metadata["collection_name"]] = [{
+                    "type": "aggregation",
+                    "count": len(action_result.objects),
+                    "prompt": user_prompt
+                }]
+            else:
+                self.data_queried[action_result.metadata["collection_name"]].append({
+                    "type": "aggregation",
+                    "count": len(action_result.objects),
+                    "prompt": user_prompt
+                })
+            self.data_queried_str += f" - For query '{user_prompt}', aggregated '{action_result.metadata['collection_name']} with description '{action_result.metadata['description'][-1]}'\n"
+    
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
 
         async for result in action_fn(

@@ -6,7 +6,7 @@ from weaviate.classes.aggregate import GroupByAggregate
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
-from elysia.util.parsing import update_current_message
+from elysia.util.parsing import update_current_message, format_aggregation_response
 from elysia.util.collection_metadata import get_collection_data_types
 
 from elysia.querying.prompt_executors import (
@@ -67,24 +67,24 @@ class AgenticAggregate:
         yield Status(f"Initialising aggregation")
 
 
-        try:
+        # try:
 
-            initialiser = self.aggregate_initialiser(
-                user_prompt=user_prompt, 
-                data_queried=data_queried, 
-                current_message=current_message, 
-                previous_reasoning=previous_reasoning
-            )
+        initialiser = self.aggregate_initialiser(
+            user_prompt=user_prompt, 
+            data_queried=data_queried, 
+            current_message=current_message, 
+            previous_reasoning=previous_reasoning
+        )
 
-            current_message, message_update = update_current_message(current_message, initialiser.text_return)
+        current_message, message_update = update_current_message(current_message, initialiser.text_return)
 
-            # Yield results to front end
-            yield TreeUpdate(from_node="query", to_node="query_initialiser", reasoning=initialiser.reasoning, last = False)
-            if message_update != "":
-                yield Response([{"text": message_update}], {})
+        # Yield results to front end
+        yield TreeUpdate(from_node="aggregate", to_node="aggregate_initialiser", reasoning=initialiser.reasoning, last = False)
+        if message_update != "":
+            yield Response([{"text": message_update}], {})
 
-        except Exception as e:
-            yield Error(f"Error in initialising aggregation: {e}")
+        # except Exception as e:
+        #     yield Error(f"Error in initialising aggregation: {e}")
 
 
         # Get some metadata about the collection
@@ -98,18 +98,18 @@ class AgenticAggregate:
         })
         yield Status(f"Aggregating {initialiser.collection_name}")
 
-        try:
-            response, aggregation = self.aggregate_executor(
-                user_prompt=user_prompt, 
-                data_types=data_types, 
-                example_field=example_field, 
-                previous_reasoning=previous_reasoning,
-                previous_aggregations=self.previous_aggregations, 
-                collection_name=initialiser.collection_name
-            )
+        # try:
+        response, aggregation = self.aggregate_executor(
+            user_prompt=user_prompt, 
+            data_types=data_types, 
+            example_field=example_field, 
+            previous_reasoning=previous_reasoning,
+            previous_aggregations=self.previous_aggregations, 
+            collection_name=initialiser.collection_name
+        )
 
-        except Exception as e:
-            yield Error(f"Error in aggregating: {e}")
+        # except Exception as e:
+        #     yield Error(f"Error in aggregating: {e}")
 
         # If the query is not possible, yield a generic retrieval and return nothing
         if aggregation is None:
@@ -118,9 +118,27 @@ class AgenticAggregate:
 
         current_message, message_update = update_current_message(current_message, aggregation.text_return)
 
+        # return values
+        objects = [
+            {initialiser.collection_name: format_aggregation_response(response)}
+        ]
+        metadata = {
+            "collection_name": initialiser.collection_name,
+            "previous_aggregations": self.previous_aggregations,
+            "description": [aggregation.description],
+            "last_code": {
+                "language": "python",
+                "title": "Aggregation",
+                "text": aggregation.code
+            }
+        }
+
         # Yield results to front end
         if message_update != "":
             yield Response([{"text": message_update}], {})
         yield Code([{"text": aggregation.code, "language": "python", "title": "Aggregation"}], {})
-        yield TreeUpdate(from_node="query_initialiser", to_node="aggregate_executor", reasoning=aggregation.reasoning, last = False)
-        yield Status(f"Aggregated {len(response.objects)} objects from {initialiser.collection_name}")
+        yield TreeUpdate(from_node="aggregate_initialiser", to_node="aggregate_executor", reasoning=aggregation.reasoning, last = False)
+        yield Status(f"Aggregated from {initialiser.collection_name}")
+
+        # final return
+        yield GenericAggregation(objects, metadata) 

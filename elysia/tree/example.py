@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd())
 os.chdir("../..")
 
+from rich import print
 from elysia.tree.tree import Tree
 from elysia.tree.tree import lm
 
@@ -18,17 +19,12 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "Summarize the last 10 GitHub Tickets"
+        "what was edward's last message?"
     )
 
-    tree.process_sync(
-        "thanks, related to issue 308, what are people saying in emails about this?"
-    )
-
-    from rich import print
-    print(tree.returns.retrieved["example_verba_slack_conversations"].to_json())
-
-    print(tree.returns.to_str())
+    print(tree.conversation_history[-1]["content"])
+    print(tree.returns.aggregation["ecommerce"].objects)
+    print(tree.returns.aggregation["ecommerce"].metadata["last_code"])
     
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"
