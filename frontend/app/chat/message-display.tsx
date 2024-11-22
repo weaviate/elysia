@@ -59,6 +59,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
       ) {
         let content: string = (message.payload as ResponsePayload).objects[0]
           .text;
+        let next_message_id: string = message.id;
 
         for (let i = index + 1; i < messages.length; i++) {
           if (
@@ -72,6 +73,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                   .objects as TextPayload[]
               )[0].text;
             skip_indices.push(i);
+            next_message_id = messages[i].id;
           } else {
             break;
           }
@@ -86,6 +88,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         const newMessage: Message = {
           ...message,
           payload: newResponsePayload,
+          id: next_message_id,
         };
 
         newMessages.push(newMessage);
@@ -110,7 +113,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     <div
       className={`w-[75vw] flex justify-start items-start p-4 overflow-scroll transition-all duration-300 ${size_control}`}
     >
-      <div className="flex flex-col gap-3 w-full">
+      <div className="flex flex-col gap-12 w-full">
         {displayMessages.map((message, index) => (
           <div key={index + "message"} className="w-full flex">
             {message.type === "User" && (
