@@ -13,7 +13,7 @@ export type Message = {
     | "tree_update";
   conversation_id: string;
   id: string;
-  collapsed?: boolean; //added for ticket display
+  query_id: string;
   payload:
     | ResultPayload
     | TextPayload
@@ -33,6 +33,7 @@ export type ResultPayload = {
   type: "text" | "ticket" | "message" | "conversation";
   /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
+  code: CodePayload[];
   objects:
     | string[]
     | Ticket[]
@@ -93,13 +94,20 @@ export type TreeUpdatePayload = {
 };
 
 export type Conversation = {
-  messages: Message[];
   enabled_collections: { [key: string]: boolean };
   id: string;
   name: string;
   tree: DecisionTreeNode[];
   base_tree: DecisionTreeNode | null;
+  queries: { [key: string]: Query };
   current: string;
+};
+
+export type Query = {
+  id: string;
+  query: string;
+  messages: Message[];
+  index: number;
 };
 
 export type DecisionTreePayload = {
@@ -155,11 +163,11 @@ export type ErrorResponse = {
 // Example Objects
 
 export const initialConversation: Conversation = {
-  messages: [],
   id: uuidv4(),
   name: "New Conversation",
   enabled_collections: {},
   tree: [],
   base_tree: null,
   current: "",
+  queries: {},
 };

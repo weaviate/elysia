@@ -5,9 +5,15 @@ import { handleNamedEntityRecognition } from "../api";
 
 interface UserMessageDisplayProps {
   payload: string[];
+  onClick: () => void;
+  collapsed: boolean;
 }
 
-const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({ payload }) => {
+const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
+  payload,
+  onClick,
+  collapsed,
+}) => {
   const [nounSpans, setNounSpans] = useState<[number, number][]>([]);
   const [entitySpans, setEntitySpans] = useState<[number, number][]>([]);
 
@@ -97,15 +103,24 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({ payload }) => {
   };
 
   return (
-    <div className="w-full flex flex-col justify-start items-start mt-8">
+    <button
+      className="flex flex-col rounded-lg  transition-all duration-300 justify-start items-start mt-8 cursor-pointer"
+      onClick={onClick}
+    >
       <div className="max-w-3/5">
         <div className="flex flex-grow justify-start items-start chat-animation">
-          <p className="text-primary text-2xl">
-            {renderTextWithHighlights(text)}
-          </p>
+          {!collapsed ? (
+            <p className="text-primary text-2xl">
+              {renderTextWithHighlights(text)}
+            </p>
+          ) : (
+            <p className="text-secondary hover:text-primary text-lg transition-all duration-300">
+              {text}
+            </p>
+          )}
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 

@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
-import { Conversation, DecisionTreeNode, Message } from "../types";
-
-import { v4 as uuidv4 } from "uuid";
+import { Conversation, DecisionTreeNode, Message, Query } from "../types";
 
 import QueryInput from "./user-input";
-import MessageDisplay from "./message-display";
+import MessageDisplay from "./display/message-display";
 import { BsChatFill } from "react-icons/bs";
 import { RiFlowChart } from "react-icons/ri";
 import FlowDisplay from "./flow-display";
 import { ReactFlowProvider } from "@xyflow/react";
 import SelectDropdown from "../navigation/select-dropdown";
+import { FaCircle } from "react-icons/fa";
 
 interface ChatInterfaceProps {
   currentConversation: string;
@@ -22,10 +21,6 @@ interface ChatInterfaceProps {
     collection_id: string,
     conversationId: string
   ) => void;
-  addMessageToConversation: (
-    message: Message[],
-    conversationId: string
-  ) => void;
   handleQuery: (query: string, conversationId: string) => void;
 }
 
@@ -33,22 +28,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentConversation,
   conversations,
   toggleCollectionEnabled,
-  addMessageToConversation,
   handleQuery,
   routerChangeCollection,
 }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentQuery, setCurrentQuery] = useState<{
+    [key: string]: Query;
+  }>({});
   const [currentStatus, setCurrentStatus] = useState<string>("");
 
   const [mode, setMode] = useState<"chat" | "flow">("chat");
   const [currentTrees, setCurrentTrees] = useState<DecisionTreeNode[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMessages(
+    setCurrentQuery(
       currentConversation && conversations.length > 0
-        ? conversations.find((c) => c.id === currentConversation)?.messages ||
-            []
-        : []
+        ? conversations.find((c) => c.id === currentConversation)?.queries || {}
+        : {}
     );
     setCurrentStatus(
       currentConversation && conversations.length > 0
@@ -62,22 +58,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     );
   }, [currentConversation, conversations]);
 
+  useEffect(() => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }, [currentQuery, currentStatus]);
+
   const handleSendQuery = (query: string) => {
-    if (query.trim() === "") return;
-    const trimmedQuery = query.trim();
-    const newMessage: Message = {
-      type: "User",
-      id: uuidv4(),
-      collapsed: false,
-      conversation_id: currentConversation,
-      payload: {
-        type: "text",
-        metadata: {},
-        objects: [trimmedQuery],
-      },
-    };
-    addMessageToConversation([newMessage], currentConversation);
-    handleQuery(trimmedQuery, currentConversation);
+    handleQuery(query, currentConversation);
   };
 
   return (
@@ -114,14 +102,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
       {mode === "chat" ? (
-        <>
-          <MessageDisplay
-            messages={messages}
-            current_status={currentStatus}
-            routerChangeCollection={routerChangeCollection}
-          />
-          <QueryInput messages={messages} handleSendQuery={handleSendQuery} />
-        </>
+        <div className="flex flex-col w-full justify-center items-center">
+          <div className="flex flex-col overflow-scroll w-[75vw] h-[90vh]">
+            {Object.entries(currentQuery)
+              .sort((a, b) => a[1].index - b[1].index)
+              .map(([queryId, query], index, array) => (
+                <MessageDisplay
+                  key={queryId}
+                  messages={query.messages}
+                  routerChangeCollection={routerChangeCollection}
+                  _collapsed={index !== array.length - 1}
+                  messagesEndRef={messagesEndRef}
+                />
+              ))}
+            {currentStatus != "" && (
+              <div className="w-full flex justify-start items-center gap-2">
+                <FaCircle className="text-secondary text-sm pulsing" />
+                <p className="text-sm shine">{currentStatus}</p>
+              </div>
+            )}
+            {!(Object.keys(currentQuery).length === 0) && (
+              <div>
+                <hr className="w-full border-t border-background my-4 mb-28" />
+              </div>
+            )}
+          </div>
+          <div className="w-full justify-center items-center flex">
+            <QueryInput
+              query_length={Object.keys(currentQuery).length}
+              handleSendQuery={handleSendQuery}
+            />
+          </div>
+        </div>
       ) : (
         <ReactFlowProvider>
           <FlowDisplay currentTrees={currentTrees} />
