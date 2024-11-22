@@ -58,11 +58,6 @@ def construct_aggregate_initialiser_prompt(collection_names: list[str] = None) -
             description="A list of the collections that you have access to.",
             format = str
         )
-
-        available_return_types = dspy.InputField(
-            description="A list of the return types that you have access to, with corresponding descriptions of each one.",
-            format = dict
-        )
         
         collection_name: CollectionLiteral = dspy.OutputField(
             desc="The name of the collection to aggregate. Only provide the name exactly as it appears.",
@@ -332,6 +327,16 @@ class AggregatePrompt(dspy.Signature):
     #     desc="A description of the aggregation you are performing, concise and informative.",
     #     format = str
     # )
+    is_aggregation_possible = dspy.OutputField(
+        desc="""
+        A boolean value indicating whether the aggregation is able to return any information. (True/False). Return True if the aggregation is able to return information, and False otherwise.
+        Base this decision on the collection metadata, and the user prompt.
+        If, for example, the data fields do not likely contain the information the user is asking for, you should return False, as the aggregation is not possible.
+        However, if the aggregation is extremely generic, and the user prompt does not specify what to filter on, you should return True.
+        Return True or False only, nothing else.
+        """.strip(),
+        format = bool
+    )
     code = dspy.OutputField(
         desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only.",
         format = str

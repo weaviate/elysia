@@ -28,17 +28,13 @@ class QueryInitialiserExecutor(dspy.Module):
         self.available_collections = collection_names
         self.available_return_types = return_types
 
-    def forward(self, user_prompt: str, previous_reasoning: dict, data_queried: list[str], current_message: str) -> str:
-        
-        data_queried_str = ""
-        for collection_name, num_items in data_queried.items():
-            data_queried_str += f" - {collection_name}: {num_items} objects retrieved {'(empty - either no objects for this prompt or incorrect query)' if num_items == 0 else ''}\n"
+    def forward(self, user_prompt: str, previous_reasoning: dict, data_queried: str, current_message: str) -> str:
         
         prediction = self.query_initialiser_prompt(
             user_prompt=user_prompt,
             reference=create_reference(),
             previous_reasoning=previous_reasoning,
-            data_queried=data_queried_str,
+            data_queried=data_queried,
             available_collections=self.available_collections,
             available_return_types=self.available_return_types,
             current_message=current_message

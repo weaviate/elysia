@@ -70,6 +70,7 @@ class AgenticQuery:
         data_queried = kwargs.get("data_queried", [])
         current_message = kwargs.get("current_message", "")
 
+
         # -- Step 1: Determine collection and other fields
         Branch({
             "name": "Query Initialiser",

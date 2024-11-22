@@ -1,6 +1,6 @@
 from elysia.tree.objects import Objects
 
-class AggregateReturn(Objects):
+class GenericAggregation(Objects):
     """
     Objects:
         List of dictionaries.

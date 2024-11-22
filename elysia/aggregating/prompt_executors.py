@@ -3,10 +3,30 @@ import dspy
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
 from elysia.util.logging import backend_print
-from elysia.aggregating.prompt_templates import AggregatePrompt
+from elysia.aggregating.prompt_templates import AggregatePrompt, construct_aggregate_initialiser_prompt
 
+class AggregateInitialiserExecutor(dspy.Module):
+    
+    def __init__(self, collection_names: list[str]):
+        self.aggregate_initialiser_prompt = construct_aggregate_initialiser_prompt(collection_names)
 
-class AggregateCollectionExecutor(dspy.Module):
+    def forward(self,
+            user_prompt: str, 
+            data_queried: list,
+            current_message: str,
+            previous_reasoning: dict
+        ) -> str:
+        
+        return self.aggregate_initialiser_prompt(
+            user_prompt=user_prompt, 
+            reference=create_reference(),
+            previous_reasoning=previous_reasoning,
+            data_queried=data_queried,
+            available_collections=self.collection_names,
+            current_message=current_message,
+        )
+
+class AggregateExecutor(dspy.Module):
 
     def __init__(self):
         super().__init__()
@@ -26,9 +46,10 @@ class AggregateCollectionExecutor(dspy.Module):
     def forward(
         self, 
         user_prompt: str, 
-        data_fields: list, 
+        data_types: list, 
         example_field: dict, 
         previous_reasoning: dict, 
+        previous_aggregations: list,
         collection_name: str
     ) -> str:
         
@@ -36,8 +57,29 @@ class AggregateCollectionExecutor(dspy.Module):
             user_prompt=user_prompt, 
             reference=create_reference(), 
             previous_reasoning=previous_reasoning,
-            data_fields=data_fields, 
+            data_types=data_types, 
             example_field=example_field, 
+        )
+
+
+        try:
+            is_aggregation_possible = eval(prediction.is_aggregation_possible)
+            assert isinstance(is_aggregation_possible, bool)
+        except Exception as e:
+            try:
+                dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_creator_prompt)
+            except Exception as e:
+                backend_print(f"Error getting is_aggregation_possible: {e}")
+                # Return empty values when there's an error
+                return None, None
+
+        if not is_aggregation_possible:
+            return None, None
+
+        dspy.Suggest(
+            prediction.code not in previous_aggregations,
+            f"The aggregation code you have produced: {prediction.code} has already been used. Please produce a new aggregation code.",
+            target_module=self.aggregate_prompt
         )
 
         # catch any errors in query execution for dspy assert

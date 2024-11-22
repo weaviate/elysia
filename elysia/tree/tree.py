@@ -83,6 +83,7 @@ class DecisionNode:
                data_queried: dict,
                collection_names: list[str],
                current_message: str = "",
+               tree_count: str = "",
                **kwargs):
         
         output, self.completed = self.decision_executor(
@@ -212,10 +213,12 @@ class Tree:
         self.run_until_node_id = run_until_node_id
         self.run_num_trees = run_num_trees
         self.num_trees_completed = 0
+        self.max_recursions = 5
 
         self.decision_nodes = {}
 
         self.data_queried = {}
+        self.data_queried_str = ""
         self.previous_info = []
         self.decision_history = []
         self.conversation_history = []
@@ -272,8 +275,8 @@ class Tree:
             id = "search",
             instruction = """
             Choose between querying the knowledge base via semantic search, or aggregating information from the knowledge base.
-            Querying is when the user is looking for specific information related to the content of the dataset.
-            Aggregating is when the user is looking for a high-level overview of the dataset, such as a summary of the quantity of some items.
+            Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query.
+            Aggregating is when the user is looking for a high-level overview of the dataset, such as summary statistics of the quantity of some items. Aggregation can also include grouping information by some property and returning statistics about the groups.
             """,
             options = {
                 "query": {
@@ -409,9 +412,21 @@ class Tree:
             self.returns.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
 
             if action_result.metadata["collection_name"] not in self.data_queried:
-                self.data_queried[action_result.metadata["collection_name"]] = len(action_result.objects)
+                self.data_queried[action_result.metadata["collection_name"]] = [{
+                    "count": len(action_result.objects),
+                    "prompt": user_prompt
+                }]
             else:
-                self.data_queried[action_result.metadata["collection_name"]] += len(action_result.objects)
+                self.data_queried[action_result.metadata["collection_name"]].append({
+                    "count": len(action_result.objects),
+                    "prompt": user_prompt
+                })
+            
+            # format data queried
+            self.data_queried_str = ""
+            for collection_name, properties in self.data_queried.items():
+                for property in properties:
+                    self.data_queried_str += f" - For query '{property['prompt']}', queried '{collection_name}' and retrieved {property['count']} objects {'(empty - either no objects for this prompt or incorrect query)' if property['count'] == 0 else ''}\n"
 
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
 
@@ -419,7 +434,7 @@ class Tree:
             user_prompt=user_prompt, 
             available_information=self.returns, 
             previous_reasoning=self.previous_reasoning,
-            data_queried=self.data_queried,
+            data_queried=self.data_queried_str,
             current_message=self.current_message,
             conversation_history=self.conversation_history,
             **kwargs
@@ -528,11 +543,12 @@ class Tree:
                 completed_tasks=self.previous_info,
                 available_information=self.returns,
                 conversation_history=self.conversation_history,
-                data_queried=self.data_queried,
+                data_queried=self.data_queried_str,
                 decision_tree=self.tree,
                 previous_reasoning=self.previous_reasoning,
                 collection_names=self.collection_names,
                 current_message=self.current_message,
+                tree_count=f"{self.num_trees_completed}/{self.max_recursions}",
                 idx=self.num_trees_completed
             )
 

@@ -229,31 +229,50 @@ class QueryCreatorPrompt(dspy.Signature):
 
     Here are some examples of how this code should be written:
 
-    # Basic query
+    # Semantic search query
+    This query uses semantic search _only_.
     ```
     collection.query.near_text(
         query="fashion icons",
         limit=3
     )
     ```
-    The `limit` parameter controls the number of results returned.
+    Use semantic search if the user prompt requests a search that needs to be based on a specific meaning, and not just a keyword.
+    The `query` argument is the search term, and the `limit` argument is the number of results to return.
+    The search term searches the _content_ of the documents, and should only contain words or meanings of words that will be in the text of the searched database, NOT the categories or properties.
 
-    # Basic hybrid search
+    # Keyword search query
+    This query uses keyword search _only_.
+    ```
+    collection.query.bm25(
+        query="food",
+        limit=3
+    )
+    ```
+    Use keyword search if the user prompt requests a search that needs a specific keyword.
+    The search term in `query` argument searches the _content_ of the documents for keywords ONLY, not the categories or properties of the data.
+
+    # Hybrid search query
+    This query uses hybrid search, a combination of semantic search and keyword search.
     ```
     collection.query.hybrid(
         query="fashion icons",
         limit=3
     )
     ```
+    Use hybrid search if the user prompt requests a search that needs a combination of semantic search and keyword search.
+    The `query` argument searches the _content_ of the documents for keywords and meaning ONLY, not the categories or properties of the data.
 
-    # Basic filter with one condition
+    # Fetch objects query
+    This query uses filters to retrieve objects from the collection.
+    Use fetch objects if the user prompt requests a search that needs to be based on certain properties of the data, and not just a keyword.
     ```
     collection.query.fetch_objects(
         filters=Filter.by_property("round").equal("Double Jeopardy!"),
         limit=3
     )
     ```
-    The above is used to retrieve objects from the collection _only_ using filters, no searching.
+    This does not use any searching, it only uses filters, similar to an SQL based query.
 
     # Filter with multiple conditions
     ```
@@ -265,7 +284,6 @@ class QueryCreatorPrompt(dspy.Signature):
         limit=3
     )
     ```
-    The above is also used to retrieve objects from the collection _only_ using filters, no searching. 
     You can also use `|` for OR.
 
     # Nested filters
@@ -282,16 +300,7 @@ class QueryCreatorPrompt(dspy.Signature):
     - Inside an operand expression, set operator equal to And or Or to add the nested group.
     - Add operands to the nested group as needed.
 
-    # Combining filters and search
-    ```
-    collection.query.near_text(
-        query="fashion icons",
-        filters=Filter.by_property("points").greater_than(200),
-        limit=3
-    )
-    ```
-    This performs vector search and also filters the results.
-
+    # Filter with contains any
     ```
     collection.query.fetch_objects(
         filters=Filter.by_property("answer").contains_any(["australia", "india"]),
@@ -300,6 +309,16 @@ class QueryCreatorPrompt(dspy.Signature):
     ```
     This is used to retrieve objects where the `answer` property in the data contains any of the strings in `["australia", "india"]`.
 
+    # Combining filters and search
+    This query performs vector search and also filters the results.
+    ```
+    collection.query.near_text(
+        query="fashion icons",
+        filters=Filter.by_property("points").greater_than(200),
+        limit=3
+    )
+    ```
+    # Combining filter with hybrid search
     ```
     collection.query.hybrid(
         query="shoes",
@@ -308,7 +327,9 @@ class QueryCreatorPrompt(dspy.Signature):
     )
     ```
     If the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.
+    This can be on `bm25` also.
 
+    # Sorting results
     You can also sort the results using the `sort` parameter, but only when using `fetch_objects`.
     So you CANNOT use it with `near_text` or `hybrid`.
 
@@ -320,12 +341,28 @@ class QueryCreatorPrompt(dspy.Signature):
         limit=3
     )
     ```
+
+    # Next level queries
+    If the user has already queried and received results, and is either asking a follow up question or you are performing a follow up query,
+    you can use the results from the previous query to help you create the next query.
+    For example, look for specific IDs or categories in the collection which you can use as filters, such as using .equal() or .contains_any() to find
+    other results with the same ID or category, but with different properties and modifying the query to the new request.
+    E.g.
+    ```
+    collection.query.fetch_objects(
+        filters=Filter.by_property("id").equal("123"),
+        limit=3
+    )
+    ```
     
+    ___ 
+
     Remember the most important distinction between the three types of queries:
     - `near_text` and `hybrid` have the `query` argument, which you use for _searching_ the database. These _can_ use `filters` but they CANNOT use `sort`.
     - `fetch_objects` is for retrieving objects that does not need and sort of search (and only using filters/sorting). This has the `filters` argument, and `sort` argument.
 
-    So, if the user prompt requires a search, you should use `near_text` or `hybrid`. But if it is only asking for objects based on certain properties, you should use `fetch_objects`.
+    So, if the user prompt requires a search, you should use `near_text`, `hybrid` or `bm25`. 
+    But if it is only asking for objects based on certain properties, something you can achieve by ONLY filtering, you should use `fetch_objects`.
 
     Use the above examples to guide you, but create your own query that is specific to the user prompt.
     You should not use one of the above examples directly, but rather use them as a guide to create your own query.
@@ -431,11 +468,11 @@ class QueryCreatorPrompt(dspy.Signature):
 
     current_message = dspy.InputField(
         description="""
-            The current message you, the assistant, have written to send to the user. 
-            This message has not been sent yet, you will add text to it, to be sent to the user later.
-            In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
-            """.strip(),
-            format = str
+        The current message you, the assistant, have written to send to the user. 
+        This message has not been sent yet, you will add text to it, to be sent to the user later.
+        In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+        """.strip(),
+        format = str
         )
     
     text_return = dspy.OutputField(

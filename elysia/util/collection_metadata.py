@@ -22,5 +22,17 @@ def get_collection_data(collection_name: str, lower_bound: int = 0, upper_bound:
                 for key, value in item.properties.items():
                     if isinstance(value, datetime.datetime):
                         item.properties[key] = format_datetime(value)
+                    elif (
+                        not isinstance(value, str) and 
+                        not isinstance(value, list) and 
+                        not isinstance(value, dict) and 
+                        not isinstance(value, float) and 
+                        not isinstance(value, int) and 
+                        not isinstance(value, bool)
+                    ):
+                        item.properties[key] = str(value)
+                    
+                    if isinstance(item.properties[key], str) and item.properties[key].startswith("[") and item.properties[key].endswith("]"):
+                        item.properties[key] = eval(item.properties[key])
             items.append(item.properties)
     return items
