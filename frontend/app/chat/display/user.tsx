@@ -54,14 +54,13 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       if (event.index > lastIndex) {
         const segmentText = text.slice(lastIndex, event.index);
         let className = "";
-
         if (activeTypes.has("noun")) {
           className =
-            "font-bold text-highlight [text-shadow:0_0_15px_theme(colors.highlight)] ";
+            "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlightshine)] ";
         }
         if (activeTypes.has("entity")) {
           className =
-            "text-accent font-bold [text-shadow:0_0_15px_theme(colors.accent)] ";
+            "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accentshine)] ";
         }
 
         segments.push(
@@ -89,11 +88,11 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
 
       if (activeTypes.has("noun")) {
         className =
-          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlight)] ";
+          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlightshine)] ";
       }
       if (activeTypes.has("entity")) {
         className =
-          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accent)] ";
+          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accentshine)] ";
       }
 
       segments.push(

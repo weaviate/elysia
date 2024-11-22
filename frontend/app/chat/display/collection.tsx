@@ -22,7 +22,7 @@ const CollectionDisplay: React.FC<CollectionDisplayProps> = ({
           e.stopPropagation();
           routerChangeCollection(collection_name);
         }}
-        className="flex justify-between items-center gap-2 mb-2 transition-all duration-300 cursor-pointer hover:text-primary text-secondary rounded-lg p-3"
+        className="flex justify-between items-center transition-all duration-300 cursor-pointer hover:text-primary text-secondary rounded-lg"
       >
         <div className="flex items-center gap-2">
           <FaDatabase className="" />

@@ -93,6 +93,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
   useEffect(() => {
     mergeMessages(messages);
+    console.log(messages);
   }, [messages]);
 
   return (
@@ -123,7 +124,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
               .map((message, index) => (
                 <div key={index + "message"} className="w-full flex">
                   {message.type === "result" && (
-                    <div className="w-full flex flex-col justify-start items-start ">
+                    <div className="w-full flex flex-col justify-start items-start">
                       {(message.payload as ResultPayload).type === "ticket" && (
                         <TicketsDisplay
                           key={`${index}-${message.id}`}
@@ -135,10 +136,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         "ecommerce" && (
                         <EcommerceDisplay
                           key={`${index}-${message.id}`}
-                          payload={
-                            (message.payload as ResultPayload)
-                              .objects as Ecommerce[]
-                          }
+                          payload={message.payload as ResultPayload}
                           routerChangeCollection={routerChangeCollection}
                         />
                       )}

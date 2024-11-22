@@ -44,6 +44,7 @@ export function useSocket(
         } else if (message.type === "tree_update") {
           updateTree(message);
         } else {
+          console.log(message);
           addMessageToConversation(
             [message],
             message.conversation_id,
