@@ -14,7 +14,7 @@ from weaviate.util import generate_uuid5
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def force_create_collection(client, collection_name: str, main_vector_name: str):
+def force_create_collection(client, collection_name: str, main_vector_names: str):
 
     # Create collection or delete existing one
     if client.collections.exists(collection_name):
@@ -26,19 +26,19 @@ def force_create_collection(client, collection_name: str, main_vector_name: str)
         vectorizer_config = [
             Configure.NamedVectors.text2vec_openai(
                 name = main_vector_name
-            )
+            ) for main_vector_name in main_vector_names
         ],
         properties = [
             Property(
                 name = main_vector_name,
                 data_type = DataType.TEXT
-            )
+            ) for main_vector_name in main_vector_names
         ]
     )
 
     return collection
 
-def soft_create_collection(client, collection_name: str, main_vector_name: str):
+def soft_create_collection(client, collection_name: str, main_vector_names: str):
 
     # Create collection or delete existing one
     if client.collections.exists(collection_name):
@@ -51,13 +51,13 @@ def soft_create_collection(client, collection_name: str, main_vector_name: str):
             vectorizer_config = [
                 Configure.NamedVectors.text2vec_openai(
                     name = main_vector_name
-                )
+                ) for main_vector_name in main_vector_names
             ],
             properties = [
                 Property(
                     name = main_vector_name,
                     data_type = DataType.TEXT
-                )
+                ) for main_vector_name in main_vector_names
             ]
         )
 
@@ -67,9 +67,9 @@ def soft_create_collection(client, collection_name: str, main_vector_name: str):
 def add_conversations_to_weaviate(client, df: pd.DataFrame, collection_name: str, force: bool = False):
 
     if force:
-        collection = force_create_collection(client, collection_name, "message_content")
+        collection = force_create_collection(client, collection_name, ["message_content"])
     else:
-        collection = soft_create_collection(client, collection_name, "message_content")
+        collection = soft_create_collection(client, collection_name, ["message_content"])
 
     unq_id = 0
     # add data to collection
@@ -106,9 +106,9 @@ def add_conversations_to_weaviate(client, df: pd.DataFrame, collection_name: str
 def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force: bool = False): 
 
     if force:
-        collection = force_create_collection(client, collection_name, "issue_content")
+        collection = force_create_collection(client, collection_name, ["issue_content"])
     else:
-        collection = soft_create_collection(client, collection_name, "issue_content")
+        collection = soft_create_collection(client, collection_name, ["issue_content"])
 
     usernames = [d[len("'login': '")+1:d[len("'login': '")+1:].find("'")+len("'login': '")+1] for d in df.user]
     labels = [[r["name"] for r in ast.literal_eval(row["labels"])] for i, row in df.iterrows()]
@@ -143,6 +143,41 @@ def add_issues_to_weaviate(client, df: pd.DataFrame, collection_name: str, force
         except Exception as e:
             print(f"Error adding issue {i}: {e}, continuing...")
 
+def add_ecommerce_to_weaviate(client, df: pd.DataFrame, collection_name: str, force: bool = False):
+
+    if force:
+        collection = force_create_collection(client, collection_name, ["name", "description"])
+    else:
+        collection = soft_create_collection(client, collection_name, ["name", "description"])
+
+    
+    # add data to collection
+    for i, row in tqdm(df.iterrows(), total=len(df), desc=f"Adding {collection_name} to Weaviate"):
+
+        try:
+
+            data_object = row.to_dict()
+
+            # weaviate metadata
+            uuid = generate_uuid5(data_object)
+
+            # evaluate the colours as a list
+            if data_object["colors"].startswith("["):
+                data_object["colors"] = eval(data_object["colors"])
+            elif "," in data_object["colors"]:
+                data_object["colors"] = data_object["colors"].split(",")
+            elif isinstance(data_object["colors"], str):
+                data_object["colors"] = [data_object["colors"]]
+
+            if not collection.data.exists(uuid):
+                collection.data.insert(
+                    properties = data_object,
+                    uuid = uuid
+                )
+
+        except Exception as e:
+            print(f"Error adding ecommerce item {i}: {e}, continuing...")
+
 if __name__ == "__main__":
 
     # connect to weaviate cloud
@@ -153,12 +188,17 @@ if __name__ == "__main__":
     )
 
     # read data frames
-    github_issues_df  = pd.read_csv("../verba_github_issues.csv")
+    # github_issues_df  = pd.read_csv("../verba_github_issues.csv")
     # slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
     # email_chains_df   = pd.read_csv("../verba_email_chains.csv")
+    ecommerce_df      = pd.read_csv("../ecommerce.csv")
+
 
     # add github issues data to weaviate collection
-    add_issues_to_weaviate(client, github_issues_df, "example_verba_github_issues", force=True)
+    # add_issues_to_weaviate(client, github_issues_df, "example_verba_github_issues", force=True)
+
+    # add ecommerce data to weaviate collection
+    add_ecommerce_to_weaviate(client, ecommerce_df, "ecommerce", force=True)
     
     # # add email and slack data to weaviate collections
     # add_conversations_to_weaviate(client, email_chains_df, "example_verba_email_chains", force=True)
