@@ -272,7 +272,11 @@ export function useConversations(id: string) {
           payload: {
             type: "text",
             metadata: {},
-            code: [],
+            code: {
+              language: "",
+              title: "",
+              text: "",
+            },
             objects: [query],
           },
         };

@@ -4,7 +4,9 @@ import {
   DecisionTreeNode,
   DecisionTreePayload,
   ErrorResponse,
+  Message,
   NERResponse,
+  ObjectRelevancyPayload,
   TitleResponse,
 } from "../types";
 
@@ -83,6 +85,27 @@ export async function getDecisionTree(
   };
   resetChoosenBlocked(data.tree);
   data.tree.choosen = true;
+  if (data.error) {
+    throw new Error(data.error);
+  }
+  return data;
+}
+
+export async function retrieveObjectRelevancy(
+  user_id: string,
+  conversation_id: string,
+  query_id: string,
+  objects: Message[]
+) {
+  const res = await fetch(`http://localhost:8000/api/object_relevance`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user_id, conversation_id, query_id, objects }),
+  });
+  const data: ObjectRelevancyPayload = await res.json();
+  console.log(data);
   if (data.error) {
     throw new Error(data.error);
   }

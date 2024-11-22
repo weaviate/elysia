@@ -115,12 +115,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   messagesEndRef={messagesEndRef}
                 />
               ))}
-            {currentStatus != "" && (
-              <div className="w-full flex justify-start items-center gap-2">
-                <FaCircle className="text-secondary text-sm pulsing" />
-                <p className="text-sm shine">{currentStatus}</p>
-              </div>
-            )}
             {!(Object.keys(currentQuery).length === 0) && (
               <div>
                 <hr className="w-full border-t border-background my-4 mb-28" />
@@ -130,6 +124,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="w-full justify-center items-center flex">
             <QueryInput
               query_length={Object.keys(currentQuery).length}
+              currentStatus={currentStatus}
               handleSendQuery={handleSendQuery}
             />
           </div>

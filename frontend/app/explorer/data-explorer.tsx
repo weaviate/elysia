@@ -92,7 +92,7 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
                   {collectionData.items.map((item, index) => (
                     <tr
                       key={index}
-                      className="hover:scale-105 bg-background hover:text-primary text-secondary hover:bg-foreground transition-all cursor-pointer duration-300 ease-in-out"
+                      className="bg-background hover:text-primary text-secondary hover:bg-foreground transition-all cursor-pointer duration-300 ease-in-out"
                       onClick={() => setSelectedCell(item)}
                     >
                       {Object.keys(collectionData.properties).map((key) => (
