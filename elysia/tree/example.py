@@ -15,9 +15,7 @@ if __name__ == "__main__":
         collection_names=["example_verba_github_issues", "example_verba_slack_conversations", "example_verba_email_chains", "ecommerce"],
         verbosity=2, 
         break_down_instructions=False, 
-        dspy_model=None,
-        training_route="search/query",
-        training_decision_output=True
+        dspy_model=None
     )
 
     tree.process_sync(

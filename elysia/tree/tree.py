@@ -620,6 +620,8 @@ class Tree:
                     decision_kwargs = {"task": task}
                 else:
                     decision_kwargs = {}
+            else:
+                decision_kwargs = {}
             
             if self.training_decision_output or self.training_route is None:
 

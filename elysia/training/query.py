@@ -51,7 +51,7 @@ def create_example(
     tree = Tree(
         collection_names=available_collections,
         verbosity=2,
-        training_route="search/query",
+        training_route=route,
         training_decision_output=True
     )
 
