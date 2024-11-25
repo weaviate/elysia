@@ -224,7 +224,10 @@ class Tree:
 
         # for training purposes, we may want to run the tree until a certain node
         # training route is e.g. "search/query/text_response"
-        self.training_route = training_route.split("/")
+        if training_route is not None:
+            self.training_route = training_route.split("/")
+        else:
+            self.training_route = None
 
         # whether to output model reasoning for the decisions even if there is a route
         self.training_decision_output = training_decision_output
