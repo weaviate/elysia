@@ -23,6 +23,7 @@ from elysia.util.api import (
     parse_text,
     parse_tree_update
 )
+from elysia.tree import base_lm, complex_lm
 from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate, Error, Warning
 from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval

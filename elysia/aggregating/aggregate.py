@@ -47,18 +47,18 @@ class AgenticAggregate:
         })
         yield Status(f"Writing aggregation")
 
-        # try:
-        with dspy.context(lm = complex_lm):
-            response, aggregation = self.aggregate_executor(
-                user_prompt=user_prompt, 
-                data_queried=data_queried, 
-                collection_information=collection_information, 
-                previous_reasoning=previous_reasoning,
-                previous_aggregations=self.previous_aggregations
-            )
+        try:
+            with dspy.context(lm = complex_lm):
+                response, aggregation = self.aggregate_executor(
+                    user_prompt=user_prompt, 
+                    data_queried=data_queried, 
+                    collection_information=collection_information, 
+                    previous_reasoning=previous_reasoning,
+                    previous_aggregations=self.previous_aggregations
+                )
 
-        # except Exception as e:
-        #     yield Error(f"Error in aggregating: {e}")
+        except Exception as e:
+            yield Error(f"Error in aggregating: {e}")
 
         # If the query is not possible, yield a generic retrieval and return nothing
         if aggregation is None:
