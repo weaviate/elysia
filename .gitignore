@@ -13,3 +13,5 @@ build/
 *.egg
 *.whl
 .venv/
+
+example-data/raw_ecommerce.json
