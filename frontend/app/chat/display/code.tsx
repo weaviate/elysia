@@ -45,7 +45,7 @@ const CodeDisplay: React.FC<CodeDisplayProps> = ({ payload }) => {
             wrapLongLines={true}
             showLineNumbers={true}
             style={oneDark}
-            customStyle={{ backgroundColor: "#061026", color: "#ffffff" }}
+            customStyle={{ backgroundColor: "#121212", color: "#ffffff" }}
             className="rounded-lg p-5 w-full text-sm shadow-xl"
           >
             {payload.text}

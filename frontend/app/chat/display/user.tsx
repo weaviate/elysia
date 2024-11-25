@@ -54,12 +54,13 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       if (event.index > lastIndex) {
         const segmentText = text.slice(lastIndex, event.index);
         let className = "";
-
         if (activeTypes.has("noun")) {
-          className = "font-bold text-highlight ";
+          className =
+            "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlightshine)] ";
         }
         if (activeTypes.has("entity")) {
-          className = "text-accent font-bold ";
+          className =
+            "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accentshine)] ";
         }
 
         segments.push(
@@ -86,10 +87,12 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       let className = "";
 
       if (activeTypes.has("noun")) {
-        className = "font-bold text-highlight shine-highlight ";
+        className =
+          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlightshine)] ";
       }
       if (activeTypes.has("entity")) {
-        className = "text-accent font-bold shine-accent ";
+        className =
+          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accentshine)] ";
       }
 
       segments.push(
@@ -104,17 +107,17 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
 
   return (
     <button
-      className="flex flex-col rounded-lg  transition-all duration-300 justify-start items-start mt-8 cursor-pointer"
+      className="flex flex-col rounded-lg transition-all duration-300 justify-start items-start mt-8 cursor-pointer w-full"
       onClick={onClick}
     >
-      <div className="max-w-3/5">
+      <div className="w-full">
         <div className="flex flex-grow justify-start items-start chat-animation">
           {!collapsed ? (
-            <p className="text-primary text-2xl">
+            <p className="text-primary text-3xl text-left">
               {renderTextWithHighlights(text)}
             </p>
           ) : (
-            <p className="text-secondary hover:text-primary text-lg transition-all duration-300">
+            <p className="text-secondary hover:text-primary text-lg transition-all duration-300 text-left">
               {text}
             </p>
           )}

@@ -9,9 +9,9 @@ interface TextDisplayProps {
 
 const TextDisplay: React.FC<TextDisplayProps> = ({ payload }) => {
   return (
-    <div className="w-full flex flex-col justify-start items-start">
+    <div className="w-full flex flex-wrap gap-1 justify-start items-start">
       {payload.map((text, idx) => (
-        <div key={idx} className="chat-animation">
+        <div key={idx} className="chat-animation text-wrap">
           <MarkdownMessageDisplay text={text.text} />
         </div>
       ))}

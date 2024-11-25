@@ -25,7 +25,7 @@ const ConversationsDisplay: React.FC<ConversationsDisplayProps> = ({
   }, [payload]);
 
   return (
-    <div className="w-full flex flex-col justify-start items-start ">
+    <div className="w-full flex flex-col justify-start items-start gap-4">
       {metadata["collection_name"] && (
         <CollectionDisplay
           collection_name={metadata["collection_name"]}
