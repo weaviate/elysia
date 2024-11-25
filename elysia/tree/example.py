@@ -19,12 +19,12 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "im looking for green pants"
+        "give me an itemised summary of the 10 most recent github tickets"
     )
 
     print(tree.conversation_history[-1]["content"])
-    print(tree.returns.aggregation["ecommerce"].objects)
-    print(tree.returns.aggregation["ecommerce"].metadata["last_code"])
+    print(tree.returns.retrieved["example_verba_github_issues"].objects)
+    # print(tree.returns.aggregation["example_verba_github_issues"].metadata["last_code"])
     
     # tree.process_sync(
     #     "query again to find out who else was in the conversation about that that message was in?"

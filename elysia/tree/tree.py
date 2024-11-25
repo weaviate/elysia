@@ -197,7 +197,8 @@ class Tree:
                 "ticket": "retrieve individual tickets, including all fields of the ticket.",
                 "ecommerce": "retrieve individual products, including all fields of the product.",
                 "generic": "retrieve any other type of information that does not fit into the other categories."
-            }
+            },
+            verbosity=verbosity
         )
 
         self.aggregator = AgenticAggregate(

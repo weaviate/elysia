@@ -21,11 +21,14 @@ class AgenticQuery:
     def __init__(self, 
                  query_creator_filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json", 
                  collection_names: list[str] = None, 
-                 return_types: dict[str, str] = None): 
+                 return_types: dict[str, str] = None,
+                 verbosity: int = 0): 
         
+        self.verbosity = verbosity
         self.collection_names = collection_names
 
         self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
+        self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
         
         # if len(query_creator_filepath) > 0:
         #     self.querier.load(query_creator_filepath)
@@ -76,6 +79,12 @@ class AgenticQuery:
         except Exception as e:
             yield Error(f"Error in query execution: {e}")
 
+        if self.verbosity > 0:
+            backend_print(f"[yellow]Query code[/yellow]: {query.code}")
+            backend_print(f"[yellow]Query output type[/yellow]: {query.output_type}")
+            backend_print(f"[yellow]Query collection name[/yellow]: {query.collection_name}")
+            backend_print(f"[yellow]Query return type[/yellow]: {query.return_type}")
+
         # If the query is not possible, yield a generic retrieval and return nothing
         if query is None:
             yield GenericRetrieval([], {"collection_name": query.collection_name, "impossible_prompts": [user_prompt]})
@@ -100,7 +109,7 @@ class AgenticQuery:
             objects[-1]["uuid"] = obj.uuid.hex
 
         # -- (Optional) Step 4: Summarise the objects
-        if query.return_type == "summary":
+        if query.output_type == "summary":
             Branch({
                 "name": "Object Summariser",
                 "description": "Generate itemised summaries of the retrieved objects."
