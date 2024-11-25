@@ -41,9 +41,7 @@ def create_example(user_prompt, collection_name, return_type, output_type, data_
         "day_of_week": date.strftime("%A"),
         "time_of_day": date.strftime("%I:%M %p")
     }
-
-
-
+    
     # return the example as a dspy.Example object
     return dspy.Example(
         user_prompt=user_prompt,

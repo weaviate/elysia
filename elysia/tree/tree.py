@@ -29,6 +29,7 @@ from elysia.text.objects import Text, Response, Summary, Code
 from elysia.querying.objects import Retrieval
 from elysia.aggregating.objects import Aggregation
 from elysia.globals.weaviate_client import client
+from elysia.training.prompt_executors import TrainingDecisionExecutor
 
 class RecursionLimitException(Exception):
     pass
@@ -36,18 +37,23 @@ class RecursionLimitException(Exception):
 class DecisionNode:
 
     def __init__(self, 
-                 id: str, 
-                 instruction: str, 
-                 options: list[dict[str, str]], 
-                 root: bool = False, 
-                 dspy_model: str = None
-                 ):
+            id: str, 
+            instruction: str, 
+            options: list[dict[str, str]], 
+            root: bool = False, 
+            dspy_model: str = None,
+            training: bool = False
+        ):
         
         self.id = id
         self.instruction = instruction
         self.options = options
         self.root = root
-        self.decision_executor = DecisionExecutor(list(options.keys())).activate_assertions(max_backtracks=4) 
+        self.training = training
+        if training:
+            self.decision_executor = TrainingDecisionExecutor(list(options.keys()))
+        else:
+            self.decision_executor = DecisionExecutor(list(options.keys())).activate_assertions(max_backtracks=4) 
 
         if dspy_model is not None:
             self.decision_executor.load(os.path.join("elysia", "training", "dspy_models", "decision", dspy_model + ".json"))
@@ -65,18 +71,19 @@ class DecisionNode:
         return out
 
     def decide(self, 
-               user_prompt: str, 
-               completed_tasks: list[dict], 
-               available_information: Returns, 
-               conversation_history: list[dict], 
-               decision_tree: dict, 
-               previous_reasoning: dict,
-               idx: int,
-               data_queried: dict,
-               collection_names: list[str],
-               current_message: str = "",
-               tree_count: str = "",
-               **kwargs):
+            user_prompt: str, 
+            completed_tasks: list[dict], 
+            available_information: Returns, 
+            conversation_history: list[dict], 
+            decision_tree: dict, 
+            previous_reasoning: dict,
+            idx: int,
+            data_queried: dict,
+            collection_names: list[str],
+            current_message: str = "",
+            tree_count: str = "",
+            **kwargs
+        ):
         
         output, self.completed = self.decision_executor(
             user_prompt = user_prompt, 
@@ -91,10 +98,15 @@ class DecisionNode:
             future_tasks = self._options_to_future(),
             collection_names = collection_names,
             current_message = current_message,
-            idx = idx
+            tree_count = tree_count,
+            idx = idx,
+            **kwargs
         )
 
-        self.decision = output.task
+        if self.training:
+            self.decision = kwargs.get("task", "")
+        else:
+            self.decision = output.task
         self.reasoning = output.reasoning
 
         if self.options[self.decision]['action'] is not None:
@@ -175,13 +187,14 @@ class BranchVisitor(ast.NodeVisitor):
 class Tree:
 
     def __init__(self, 
-                 conversation_id: str = "1", 
-                 collection_names: list[str] = [],
-                 verbosity: int = 1, 
-                 break_down_instructions: bool = False,
-                 run_num_trees: int = None,
-                 run_until_node_id: str = None,
-                 dspy_model: str = None):
+            conversation_id: str = "1", 
+            collection_names: list[str] = [],
+            verbosity: int = 1, 
+            break_down_instructions: bool = False,
+            training_route: str = None,
+            training_decision_output: bool = False,
+            dspy_model: str = None
+        ):
         
         self.conversation_id = conversation_id
         self.verbosity = verbosity
@@ -209,9 +222,13 @@ class Tree:
         self.query_id_to_prompt = {}
         self.prompt_to_query_id = {}
 
-        # for training purposes, we may want to run the tree until a certain node and a certain number of times
-        self.run_until_node_id = run_until_node_id
-        self.run_num_trees = run_num_trees
+        # for training purposes, we may want to run the tree until a certain node
+        # training route is e.g. "search/query/text_response"
+        self.training_route = training_route.split("/")
+
+        # whether to output model reasoning for the decisions even if there is a route
+        self.training_decision_output = training_decision_output
+
         self.num_trees_completed = 0
         self.max_recursions = 5
 
@@ -526,6 +543,20 @@ class Tree:
             for collection_name in collection_names_to_remove:
                 self._remove_collection_from_data(collection_name)
 
+    def _decide_from_route(self, node_id: str):
+        node = self.decision_nodes[node_id]
+        possible_nodes = node.options.keys()
+
+        next_route = self.training_route[0]
+        if next_route not in possible_nodes:
+            raise Exception(f"Next node in training route ({next_route}) not in possible nodes ({possible_nodes})")
+        
+        self.training_route = self.training_route[1:]
+        completed = len(self.training_route) == 0
+        
+        return next_route, node.options[next_route]["action"], completed
+        
+
     def hard_reset(self):
         self = Tree(verbosity=self.verbosity)
 
@@ -542,7 +573,14 @@ class Tree:
         self.returner = TreeReturner(conversation_id=self.conversation_id, tree_index=self.tree_index)
 
     def add_decision_node(self, id: str, instruction: str, options: dict[str, dict[str, str]], root: bool = False):
-        decision_node = DecisionNode(id, instruction, options, root, dspy_model = self.dspy_model)
+        decision_node = DecisionNode(
+            id, 
+            instruction, 
+            options, 
+            root, 
+            dspy_model = self.dspy_model, 
+            training = self.training_decision_output and self.training_route is not None
+        )
         self.decision_nodes[id] = decision_node
         return decision_node
 
@@ -572,51 +610,63 @@ class Tree:
         
         while True:
 
-            if self.run_until_node_id is not None and current_decision_node.id == self.run_until_node_id:
-                completed = True
-                break
+            if self.training_route is not None:
+                task, action_fn, completed = self._decide_from_route(current_decision_node.id)
 
-            decision, action_fn, completed = current_decision_node(
-                user_prompt=user_prompt, 
-                completed_tasks=self.previous_info,
-                available_information=self.returns,
-                conversation_history=self.conversation_history,
-                data_queried=self.data_queried_str,
-                decision_tree=self.tree,
-                previous_reasoning=self.previous_reasoning,
-                collection_names=self.collection_names,
-                current_message=self.current_message,
-                tree_count=f"{self.num_trees_completed}/{self.max_recursions}",
-                idx=self.num_trees_completed
-            )
-
-            self.current_message, message_update = update_current_message(self.current_message, decision.text_return)
-            print(f"Decision message: [bold yellow]'{message_update}'[/bold yellow]")
-
-            if message_update != "" and not (decision.task == "text_response" or decision.task == "summarize"):
-                yield self.returner._parse_text(Response([{"text": message_update}], {}), query_id = self.prompt_to_query_id[user_prompt])
-            yield self.returner._parse_tree_update(current_decision_node.id, decision.task, decision.reasoning, False, query_id = self.prompt_to_query_id[user_prompt])
+                if self.training_decision_output:
+                    decision_kwargs = {"task": task}
+                else:
+                    decision_kwargs = {}
             
-            self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = decision.reasoning
-            self.decision_history.append(decision.task)
-            self.previous_info.append(current_decision_node.construct_as_previous_info())            
+            if self.training_decision_output or self.training_route is None:
+
+                decision, action_fn, model_completed = current_decision_node(
+                    user_prompt=user_prompt, 
+                    completed_tasks=self.previous_info,
+                    available_information=self.returns,
+                    conversation_history=self.conversation_history,
+                    data_queried=self.data_queried_str,
+                    decision_tree=self.tree,
+                    previous_reasoning=self.previous_reasoning,
+                    collection_names=self.collection_names,
+                    current_message=self.current_message,
+                    tree_count=f"{self.num_trees_completed}/{self.max_recursions}",
+                    idx=self.num_trees_completed,
+                    **decision_kwargs
+                )
+                if self.training_route is None:
+                    task = decision.task
+                    completed = model_completed
+                    
+                self.current_message, message_update = update_current_message(self.current_message, decision.text_return)
+                print(f"Decision message: [bold yellow]'{message_update}'[/bold yellow]")
+
+                if message_update != "" and not (task == "text_response" or task == "summarize"):
+                    yield self.returner._parse_text(Response([{"text": message_update}], {}), query_id = self.prompt_to_query_id[user_prompt])
+                yield self.returner._parse_tree_update(current_decision_node.id, task, decision.reasoning, False, query_id = self.prompt_to_query_id[user_prompt])
+                
+                self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = decision.reasoning
+                self.previous_info.append(current_decision_node.construct_as_previous_info())
+
+            self.decision_history.append(task)
+                        
 
             if self.verbosity > 1:
                 backend_print(f"Node: [magenta]{current_decision_node.id}[/magenta]")
                 backend_print(f"Instruction: [italic]{current_decision_node.instruction.strip()}[/italic]")
-                backend_print(f"Decision: [green]{decision.task}[/green]\n")
+                backend_print(f"Decision: [green]{task}[/green]\n")
 
             if action_fn is not None:
                 async for result in self._evaluate_action(action_fn, user_prompt, completed, **kwargs):
                     yield result
 
-            if current_decision_node.options[decision.task]["next"] is None:
+            if current_decision_node.options[task]["next"] is None:
                 break
             else:
-                current_decision_node = self.decision_nodes[current_decision_node.options[decision.task]["next"]]
+                current_decision_node = self.decision_nodes[current_decision_node.options[task]["next"]]
 
         # end of the tree for this iteration
-        if not completed or (self.run_num_trees is not None and self.num_trees_completed < self.run_num_trees):
+        if not completed:
             
             if self.verbosity == 2:
                 backend_print("Model did [bold red]not[/bold red] complete overall goal! Restarting tree...")
