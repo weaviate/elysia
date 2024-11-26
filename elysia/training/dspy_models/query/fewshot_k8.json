@@ -1,0 +1,3598 @@
+{
+  "query_prompt": {
+    "lm": null,
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "user_prompt": "I want to find some 90s aesthetic clothing",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Given the user's prompt for 90s aesthetic clothing, and the available tasks, I will choose the \"search\" task. This is appropriate because:\n\n1. The user is explicitly looking for information about a specific type of clothing (90s aesthetic).\n2. We have an e-commerce collection available that might contain relevant information.\n3. We haven't searched any collections yet (tree_count is 0\/5).\n4. The search task will allow me to retrieve relevant information about 90s aesthetic clothing.\n\nThe most promising collection to search appears to be the \"ecommerce\" collection, which is likely to contain clothing-related information. By searching this collection, I can find items that match the user's interest in 90s aesthetic clothing.\n\nI'll proceed with the search task to retrieve potential clothing items or information about 90s fashion that the user might find interesting. This is the most direct way to address the user's query and provide them with useful information.",
+            "search": "Given the user's prompt for 90s aesthetic clothing, I will choose the \"query\" task. My reasoning is as follows:\n\n1. The user has a specific request for 90s aesthetic clothing, which requires a targeted search through the available collections.\n\n2. The \"query\" task is most appropriate because:\n   - It allows for semantic search, which can capture the nuanced concept of \"90s aesthetic clothing\"\n   - It will help retrieve specific items that match the user's interest\n   - The search can find relevant clothing items based on style, era, and aesthetic characteristics\n\n3. The current context suggests we have not yet retrieved any information about 90s clothing, so a query is necessary to provide the user with relevant results.\n\n4. The semantic search will allow for a more flexible and contextual search compared to a simple keyword match, capturing the essence of 90s aesthetic clothing beyond literal text matches.\n\n5. By using the query task, we can explore the e-commerce or fashion-related collections to find clothing items that embody the 90s aesthetic style, which may include characteristics like:\n   - Baggy or oversized silhouettes\n   - Bright and bold colors\n   - Specific patterns like tie-dye or geometric prints\n   - Iconic 90s fashion items like crop tops, mom jeans, platform shoes, etc.\n\nThe goal is to provide the user with a curated selection of clothing that captures the unique style and spirit of 90s fashion."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "average": 2241049487.556338,
+                "groups": []
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.1971830985915493
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 8.334507042253522
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [
+                  "closed",
+                  "open"
+                ],
+                "average": 1.0
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 74.7942794279428
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "average": 23.635863586358635,
+                "groups": []
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 3.031903190319032
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 76.15677966101696
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "average": 64.6927966101695,
+                "groups": []
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "average": 1.18114406779661,
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ]
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 44.66890380313199
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 37.66890380313199
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ],
+                "average": 1.2102908277404922
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "average": 98.6078523489933,
+                "groups": []
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ],
+                "average": 2.4049217002237135
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 3.237136465324385
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll help you find some 90s aesthetic clothing by searching our collections.",
+        "code": "collection.query.near_text(\n    query=\"90s aesthetic\",\n    limit=10\n)",
+        "collection_name": "ecommerce",
+        "return_type": "ecommerce",
+        "output_type": "original",
+        "text_return": "I'll help you find some 90s aesthetic clothing by searching our collections. I'll search ecommerce using semantic search.",
+        "reasoning": "The user is asking for some 90s aesthetic clothing. None of the categories in the collection match this request, so we should use a semantic search (near_text), to pick up the 90s aesthetic in the description of the clothing. The phrase \"90s aesthetic\" should capture the issue of the user looking for 90s aesthetic clothing. We apply a generic limit of 10, to get a broad picture of the issue. The user is requesting individual items, so we should show them the original return type of the clothing as they are."
+      },
+      {
+        "user_prompt": "Summarise Sofia's slack messages from the last 2 months.",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Based on the user's prompt to summarize Sofia's Slack messages from the last 2 months, I will choose the \"search\" task. The reasoning is as follows:\n\n1. The user is requesting specific information about Sofia's Slack messages.\n2. There is no existing information in the available_information field about these messages.\n3. The future_information field indicates that \"example_verba_slack_conversations\" is a queryable collection.\n4. This is the first pass through the decision tree (tree_count is 0\/5), so I should initiate a search.\n5. The search task will allow me to retrieve the relevant Slack messages before moving to summarization.\n\nKey considerations:\n- The task requires retrieving specific Slack conversations\n- No prior information is available about these messages\n- The search task is appropriate to gather the necessary information\n- This is the first step in addressing the user's request for a summary\n\nThe goal is to first search the Slack conversations collection, filtering for messages from Sofia in the last two months, which will then enable a subsequent summarization task.",
+            "search": "I will choose the \"query\" task for the following reasons:\n\n1. User Request Specificity:\n- The user has asked for a specific set of Slack messages from Sofia over the last two months\n- This requires a targeted search rather than a broad aggregation\n- A query task will allow precise filtering of messages by author and time range\n\n2. Current Information State:\n- No existing information is available about Sofia's Slack messages\n- The available_information field is empty for this type of data\n- A query is necessary to retrieve the initial set of messages\n\n3. Search Strategy:\n- I will need to use semantic search or keyword search to find Sofia's messages\n- The search will likely involve filtering by:\n  a) Author\/sender name: \"Sofia\"\n  b) Time range: Last 2 months from the current reference date (2024-11-25)\n\n4. Preparation for Further Processing:\n- Querying first will provide the raw data needed for potential subsequent aggregation or summarization\n- This approach allows for a step-by-step information retrieval process\n\n5. Decision Tree Context:\n- This is the first pass through the decision tree (0\/5)\n- Initiating a query is the most appropriate first step to gather necessary information\n\nThe primary goal is to retrieve Sofia's Slack messages from the last two months, setting the groundwork for potential further analysis or summarization."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "average": 2241049487.556338,
+                "groups": []
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 8.334507042253522
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "average": 1.1971830985915493,
+                "groups": []
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [
+                  "closed",
+                  "open"
+                ],
+                "average": 1.0
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "average": 74.7942794279428,
+                "groups": []
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 23.635863586358635
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "average": 76.15677966101696,
+                "groups": []
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "average": 64.6927966101695,
+                "groups": []
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "average": 1.18114406779661,
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ]
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 6.0,
+                "groups": []
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 37.66890380313199
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ],
+                "average": 1.395973154362416
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 1.2102908277404922,
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ]
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 98.6078523489933
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ],
+                "average": 2.4049217002237135
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 3.237136465324385
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll help you search for Sofia's Slack messages from the last 2 months. I'll start by retrieving the relevant Slack conversations to prepare for summarization.",
+        "code": "collection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"message_timestamp\").greater_than(format_datetime(datetime.datetime(2024, 9, 1, tzinfo=datetime.timezone.utc))) &\n        Filter.by_property(\"message_author\").equal(\"Sofia\")\n    ),\n    limit=30\n)",
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "message",
+        "output_type": "original",
+        "text_return": "I'll help you search for Sofia's Slack messages from the last 2 months. I'll start by retrieving the relevant Slack conversations to prepare for summarization. I'll search example_verba_slack_conversations using fetch_objects search, filtering by rty(\"message_timestamp\".",
+        "reasoning": "The user is asking for a summary of Sofia's slack messages from the last 2 months. Note that they are not asking for an summary of each message, but a summary of all messages from Sofia. So we should output \"original\" return type. Since the user is not looking for any specific information within the messages, we should use the generic fetch_objects query, with filters to pick out Sofia's messages. We can see in the collection information that there is an author called \"Sofia\", so we can filter for this exactly using the Filter.by_property(\"message_author\").equal(\"Sofia\") filter. We apply a generic limit of 30, to get a broad picture of the issue."
+      },
+      {
+        "user_prompt": "What are the most recent emails people are writing about verba?",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "The user has asked about the most recent emails related to Verba, which directly calls for a search action. Given the available collections, I can see there's an `example_verba_email_chains` collection that would be perfect for this query. \n\nThe instruction is clear that if I haven't searched yet (which is true, as the data_queried is empty), I should use the search task to retrieve information. This is the first pass through the decision tree (tree_count is 0\/5), so searching is the most appropriate initial action.\n\nThe future_information confirms that I can query multiple collections, but the email chains collection seems most relevant to the user's specific request about recent emails about Verba.\n\nMy goal is to retrieve the most recent and relevant email communications about Verba, which will then allow me to potentially summarize the findings in a subsequent step if information is successfully retrieved.",
+            "search": "Based on the user's query about the most recent emails related to Verba, I will choose the \"query\" task for the following reasons:\n\n1. The user is specifically asking about recent emails, which requires a targeted search through the email collections.\n\n2. The instruction clearly distinguishes between querying (for specific information retrieval) and aggregating (for high-level overview), and this request falls squarely into the querying category.\n\n3. From the previous reasoning, I know there's an `example_verba_email_chains` collection that is directly relevant to this query.\n\n4. This is the first pass through the decision tree (0\/5), so performing an initial search is the most appropriate action to gather information.\n\n5. The query task allows me to use semantic search to find the most recent and relevant emails about Verba, which will provide the specific information the user is seeking.\n\nThe goal is to retrieve a set of recent email communications that discuss Verba, which will help answer the user's question about what people are currently writing about the topic."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "average": 2241049487.556338,
+                "groups": []
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.1971830985915493
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "average": 8.334507042253522,
+                "groups": []
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [
+                  "closed",
+                  "open"
+                ],
+                "average": 1.0
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "average": 74.7942794279428,
+                "groups": []
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 23.635863586358635
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 6.0,
+                "groups": []
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 76.15677966101696
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "average": 1.18114406779661,
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ]
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 64.6927966101695
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 6.0,
+                "groups": []
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "average": 37.66890380313199,
+                "groups": []
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 1.2102908277404922,
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ]
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "average": 98.6078523489933,
+                "groups": []
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ],
+                "average": 2.4049217002237135
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 3.237136465324385
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll search for recent emails about Verba.",
+        "code": "collection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"message_timestamp\").greater_than(format_datetime(datetime.datetime(2024, 9, 1, tzinfo=datetime.timezone.utc))) # last 2 months\n    ),\n    sort = Sort.by_property(\"message_timestamp\", ascending=False), # sort so most recent is first (only for fetch_objects)\n    limit=30 # an arbitrary large number\n)",
+        "collection_name": "example_verba_email_chains",
+        "return_type": "message",
+        "output_type": "original",
+        "text_return": "I'll search for recent emails about Verba. I'll search example_verba_email_chains using fetch_objects search, sorting by y(\"message_timestamp\", ascending=False, filtering by rty(\"message_timestamp\".",
+        "reasoning": "Since we only need to sort and not perform any searches, we can use fetch_objects. The user is asking for the most recent emails, so we should sort the results by the message_timestamp property in descending order. The user is asking for the most recent emails, without a specified time range. We will use a single filter for this on a generic span of the last 2 months, since the current month is November 2024. Additionally, we apply a generic limit of 30, to get a broad picture of the issue. Also, we will output \"original\" return type, as the user does not seem to be asking for an itemised summary. We will additionally sort the results by the message_timestamp property in descending order, to get the most recent emails first."
+      },
+      {
+        "user_prompt": "List and sort the most common issues from the verba github issues collection from 2024.",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Based on the user's prompt to \"List and sort the most common issues from the verba github issues collection from 2024\", the most appropriate task is to search the knowledge base. \n\nReasoning breakdown:\n1. The user is requesting specific information about GitHub issues for the Verba project in 2024.\n2. The available tasks include a \"search\" option, which is perfect for retrieving this type of information.\n3. There is no existing information in the available_information field that answers the query.\n4. The future_information confirms that the \"example_verba_github_issues\" collection can be queried.\n5. This is the first pass through the decision tree (tree_count is 0\/5), so searching is the logical first step.\n6. The instruction explicitly suggests searching the knowledge base when information is needed.\n\nThe goal is to retrieve the most common issues from the Verba GitHub issues collection, which requires using the search task to query the specific collection and extract the relevant information.",
+            "search": "Reasoning for selecting the query task:\n\n1. User Request Analysis:\n- The user specifically wants a list of the most common GitHub issues for the Verba project in 2024\n- This requires retrieving specific information from a collection, which aligns perfectly with the query task\n\n2. Task Selection Rationale:\n- The \"query\" task allows for semantic search and retrieval of specific information\n- We need to extract and then potentially aggregate issues from the Verba GitHub issues collection\n- The first step is to retrieve the relevant issues using a targeted search query\n\n3. Search Strategy:\n- Will use a query that filters for:\n  a) Collection: example_verba_github_issues\n  b) Time frame: Issues from 2024\n  c) Sorting: By frequency\/occurrence of issues\n\n4. Anticipated Next Steps:\n- After retrieving the issues, we may need to use the aggregate task to count and sort the most common issues\n- This two-step approach (query then aggregate) will provide the most comprehensive answer to the user's request\n\n5. Contextual Considerations:\n- This is the first pass through the decision tree (0\/5)\n- No previous information is available about the issues\n- Query is the most appropriate initial task to gather the required information\n\nThe goal is to systematically retrieve and then analyze the Verba GitHub issues from 2024 to provide a clear, sorted list of the most common problems."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "average": 2241049487.556338,
+                "groups": []
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.1971830985915493
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 8.334507042253522
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [
+                  "closed",
+                  "open"
+                ],
+                "average": 1.0
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 74.7942794279428
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 23.635863586358635
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 76.15677966101696
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 64.6927966101695
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "average": 1.18114406779661,
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ]
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 3.1652542372881354
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 3.237136465324385,
+                "groups": []
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 37.66890380313199
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ],
+                "average": 1.2102908277404922
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "average": 98.6078523489933,
+                "groups": []
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 2.4049217002237135,
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ]
+              },
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll search the Verba GitHub issues collection for the most common issues from 2024. I'll retrieve and analyze the issues to provide a sorted list of the most frequent problems.",
+        "code": "collection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"issue_created_at\").greater_than(format_datetime(datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc))) &\n        Filter.by_property(\"issue_created_at\").less_than(format_datetime(datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)))\n    ),\n    sort = Sort.by_property(\"issue_created_at\", ascending=False), # sort so most recent is first\n    limit=30 # an arbitrary large number\n)",
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "original",
+        "text_return": "I'll search the Verba GitHub issues collection for the most common issues from 2024. I'll retrieve and analyze the issues to provide a sorted list of the most frequent problems. I'll search example_verba_github_issues using fetch_objects search, sorting by y(\"issue_created_at\", ascending=False, filtering by rty(\"issue_created_at\".",
+        "reasoning": "We need to use fetch_objects, as no semantic or keyword search is required, as the user is specifying a generic retrieval. We also need to specify a time range between 2024 and 2025, as the user is specifying a time-based retrieval. Since the user is asking for the most common issues, we should sort the results by the issue_created_at property in descending order."
+      },
+      {
+        "user_prompt": "Tell me what people are saying about the issue of the bug where you can't open the settings page in verba.",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Given the user's specific query about what people are saying about a bug in the Verba settings page, the most appropriate task is to search the available knowledge bases. \n\nKey considerations:\n1. The user is asking about a specific issue related to the Verba application\n2. This requires gathering information from potential sources like GitHub issues, Slack conversations, or email chains\n3. The future_information field confirms I can search collections like example_verba_github_issues, example_verba_slack_conversations, and example_verba_email_chains\n4. We are at the first pass of the decision tree (tree_count is 0\/5)\n5. No previous information has been retrieved yet\n6. The goal is to find discussions or reports about the settings page bug\n\nThe search task will help me retrieve relevant information about this specific issue, allowing me to understand what people are saying about the bug. This is the most direct way to address the user's query and gather concrete information from various sources.\n\nI will proceed with the search task to collect information about the Verba settings page bug from the available collections.",
+            "search": "To address the user's query about what people are saying about the bug in the Verba settings page, I will choose the \"query\" task. This is the most appropriate choice because:\n\n1. The user is seeking specific information about a particular issue (settings page bug)\n2. We need to search across different sources to gather people's discussions and reports\n3. A semantic search will help retrieve relevant conversations and bug reports\n4. The query task allows me to search collections that might contain information about this bug\n\nSpecific considerations:\n- The user wants to know what \"people are saying\" - this implies gathering qualitative information from various sources\n- This requires a targeted search across potential collections like GitHub issues, Slack conversations, or email chains\n- The query task will help me find the most relevant discussions about this specific bug\n- We are at the first pass of the decision tree (0\/5), so we have multiple opportunities to gather comprehensive information\n\nThe goal is to collect concrete examples, descriptions, and discussions about the settings page bug in Verba, providing the user with a comprehensive view of what people are experiencing and saying about this issue."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "average": 2241049487.556338,
+                "groups": []
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "average": 1.1971830985915493,
+                "groups": []
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "average": 8.334507042253522,
+                "groups": []
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [
+                  "closed",
+                  "open"
+                ],
+                "average": 1.0
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 74.7942794279428
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 23.635863586358635
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "average": 76.15677966101696,
+                "groups": []
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "average": 64.6927966101695,
+                "groups": []
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ],
+                "average": 1.18114406779661
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "average": 37.66890380313199,
+                "groups": []
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "average": 98.6078523489933,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 1.2102908277404922,
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ]
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 2.4049217002237135,
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ]
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 3.237136465324385,
+                "groups": []
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll search for information about the Verba settings page bug.",
+        "code": "collection.query.hybrid(\n    query=\"can't open settings page\",\n    limit=10\n)",
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "conversation",
+        "output_type": "original",
+        "text_return": "I'll search for information about the Verba settings page bug. I'll search example_verba_slack_conversations using hybrid search.",
+        "reasoning": "The user is asking for a specific issue, so hybrid search, which captures the exact phrase as well as its meaning, is appropriate. The phrase \"can't open settings page\" should capture the issue of the settings page not being accessible. We apply a generic limit of 10, to get a broad picture of the issue. Since the user is asking generically what people (plural) are saying, we should retrieve full conversations, including all messages and message authors, with timestamps and context of other messages in the conversation. Also, we will output \"original\" return type, as the user does not seem to be asking for an itemised summary."
+      },
+      {
+        "user_prompt": "Give me a range of the different tops there are in my ecommernce collection",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Based on the user's prompt requesting a range of tops in the ecommerce collection, the most appropriate task is to search the collection. The instruction clearly indicates that if I haven't searched yet, I should search the knowledge base. The future_information field also confirms that the ecommerce collection is available for querying. \n\nThe user is specifically asking about the variety of tops in the collection, which requires a direct search to retrieve the relevant information. Since this is the first search (tree_count is 0\/5) and no previous searches have been conducted, searching the ecommerce collection is the logical next step to gather the requested information.\n\nThe goal is to retrieve a comprehensive overview of the different tops available, which will then likely be followed by a summarization task to present the information to the user in a clear and concise manner.",
+            "search": "Based on the user's prompt requesting a range of tops in the ecommerce collection, I will choose the \"query\" task for the following reasons:\n\n1. User Request Analysis:\n- The user specifically asks for a \"range of different tops\"\n- This indicates a need for comprehensive information about the tops in the collection\n- A query task is most appropriate to retrieve this specific type of information\n\n2. Instruction Alignment:\n- The instruction suggests using semantic search when looking for specific information related to the dataset's content\n- The request for \"different tops\" aligns perfectly with a semantic search approach\n- This will allow me to retrieve a diverse and comprehensive set of tops from the collection\n\n3. Current Context:\n- This is the first search attempt (tree_count is 0\/5)\n- No previous searches have been conducted\n- No existing information is available about the tops in the collection\n- A direct query is necessary to gather the initial information\n\n4. Task Selection Rationale:\n- \"query\" task will allow me to search the ecommerce collection semantically\n- This will retrieve a range of tops, capturing their variety and characteristics\n- The semantic search can capture nuanced variations in top types beyond exact keyword matching\n\nThe primary goal is to retrieve a comprehensive overview of the different tops available in the ecommerce collection, setting the stage for potential further analysis or aggregation in subsequent steps."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 2241049487.556338
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 8.334507042253522
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.1971830985915493
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": [
+                  "closed",
+                  "open"
+                ]
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 74.7942794279428
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "average": 23.635863586358635,
+                "groups": []
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "average": 76.15677966101696,
+                "groups": []
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ],
+                "average": 1.18114406779661
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 64.6927966101695
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 6.0,
+                "groups": []
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 37.66890380313199
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 98.6078523489933
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 1.2102908277404922,
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ]
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "average": 2.4049217002237135,
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ]
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 3.237136465324385
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll search the ecommerce collection to find the different types of tops available. I'm going to perform a semantic search to retrieve the variety of tops in the collection.",
+        "code": "collection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"category\").equal(\"Tops\")\n    ),\n    limit=10\n)",
+        "collection_name": "ecommerce",
+        "return_type": "ecommerce",
+        "output_type": "summary",
+        "text_return": "I'll search the ecommerce collection to find the different types of tops available. I'm going to perform a semantic search to retrieve the variety of tops in the collection. I'll search ecommerce using fetch_objects search, filtering by rty(\"category\".",
+        "reasoning": "The user is asking for a range of the different tops there are in the ecommerce collection, so we should use a generic fetch_objects query. We can see in the collection information that there is a category called \"Tops\", so we can filter for this exactly using the Filter.by_property(\"category\").equal(\"Tops\") filter. We apply an arbitrary limit of 10, to get a broad picture of the issue. Since the user seems to be looking for an overview, and not the properties of the individual items, we should output \"summary\" return type to give a concise overview of the different tops."
+      },
+      {
+        "user_prompt": "Summarise the issue of 'PDF being too large' in verba.",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Based on the user's prompt asking to summarize the issue of 'PDF being too large' in Verba, and given that there is currently no available information, the most appropriate task is to search the knowledge base. \n\nReasoning breakdown:\n1. The user is specifically requesting information about a PDF size issue in Verba\n2. No previous information is available in the available_information field\n3. The search task is appropriate to retrieve relevant information from the knowledge base\n4. The future_information field suggests searching collections like GitHub issues, Slack conversations, and email chains\n5. This is the first pass through the decision tree (tree_count is 0\/5), so searching is the most logical first step\n6. The goal is to find specific information about the PDF size limitation or issue in Verba\n\nI will use the search task to query relevant collections to find information about this specific issue, focusing on GitHub issues, Slack conversations, and email chains that might contain details about PDF size limitations in Verba.",
+            "search": "I will choose the \"query\" task to search for specific information about the PDF size issue in Verba. My reasoning is as follows:\n\n1. User Prompt Analysis:\n   - The user specifically wants a summary of the 'PDF being too large' issue in Verba\n   - This requires finding precise, targeted information about this specific problem\n\n2. Search Strategy:\n   - A semantic search will help find the most relevant information about PDF size limitations\n   - I'll focus on searching collections that might contain technical documentation, issue reports, or development discussions\n   - The goal is to retrieve specific context about why PDFs might be too large and any associated challenges in Verba\n\n3. Context Considerations:\n   - This is the first pass through the decision tree (0\/5)\n   - No previous information is available about this issue\n   - A query task is the most appropriate first step to gather initial information\n\n4. Potential Search Sources:\n   - GitHub issues collection\n   - Slack conversation logs\n   - Email chain archives\n   - Technical documentation repositories\n\nThe query task will help me retrieve targeted information to provide a comprehensive summary of the PDF size issue in Verba, addressing the user's specific request."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "average": 2241049487.556338,
+                "groups": []
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "average": 202.76760563380282,
+                "groups": []
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.1971830985915493
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 8.334507042253522
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": [
+                  "closed",
+                  "open"
+                ]
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 74.7942794279428
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 23.635863586358635
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 76.15677966101696
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ],
+                "average": 1.18114406779661
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 64.6927966101695
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 37.66890380313199
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "average": 98.6078523489933,
+                "groups": []
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "average": 4.654362416107384,
+                "groups": []
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ],
+                "average": 1.2102908277404922
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ],
+                "average": 2.4049217002237135
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 3.237136465324385,
+                "groups": []
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll search for information about the 'PDF being too large' issue in Verba.",
+        "code": "collection.query.hybrid(\n    query=\"PDF too large\",\n    limit=10\n)",
+        "collection_name": "example_verba_github_issues",
+        "return_type": "ticket",
+        "output_type": "original",
+        "text_return": "I'll search for information about the 'PDF being too large' issue in Verba. I'll search example_verba_github_issues using hybrid search.",
+        "reasoning": "The user is asking for a specific issue, so hybrid search, which captures the exact phrase as well as its meaning, is appropriate. The phrase \"PDF too large\" should capture the issue of the PDF being too large, hoping to pick up this description in the content of the issues. We apply a generic limit of 10, to get a broad picture of the issue. Later, we will summarise the results, but the user is not asking for an itemised summary or does not seem to be, so we will output \"original\" return type."
+      },
+      {
+        "user_prompt": "Has Kaladin proposed any new features for verba recently?",
+        "previous_queries": [],
+        "data_queried": "",
+        "previous_reasoning": {
+          "tree_1": {
+            "base": "Based on the user's specific query about Kaladin and new Verba features, the most appropriate task is to search the available knowledge base. The instruction clearly indicates that for a query seeking specific information, I should use the search task. \n\nKey considerations:\n1. The query is directly asking about recent feature proposals by Kaladin\n2. No prior information is available in the current context\n3. We have multiple collections that could potentially contain relevant information (GitHub issues, Slack conversations, email chains)\n4. This is the first pass through the decision tree (tree_count is 0\/5)\n5. No data has been queried yet\n\nI will search across the available collections to find any recent information about Kaladin's proposed features for Verba. The goal is to retrieve any relevant details that can answer the user's specific question about new feature proposals.",
+            "search": "I will choose the \"query\" task for this specific request about Kaladin's recent feature proposals. The reasoning behind this decision is as follows:\n\n1. Specificity of the Query:\n   - The user is asking a very targeted question about recent feature proposals by a specific person (Kaladin) for a specific project (Verba)\n   - This requires a precise search through the available knowledge base to find relevant information\n\n2. Task Alignment:\n   - The instruction clearly states that querying is appropriate when looking for specific information related to the content of the dataset\n   - A semantic search will help find the most relevant documents or information about Kaladin's recent feature proposals\n\n3. Current Context:\n   - No prior information is available in the current context about Kaladin's features\n   - This is the first pass through the decision tree (0\/5 iterations)\n   - No data has been queried yet, which means we need to initiate a search\n\n4. Search Strategy:\n   - I will perform a semantic search across available collections\n   - Look for keywords like \"Kaladin\", \"Verba\", \"feature\", \"proposal\", \"new feature\"\n   - Focus on recent timeframes to match the \"recently\" qualifier in the user's question\n\nThe goal is to retrieve precise, relevant information that directly answers the user's specific query about Kaladin's recent feature proposals for Verba."
+          }
+        },
+        "collection_information": [
+          {
+            "fields": {
+              "issue_id": {
+                "range": [
+                  1882676623.0,
+                  2625892189.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 2241049487.556338
+              },
+              "issue_content": {
+                "range": [
+                  1.0,
+                  4155.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 202.76760563380282
+              },
+              "issue_created_at": {
+                "range": [
+                  "2023-09-05T20:31:32Z",
+                  "2024-10-31T03:29:51Z"
+                ],
+                "type": "date",
+                "average": "2024-05-17T08:49:34Z"
+              },
+              "issue_comments": {
+                "range": [
+                  0.0,
+                  26.0
+                ],
+                "type": "number",
+                "average": 3.038732394366197,
+                "groups": []
+              },
+              "issue_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.0
+              },
+              "issue_labels": {
+                "range": [
+                  0.0,
+                  3.0
+                ],
+                "type": "text[]",
+                "average": 0.7323943661971831,
+                "groups": []
+              },
+              "issue_updated_at": {
+                "range": [
+                  "2023-09-07T03:44:29Z",
+                  "2024-10-31T03:31:13Z"
+                ],
+                "type": "date",
+                "average": "2024-06-27T13:17:01.500000Z"
+              },
+              "issue_author": {
+                "range": [
+                  1.0,
+                  5.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 1.1971830985915493
+              },
+              "issue_title": {
+                "range": [
+                  1.0,
+                  73.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 8.334507042253522
+              },
+              "issue_state": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": [
+                  "closed",
+                  "open"
+                ]
+              }
+            },
+            "length": 284.0,
+            "summary": "This dataset represents a collection of GitHub issues for the Verba project, which is an open-source RAG (Retrieval-Augmented Generation) tool with various technical and user-experience related discussions.\nThe data fields include: \n- `issue_content`: Detailed description of the issue\n- `issue_id`: Unique identifier for each issue\n- `issue_created_at`: Timestamp of issue creation\n- `issue_updated_at`: Timestamp of last issue update\n- `issue_state`: Current status of the issue (open\/closed)\n- `issue_title`: Short summary of the issue\n- `issue_url`: Direct link to the GitHub issue\n- `issue_author`: GitHub username of the issue creator\n- `issue_labels`: Categories or tags associated with the issue\n- `issue_comments`: Number of comments on the issue\nThe issues span several categories including installation problems, feature enhancements, bug reports, Docker and deployment challenges, embedding and generation model integrations, and user interface improvements.\nThe data types include strings for text fields, datetime objects for timestamps, floating point numbers for comment counts, and lists\/arrays for labels and other complex fields.\nThis dataset provides a comprehensive view of the community's interactions, challenges, and suggestions for improving the Verba project, offering insights into the ongoing development and user experiences with the RAG tool.",
+            "name": "example_verba_github_issues"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  148.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 74.7942794279428
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Alice",
+                  "John",
+                  "Xaden",
+                  "Danny",
+                  "Jaina",
+                  "Zara",
+                  "Kaladin",
+                  "Sofia",
+                  "Ravi",
+                  "Tychus",
+                  "Vin",
+                  "Shallan",
+                  "Wu Zi-nan",
+                  "Edward",
+                  "Fatima",
+                  "Kerrigan",
+                  "Dalinar",
+                  "Sof\u00eda"
+                ],
+                "average": 1.1518151815181519
+              },
+              "message_content": {
+                "range": [
+                  6.0,
+                  45.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 23.635863586358635
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.031903190319032,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 909.0,
+            "summary": "This dataset contains a collection of technical team communication messages discussing software development issues, debugging strategies, and collaborative problem-solving across various technological domains.\nThe data fields include: 'message_content' (the actual text of the message), 'message_timestamp' (when the message was sent), 'message_index' (the sequence of the message in a conversation), 'message_author' (the name of the person sending the message), and 'conversation_id' (a unique identifier for each conversation thread).\nThe conversations cover multiple categories including Docker deployment, API configuration, software troubleshooting, technical debugging, project planning, translation efforts, and collaborative problem-solving across different technical challenges.\nThe data types appear to be primarily strings for message content and author, floating point numbers for conversation and message indices, and timestamp strings representing dates and times of the messages.\nThe dataset reveals a collaborative team environment with members like Alice, Danny, Kaladin, and others working together to solve complex technical issues, sharing knowledge, and supporting each other through various software development challenges.",
+            "name": "example_verba_slack_conversations"
+          },
+          {
+            "fields": {
+              "conversation_id": {
+                "range": [
+                  0.0,
+                  152.0
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 76.15677966101696
+              },
+              "message_author": {
+                "range": [
+                  1.0,
+                  4.0
+                ],
+                "type": "text",
+                "average": 1.18114406779661,
+                "groups": [
+                  "Zara",
+                  "Xaden",
+                  "Tychus",
+                  "Kaladin",
+                  "Shallan",
+                  "John",
+                  "Dalinar",
+                  "Wu Zi-nan",
+                  "Vin",
+                  "Alice",
+                  "Jaina",
+                  "Danny",
+                  "Fatima",
+                  "Ravi",
+                  "Kerrigan",
+                  "Sofia",
+                  "Edward",
+                  "Vera"
+                ]
+              },
+              "message_content": {
+                "range": [
+                  23.0,
+                  165.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 64.6927966101695
+              },
+              "message_index": {
+                "range": [
+                  0.0,
+                  9.0
+                ],
+                "type": "number",
+                "average": 3.1652542372881354,
+                "groups": []
+              },
+              "message_timestamp": {
+                "range": [
+                  6.0,
+                  6.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 6.0
+              }
+            },
+            "length": 944.0,
+            "summary": "This dataset contains a series of professional email and message exchanges between team members, primarily focused on technical support, software development, and project coordination.\nThe data fields include: \n- `message_content`: Contains the full text of each communication\n- `message_timestamp`: Records the date and time of each message\n- `message_index`: Appears to track the sequence of messages within a conversation\n- `message_author`: Identifies the sender of each message\n- `conversation_id`: A unique identifier linking related messages\nThe messages cover various categories such as technical support requests, product feature discussions, project updates, troubleshooting efforts, integration inquiries, and collaborative team communications.\nThe data types are primarily strings, with timestamps in a datetime format and numeric identifiers for conversation and message indices.\nThe dataset reveals a collaborative tech environment with multiple team members like Zara, John, Xaden, Fatima, and others working on software development, support, and product enhancement.",
+            "name": "example_verba_email_chains"
+          },
+          {
+            "fields": {
+              "subcategory": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Blouses & Shirts",
+                  "Trousers & Pants",
+                  "Sweaters & Cardigans",
+                  "Coats",
+                  "T-Shirts",
+                  "Jewelry",
+                  "Jeans",
+                  "Skirts",
+                  "Hoodies & Sweatshirts",
+                  "Jackets",
+                  "Jumpsuits & Rompers",
+                  "Tank Tops",
+                  "Casual Dresses",
+                  "Sneakers",
+                  "Bags & Totes",
+                  "Formal Dresses",
+                  "Boots",
+                  "Heals",
+                  "Hats & Beanies",
+                  "Shorts",
+                  "Vests",
+                  "Blazers",
+                  "Belts",
+                  "Dress Shoes",
+                  "Sandals",
+                  "Scarves & Wraps"
+                ],
+                "average": 2.040268456375839
+              },
+              "description": {
+                "range": [
+                  17.0,
+                  92.0
+                ],
+                "type": "text",
+                "average": 44.66890380313199,
+                "groups": []
+              },
+              "reviews": {
+                "range": [
+                  16.0,
+                  79.0
+                ],
+                "type": "text",
+                "groups": [],
+                "average": 37.66890380313199
+              },
+              "collection": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text",
+                "average": 1.395973154362416,
+                "groups": [
+                  "Cottagecore",
+                  "Light Academia",
+                  "Y2K",
+                  "Cyberpunk",
+                  "Goblincore",
+                  "Techwear",
+                  "Dark Academia",
+                  "Fairycore"
+                ]
+              },
+              "tags": {
+                "range": [
+                  2.0,
+                  11.0
+                ],
+                "type": "text",
+                "average": 2.988814317673378,
+                "groups": [
+                  "[]",
+                  "['new in']",
+                  "['most loved']",
+                  "['sale']",
+                  "['new in', 'most loved']",
+                  "['sale', 'most loved']"
+                ]
+              },
+              "product_id": {
+                "range": [],
+                "type": "uuid",
+                "average": 0.0,
+                "groups": []
+              },
+              "price": {
+                "range": [
+                  14.99,
+                  425.0
+                ],
+                "type": "number",
+                "average": 98.6078523489933,
+                "groups": []
+              },
+              "rating": {
+                "range": [
+                  4.2,
+                  4.9
+                ],
+                "type": "number",
+                "groups": [],
+                "average": 4.654362416107384
+              },
+              "category": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Tops",
+                  "Bottoms",
+                  "Outerwear",
+                  "Accessories",
+                  "Dresses & Jumpsuits",
+                  "Footwear"
+                ],
+                "average": 1.2102908277404922
+              },
+              "image_url": {
+                "range": [
+                  1.0,
+                  1.0
+                ],
+                "type": "text",
+                "average": 1.0,
+                "groups": []
+              },
+              "colors": {
+                "range": [
+                  1.0,
+                  2.0
+                ],
+                "type": "text[]",
+                "average": 1.6711409395973154,
+                "groups": []
+              },
+              "brand": {
+                "range": [
+                  1.0,
+                  3.0
+                ],
+                "type": "text",
+                "groups": [
+                  "Loom & Aura",
+                  "Nova Nest",
+                  "Vivid Verse",
+                  "Canvas & Co.",
+                  "Echo & Stitch",
+                  "NixNada",
+                  "Solemn Chic",
+                  "Urban Threadline",
+                  "Eko & Stitch"
+                ],
+                "average": 2.4049217002237135
+              },
+              "name": {
+                "range": [
+                  2.0,
+                  6.0
+                ],
+                "type": "text",
+                "average": 3.237136465324385,
+                "groups": []
+              }
+            },
+            "length": 447.0,
+            "summary": "This dataset contains a diverse fashion collection featuring clothing and accessories across five distinct aesthetic styles: Dark Academia, Light Academia, Cyberpunk, Y2K, Cottagecore, Goblincore, and Fairycore.\nThe data fields include: description (detailed product narrative), category (type of clothing item), rating (customer satisfaction score), colors (available color options), collection (aesthetic style), brand (manufacturer), tags (product highlights), image URL, product name, price, subcategory (specific clothing type), reviews (customer feedback), and a unique product ID.\nThe collections represented include Dark Academia (scholarly and vintage-inspired), Light Academia (optimistic and intellectual), Cyberpunk (futuristic and tech-oriented), Y2K (early 2000s nostalgic), Cottagecore (pastoral and romantic), Goblincore (nature-inspired and rustic), and Fairycore (magical and ethereal).\nThe data types encompass strings (descriptions, names), numbers (prices, ratings), arrays (colors, reviews), and unique identifiers (product IDs), providing a comprehensive and structured representation of fashion items.\nEach product is meticulously described with a narrative that captures its aesthetic essence, accompanied by customer reviews, precise categorization, and high-quality imagery, making this a rich and immersive fashion dataset.",
+            "name": "ecommerce"
+          }
+        ],
+        "current_message": "I'll search for recent information about Kaladin's proposed features for Verba.",
+        "code": "collection.query.near_text(\n    query=\"feature proposal\",\n    filters=(\n        Filter.by_property(\"message_timestamp\").greater_than(format_datetime(datetime.datetime(2024, 9, 1, tzinfo=datetime.timezone.utc))) &\n        Filter.by_property(\"message_author\").equal(\"Kaladin\")\n    ),\n    limit=5\n)",
+        "collection_name": "example_verba_slack_conversations",
+        "return_type": "conversation",
+        "output_type": "original",
+        "text_return": "I'll search for recent information about Kaladin's proposed features for Verba. I'll search example_verba_slack_conversations using semantic search, filtering by rty(\"message_timestamp\".",
+        "reasoning": "The user is asking for a specific type of message, a \"feature proposal\", so we should search for this phrase. Since this can be quite broad, we will use a semantic search (near_text). The phrase \"feature proposal\" should capture the issue of the user proposing a new feature. We apply a generic limit of 5, to get a broad picture of the issue. We can see in the collection information that there is an author called \"Kaladin\", so we can filter for this exactly using the Filter.by_property(\"message_author\").equal(\"Kaladin\") filter. Also, we will output \"original\" return type, as the user does not seem to be asking for an itemised summary."
+      }
+    ],
+    "signature": {
+      "instructions": "You are an expert Query agent. You decide what collection to query, how the queried objects should be returned, and most importantly, how to query the collection via writing python code in Weaviate's Python client.\n\nInstructions for writing the query:\nYou must write code to retrieve the objects from the collection.\n\nYou can use one of the following functions:\n\n- `collection.query.near_text(query, limit)`: this is a semantic search on the text of the documents.\n- `collection.query.hybrid(query, limit)`: this is a hybrid search on the text of the documents.\n- `collection.query.fetch_objects(filters, limit)`: this is a filter search on the documents.\n\nHere are some examples of how this code should be written:\n\n# Semantic search query\nThis query uses semantic search _only_.\n```\ncollection.query.near_text(\n    query=\"fashion icons\",\n    limit=3\n)\n```\nUse semantic search if the user prompt requests a search that needs to be based on a specific meaning, and not just a keyword.\nThe `query` argument is the search term, and the `limit` argument is the number of results to return.\nThe search term searches the _content_ of the documents, and should only contain words or meanings of words that will be in the text of the searched database, NOT the categories or properties.\n\n# Keyword search query\nThis query uses keyword search _only_.\n```\ncollection.query.bm25(\n    query=\"food\",\n    limit=3\n)\n```\nUse keyword search if the user prompt requests a search that needs a specific keyword.\nThe search term in `query` argument searches the _content_ of the documents for keywords ONLY, not the categories or properties of the data.\n\n# Hybrid search query\nThis query uses hybrid search, a combination of semantic search and keyword search.\n```\ncollection.query.hybrid(\n    query=\"fashion icons\",\n    limit=3\n)\n```\nUse hybrid search if the user prompt requests a search that needs a combination of semantic search and keyword search.\nThe `query` argument searches the _content_ of the documents for keywords and meaning ONLY, not the categories or properties of the data.\n\n# Fetch objects query\nThis query uses filters to retrieve objects from the collection.\nUse fetch objects if the user prompt requests a search that needs to be based on certain properties of the data, and not just a keyword.\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"round\").equal(\"Double Jeopardy!\"),\n    limit=3\n)\n```\nThis does not use any searching, it only uses filters, similar to an SQL based query.\n\n# Filter with multiple conditions\n```\ncollection.query.fetch_objects(\n    filters=(\n        Filter.by_property(\"round\").equal(\"Double Jeopardy!\") &\n        Filter.by_property(\"points\").less_than(600)\n    ),\n    limit=3\n)\n```\nYou can also use `|` for OR.\n\n# Nested filters\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").like(\"*bird*\") &\n            (Filter.by_property(\"points\").greater_than(700) | Filter.by_property(\"points\").less_than(300)),\n    limit=3\n)\n```\nTo create a nested filter, follow these steps.\n- Set the outer operator equal to And or Or.\n- Add operands.\n- Inside an operand expression, set operator equal to And or Or to add the nested group.\n- Add operands to the nested group as needed.\n\n# Filter with contains any\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").contains_any([\"australia\", \"india\"]),\n    limit=3\n)\n```\nThis is used to retrieve objects where the `answer` property in the data contains any of the strings in `[\"australia\", \"india\"]`.\n\n# Combining filters and search\nThis query performs vector search and also filters the results.\n```\ncollection.query.near_text(\n    query=\"fashion icons\",\n    filters=Filter.by_property(\"points\").greater_than(200),\n    limit=3\n)\n```\n# Combining filter with hybrid search\n```\ncollection.query.hybrid(\n    query=\"shoes\",\n    filters=Filter.by_property(\"answer\").like(\"*inter*\"),\n    limit=3\n)\n```\nIf the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.\nThis can be on `bm25` also.\n\n# Sorting results\nYou can also sort the results using the `sort` parameter, but only when using `fetch_objects`.\nSo you CANNOT use it with `near_text` or `hybrid`.\n\nFor example:\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"answer\").like(\"*inter*\"),\n    sort = Sort.by_property(\"answer\", ascending=True),\n    limit=3\n)\n```\n\n# Next level queries\nIf the user has already queried and received results, and is either asking a follow up question or you are performing a follow up query,\nyou can use the results from the previous query to help you create the next query.\nFor example, look for specific IDs or categories in the collection which you can use as filters, such as using .equal() or .contains_any() to find\nother results with the same ID or category, but with different properties and modifying the query to the new request.\nE.g.\n```\ncollection.query.fetch_objects(\n    filters=Filter.by_property(\"id\").equal(\"123\"),\n    limit=3\n)\n```\n\nThe `Filter` class has the following methods:\n|  Static methods defined here:\n|\n|  .all_of(filters: List[weaviate.collections.classes.filters._Filters]) -> weaviate.collections.classes.filters._Filters\n|      Combine all filters in the input list with an AND operator.\n|\n|  .any_of(filters: List[weaviate.collections.classes.filters._Filters]) -> weaviate.collections.classes.filters._Filters\n|      Combine all filters in the input list with an OR operator.\n|\n|  .by_property(name: str, length: bool = False) -> weaviate.collections.classes.filters._FilterByProperty\n|      Define a filter based on a property to be used when querying and deleting from a collection.\n\nMost of the time when using filters, you will be using the `.by_property` method.\nThe `.by_property` method has the following methods:\n|  .contains_all(self, val: Union[Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property contains all of the given values.\n|\n|  .contains_any(self, val: Union[Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property contains any of the given values.\n|\n|  .equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is equal to the given value.\n|\n|  .greater_or_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is greater than or equal to the given value.\n|\n|  .greater_than(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is greater than the given value.\n|\n|  .is_none(self, val: bool) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is `None`.\n|\n|  .less_or_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is less than or equal to the given value.\n|\n|  .less_than(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is less than the given value.\n|\n|  .like(self, val: str) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is like the given value.\n|\n|      This filter can make use of `*` and `?` as wildcards. \n|\n|  .not_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters\n|      Filter on whether the property is not equal to the given value.\n\n___ \n\nRemember the most important distinction between the three types of queries:\n- `near_text` and `hybrid` have the `query` argument, which you use for _searching_ the database. These _can_ use `filters` but they CANNOT use `sort`.\n- `fetch_objects` is for retrieving objects that does not need and sort of search (and only using filters\/sorting). This has the `filters` argument, and `sort` argument.\n\nSo, if the user prompt requires a search, you should use `near_text`, `hybrid` or `bm25`. \nBut if it is only asking for objects based on certain properties, something you can achieve by ONLY filtering, you should use `fetch_objects`.\n\nUse the above examples to guide you, but create your own query that is specific to the user prompt.\nYou should not use one of the above examples directly, but rather use them as a guide to create your own query.\nFilters are optional, and if not specified in the user prompt, you should not use them.\n\nYou have access to a function called `format_datetime(dt)` which formats a datetime object to the ISO format without the timezone offset. \nUse this function to format the datetime objects in the filters.\n\nAssume you have access to the object `collection` which is a Weaviate collection.  ",
+      "fields": [
+        {
+          "prefix": "User Prompt:",
+          "description": "The user's original query"
+        },
+        {
+          "prefix": "Reference:",
+          "description": "Information about the state of the world NOW such as the date and time, used to frame the query."
+        },
+        {
+          "prefix": "Previous Reasoning:",
+          "description": "Your reasoning that you have output from previous decisions.\n            This is so you can use the information from previous decisions to help you decide what type of query to create.\n\n            This is a dictionary of the form:\n            {\n                \"tree_1\": \n                {\n                    \"decision_1\": \"Your reasoning for the decision 1\",\n                    \"decision_2\": \"Your reasoning for the decision 2\",\n                    ...\n                },\n                \"tree_2\": {\n                    \"decision_1\": \"Your reasoning for the decision 1\",\n                    \"decision_2\": \"Your reasoning for the decision 2\",\n                    ...\n                }\n            }\n            where `tree_1`, `tree_2`, etc. are the ids of the trees in the tree, and `decision_1`, `decision_2`, etc. are the ids of the decisions in the tree.\n            \n            Use this to base your current action from previous reasoning."
+        },
+        {
+          "prefix": "Collection Information:",
+          "description": "Information about each of the collections, so that you can choose which collection to query, as well as understand the format of the collection you will eventually query.\n            This is of the form:\n            {\n                \"name\": collection name,\n                \"length\": number of objects in the collection,\n                \"summary\": summary of the collection,\n                \"fields\": {\n                    \"field_name\": {\n                        \"groups\": a comprehensive list of all unique text values that exist in the field. if the field is not text, this should be an empty list,\n                        \"mean\": mean of the field. if the field is text, this refers to the means length (in tokens) of the texts in this field. if the type is a list, this refers to the mean length of the lists,\n                        \"range\": minimum and maximum values of the length.\n                        \"type\": the data type of the field.\n                    },\n                    ...\n                }\n            }\n            You will be given one of these for each collection that you can choose from.\n            Use this to determine which collection to query, based on the user prompt."
+        },
+        {
+          "prefix": "Data Queried:",
+          "description": "A list of items, showing whether a query has been completed or not.\n            This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.\n            If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.\n            Use this to determine which collection to query next, based on what has been queried already (and the user prompt)."
+        },
+        {
+          "prefix": "Previous Queries:",
+          "description": "For each collection, a comma separated list of existing code that has been used to query the collection. \n            This can be used to avoid generating duplicate queries. \n            If this field is an empty list, you are generating the first query."
+        },
+        {
+          "prefix": "Current Message:",
+          "description": "The current message you, the assistant, have written to send to the user. \n            This message has not been sent yet, you will add text to it, to be sent to the user later.\n            In essence, the concatenation of this field, current_message, and the response field, will be sent to the user."
+        },
+        {
+          "prefix": "Reasoning: Let's think step by step in order to",
+          "description": "${reasoning}"
+        },
+        {
+          "prefix": "Collection Name:",
+          "description": "The name of the collection to query. Only provide the name exactly as it appears."
+        },
+        {
+          "prefix": "Return Type:",
+          "description": "The type of objects to return. Only provide the type name exactly as it appears."
+        },
+        {
+          "prefix": "Output Type:",
+          "description": "One of: 'original' or 'summary'. Output the name exactly as it appears.\n            'original' means you will return the original objects returned. Use this most of the time, unless the user has specifically asked for summaries.\n            'summary' means you will return an itemised summary of each of the objects returned.\n            You should only choose 'summary' if the user has specifically asked for individual summaries of the objects in the user_prompt.\n            I.e., in the user prompt, they have directly asked for summaries of the objects.\n            Otherwise, you should choose 'original'.\n            Be _very_ sparing with 'summary', as it is more expensive to compute."
+        },
+        {
+          "prefix": "Code:",
+          "description": "The generated query code only. Do not enclose it in quotes or in ```. Just the code only."
+        },
+        {
+          "prefix": "Is Query Possible:",
+          "description": "A boolean value indicating whether the query is able to return any information. (True\/False). Return True if the query is able to return information, and False otherwise.\n            Base this decision on the collection metadata, and the user prompt.\n            If, for example, the filter\/sort values do not exist in the collection metadata, you should return False, as the query is not possible.\n            However, if the query is extremely generic (just a regular search with no filters or search), and the user prompt does not specify what to filter on, you should return True, \n            as the query will just be a regular search.\n            Return True or False only, nothing else."
+        },
+        {
+          "prefix": "Text Return:",
+          "description": "Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.\n            You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.\n            Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.\n            Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.\n            Do not ask any questions, and do not ask the user to confirm or approve of your actions.\n            You should only add one extra sentence to the current_message field, and that is it. Do not add any more.\n            If current_message is empty, then this is a new message you are starting, so you should write out only a new message.\n            Use gender neutral language."
+        }
+      ]
+    }
+  }
+}

@@ -7,13 +7,14 @@ from rich import print
 
 import asyncio
 import nest_asyncio
+import datetime
 
 # from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
 from elysia.text.text import Summarizer, TextResponse
 from elysia.querying.agentic_query import AgenticQuery
 from elysia.aggregating.aggregate import AgenticAggregate
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
-from elysia.util.parsing import remove_whitespace, update_current_message
+from elysia.util.parsing import remove_whitespace, update_current_message, format_datetime
 from elysia.util.logging import backend_print
 from elysia.util.api import (
     parse_result, 
@@ -320,18 +321,36 @@ class Tree:
         self.tree = {}
         self._construct_tree(self.root, self.tree)
 
-        # Get collection metadata
+        self._get_collection_information()
+        if verbosity > 1:
+            backend_print("Initialised tree with the following decision nodes:")
+            for decision_node in self.decision_nodes.values():
+                backend_print(f"  - [magenta]{decision_node.id}[/magenta]: {list(decision_node.options.keys())}")
+
+    def _get_collection_information(self):
         self.collection_information = []
         for collection_name in self.collection_names:
             metadata_name = f"ELYSIA_METADATA_{collection_name}__"
             if client.collections.exists(metadata_name):
                 metadata = client.collections.get(metadata_name).query.fetch_objects(limit=1)
-                self.collection_information.append(metadata.objects[0].properties)
-        
-        if verbosity > 1:
-            backend_print("Initialised tree with the following decision nodes:")
-            for decision_node in self.decision_nodes.values():
-                backend_print(f"  - [magenta]{decision_node.id}[/magenta]: {list(decision_node.options.keys())}")
+                properties = {}
+
+                def format_datetime_in_dict(d):
+                    for key, value in d.items():
+                        if isinstance(value, datetime.datetime):
+                            d[key] = format_datetime(value)
+                        elif isinstance(value, dict):
+                            format_datetime_in_dict(value)
+                        elif isinstance(value, list):
+                            for i, item in enumerate(value):
+                                if isinstance(item, dict):
+                                    format_datetime_in_dict(item)
+                                elif isinstance(item, datetime.datetime):
+                                    d[key][i] = format_datetime(item)
+
+                format_datetime_in_dict(metadata.objects[0].properties)
+                properties.update(metadata.objects[0].properties)
+                self.collection_information.append(properties)
 
     def _get_root(self):
         for decision_node in self.decision_nodes.values():            
@@ -571,6 +590,7 @@ class Tree:
         self.previous_reasoning = {}
         self.num_trees_completed = 0
         self.data_queried = {}
+        self.current_message = ""
 
         self.tree_index += 1
         self.returner = TreeReturner(conversation_id=self.conversation_id, tree_index=self.tree_index)
@@ -610,6 +630,7 @@ class Tree:
                 print(f"[bold yellow]User prompt:[/bold yellow][yellow]\n{user_prompt}[/yellow]")
 
         current_decision_node = self.decision_nodes[self.root]
+        training_completed = False # flag to check if the training route has been completed, if True, halts execution
         
         while True:
 
@@ -617,6 +638,7 @@ class Tree:
                 task, action_fn, completed = self._decide_from_route(current_decision_node.id)
 
                 if self.training_decision_output:
+                    training_completed = completed
                     decision_kwargs = {"task": task}
                 else:
                     decision_kwargs = {}
@@ -661,11 +683,11 @@ class Tree:
                 backend_print(f"Instruction: [italic]{current_decision_node.instruction.strip()}[/italic]")
                 backend_print(f"Decision: [green]{task}[/green]\n")
 
-            if action_fn is not None:
+            if action_fn is not None and not training_completed:
                 async for result in self._evaluate_action(action_fn, user_prompt, completed, **kwargs):
                     yield result
 
-            if current_decision_node.options[task]["next"] is None:
+            if current_decision_node.options[task]["next"] is None or training_completed:
                 break
             else:
                 current_decision_node = self.decision_nodes[current_decision_node.options[task]["next"]]
@@ -685,7 +707,6 @@ class Tree:
         else:
 
             self.num_trees_completed += 1
-            self.current_message = ""
 
             yield self.returner._parse_finished(query_id = self.prompt_to_query_id[user_prompt])
 

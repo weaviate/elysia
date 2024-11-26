@@ -19,7 +19,7 @@ from elysia.querying.objects import GenericRetrieval, MessageRetrieval, Conversa
 class AgenticQuery:
 
     def __init__(self, 
-                 query_creator_filepath: str = "elysia/training/dspy_models/agentic_query/fewshot_k12.json", 
+                 query_filepath: str = "elysia/training/dspy_models/query/fewshot_k8.json", 
                  collection_names: list[str] = None, 
                  return_types: dict[str, str] = None,
                  verbosity: int = 0): 
@@ -30,9 +30,9 @@ class AgenticQuery:
         self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
         
-        # if len(query_creator_filepath) > 0:
-        #     self.querier.load(query_creator_filepath)
-        #     backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_creator_filepath}[/italic magenta]")
+        if len(query_filepath) > 0:
+            self.querier.load(query_filepath)
+            backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_filepath}[/italic magenta]")
 
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names

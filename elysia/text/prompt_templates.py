@@ -62,7 +62,12 @@ class SummarizingPrompt(dspy.Signature):
         """.strip()
     )
     subtitle = dspy.OutputField(description="A subtitle for the summary")
-    summary = dspy.OutputField(description="The summary of the retrieved objects. You can use markdown formatting.")
+    summary = dspy.OutputField(description="""
+    The summary of the retrieved objects. You can use markdown formatting.
+    Don't provide an itemised list of the objects, since they will be displayed to the user anyway.
+    Your summary should take account what the user prompt is, and the information in the retrieved objects,
+    and be a natural continuation of the conversation history, whilst summarising the information.
+    """.strip())
 
 class TextResponsePrompt(dspy.Signature):
     """
