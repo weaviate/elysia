@@ -19,7 +19,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "give me an itemised summary of the 10 most recent github tickets"
+        "Summarize the last 10 GitHub Tickets"
     )
 
     print(tree.conversation_history[-1]["content"])

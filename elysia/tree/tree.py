@@ -265,6 +265,7 @@ class Tree:
             Use all information available to you to make the decision.
             If you _have searched already_ (based on completed_tasks), and there is no information (based on available_information), 
             you should assume that the task is impossible, hence choose text_response to reply this to the user.
+            If you look forward and see that you will not be able to search for any relevant information, you should choose text_response.
             Otherwise, if you haven't searched yet, you should search the knowledge base.
             If you don't need to search, i.e. the user is talking to you, or you have already searched and there is no new information, choose text_response.
             If you have searched, and there is available information, you should choose summarize to reply this to the user.
@@ -284,9 +285,9 @@ class Tree:
                     "next": None    # next=None represents the end of the tree
                 },
                 "text_response": {
-                    "description": "Respond to the user's prompt. This should be used when the user wants a response that is explicitly not any of the other options. These responses are informal, polite, and assistant-like. This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
+                    "description": "End the conversation. This should be used when the user has finished their query, or you have nothing more to do.",
                     "future": "",
-                    "action": TextResponse(),
+                    "action": None,
                     "next": None
                 }
             },
@@ -609,11 +610,6 @@ class Tree:
 
     async def process(self, user_prompt: str, query_id: str = "1", recursion_counter: int = 0, first_run: bool = True, **kwargs):
 
-        if recursion_counter > 5:
-            backend_print(f"[bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
-            yield self.returner._parse_warning("Recursion limit reached!", query_id = self.prompt_to_query_id[user_prompt])
-            raise RecursionLimitException("Recursion limit reached!")  # Force exit from the async function by raising an exception
-
         self.previous_reasoning[f"tree_{self.num_trees_completed+1}"] = {}
 
         if first_run:
@@ -646,6 +642,11 @@ class Tree:
                 decision_kwargs = {}
             
             if self.training_decision_output or self.training_route is None:
+                
+                tree_count = f"{self.num_trees_completed}/{self.max_recursions}"
+                if recursion_counter > 5:
+                    tree_count += f" (recursion limit reached, write your full chat response accordingly)"
+
 
                 decision, action_fn, model_completed = current_decision_node(
                     user_prompt=user_prompt, 
@@ -657,18 +658,30 @@ class Tree:
                     previous_reasoning=self.previous_reasoning,
                     collection_names=self.collection_names,
                     current_message=self.current_message,
-                    tree_count=f"{self.num_trees_completed}/{self.max_recursions}",
+                    tree_count=tree_count,
                     idx=self.num_trees_completed,
                     **decision_kwargs
                 )
+
+                # additional end criteria, task picked is "text_response"
+                if decision.task == "text_response":
+                    model_completed = True
+
+                # additional end criteria, recursion limit reached
+                if recursion_counter > 5:
+                    backend_print(f"[bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
+                    yield self.returner._parse_warning("Recursion limit reached! Forcing text response.", query_id = self.prompt_to_query_id[user_prompt])
+                    model_completed = True
+
+                # set current variables (if not in training mode)
                 if self.training_route is None:
                     task = decision.task
                     completed = model_completed
-                    
-                self.current_message, message_update = update_current_message(self.current_message, decision.text_return)
+                
+                self.current_message, message_update = update_current_message(self.current_message, decision.reasoning_update_message)
                 print(f"Decision message: [bold yellow]'{message_update}'[/bold yellow]")
 
-                if message_update != "" and not (task == "text_response" or task == "summarize"):
+                if message_update != "" and not completed:
                     yield self.returner._parse_text(Response([{"text": message_update}], {}), query_id = self.prompt_to_query_id[user_prompt])
                 yield self.returner._parse_tree_update(current_decision_node.id, task, decision.reasoning, False, query_id = self.prompt_to_query_id[user_prompt])
                 
@@ -691,22 +704,14 @@ class Tree:
                 break
             else:
                 current_decision_node = self.decision_nodes[current_decision_node.options[task]["next"]]
-
-        # end of the tree for this iteration
-        if not completed:
-            
-            if self.verbosity == 2:
-                backend_print("Model did [bold red]not[/bold red] complete overall goal! Restarting tree...")
-
-            # recursive call to restart the tree since the goal was not completed
-            self.num_trees_completed += 1
-            async for result in self.process(user_prompt, query_id, recursion_counter + 1, first_run=False, **kwargs):
-                yield result
-
+    
         # end of all trees
-        else:
+        if completed:
 
             self.num_trees_completed += 1
+
+            if decision.full_chat_response != "" and decision.task != "summarize":
+                yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
             yield self.returner._parse_finished(query_id = self.prompt_to_query_id[user_prompt])
 
@@ -716,6 +721,16 @@ class Tree:
 
                 for i, info in enumerate(self.previous_info):
                     backend_print(f"[Decision {i} ({info['id']})]: [bold]Instruction:[/bold] [cyan italic]{info['instruction']}[/cyan italic] -> [bold]Result:[/bold] [green]{info['decision']}[/green]")
+
+        # end of the tree for this iteration
+        else:
+            if self.verbosity == 2:
+                backend_print("Model did [bold red]not[/bold red] yet complete overall goal! Restarting tree...")
+
+            # recursive call to restart the tree since the goal was not completed
+            self.num_trees_completed += 1
+            async for result in self.process(user_prompt, query_id, recursion_counter + 1, first_run=False, **kwargs):
+                yield result
 
     def process_sync(self, user_prompt: str, query_id: str = "1", recursion_counter: int = 0, first_run: bool = True, **kwargs):
         """Synchronous version of process() for testing purposes"""

@@ -3,7 +3,9 @@ import logging
 import asyncio
 import json
 import spacy
-
+import psutil
+import time
+import websockets  # Add this with other imports
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, Request, status
@@ -125,10 +127,19 @@ async def process(data: QueryData, websocket: WebSocket):
     tree.soft_reset()
     try:
         async for yielded_result in tree.process(user_prompt, query_id=query_id):
-            await websocket.send_json(yielded_result)
-            await asyncio.sleep(0)
-    except RecursionLimitException:
-        pass
+            try:
+                await websocket.send_json(yielded_result)
+            except WebSocketDisconnect:
+                logger.info("Client disconnected during processing")
+                break
+            # Add a small delay between messages to prevent overwhelming
+            await asyncio.sleep(0.001)
+    except Exception as e:
+        logger.error(f"Error in process function: {str(e)}")
+        await websocket.send_json({
+            "type": "error",
+            "message": "An error occurred during processing"
+        })
 
 # Process endpoint
 @app.websocket("/ws/query")
@@ -137,14 +148,18 @@ async def websocket_endpoint(websocket: WebSocket):
     WebSocket endpoint for processing pipelines.
     Handles real-time communication for pipeline execution and status updates.
     """
+    memory_process = psutil.Process()
+    initial_memory = memory_process.memory_info().rss
     try:
         await websocket.accept()
         while True:
             try:
 
                 # Wait for a message from the client
+                logger.info(f"Memory usage before receiving: {psutil.Process().memory_info().rss / 1024 / 1024}MB")
                 data = await websocket.receive_json()
-
+                logger.info(f"Memory usage after receiving: {psutil.Process().memory_info().rss / 1024 / 1024}MB")
+                
                 # Check if the message is a disconnect request
                 if data.get("type") == "disconnect":
                     logger.info("Received disconnect request")
@@ -153,10 +168,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.info(f"Received message: {data}")
 
                 # == main code ==
-                await process(data, websocket)
+                # Add timing information
+                start_time = time.time()
+                try:
+                    async with asyncio.timeout(60):  # adjust timeout as needed
+                        await process(data, websocket)
+                except asyncio.TimeoutError:
+                    logger.warning("Processing timeout - sending heartbeat")
+                    await websocket.send_json({"type": "heartbeat"})
+                    
+                logger.info(f"Processing time: {time.time() - start_time}s")
+
+                if time.time() % 60 < 1:  # Log every minute
+                    current_memory = memory_process.memory_info().rss
+                    logger.info(f"Memory usage: {(current_memory - initial_memory) / 1024 / 1024}MB")
+                
 
             except WebSocketDisconnect:
-                logger.info("WebSocket disconnected")
+                logger.info("WebSocket disconnected", exc_info=True)
                 break  # Exit the loop on disconnect
 
             except RuntimeError as e:

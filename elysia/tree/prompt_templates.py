@@ -243,7 +243,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format=bool
         )
-        text_return = dspy.OutputField(
+        reasoning_update_message = dspy.OutputField(
             desc="""
             Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). 
             If this field is empty, this is a new message you are starting.
@@ -259,6 +259,18 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
             Use gender neutral language.
             You should always add an extra sentence to the current_message field, summarising your reasoning and explaining the decision.
+            """.strip(),
+            format = str
+        )
+        full_chat_response = dspy.OutputField(
+            description="""
+            The response to the user's prompt. Use gender neutral language.
+            Use current_message to frame your response, as if you are continuing the paragraph.
+            But this field should be a full response to the user's prompt, so try to answer the user's prompt in full.
+            You should still use what information is available to you to answer the user's prompt.
+            If nothing is relevant, then you should just respond with a simple text response, apologising that you cannot answer the users query.
+            If the recursion limit has been reached, it is likely some or all of the information is not relevant, so you should answer based on what is available.
+            If possible, you should apologise for anything you cannot achieve, and suggest alternative ways of prompting that you think would help, based on what you know about the decision process.
             """.strip(),
             format = str
         )

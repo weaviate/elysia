@@ -36,7 +36,6 @@ class AgenticAggregate:
         collection_information = kwargs.get("collection_information", [])
         current_message = kwargs.get("current_message", "")
         
-
         # Get some metadata about the collection
         self._find_previous_aggregations(available_information)
 

@@ -44,6 +44,7 @@ query_payload = QueryData(
     conversation_id="1"
 )
 
+
 class fake_websocket:
     async def send_json(self, data: dict):
         print(data) 

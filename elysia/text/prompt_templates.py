@@ -62,12 +62,14 @@ class SummarizingPrompt(dspy.Signature):
         """.strip()
     )
     subtitle = dspy.OutputField(description="A subtitle for the summary")
-    summary = dspy.OutputField(description="""
-    The summary of the retrieved objects. You can use markdown formatting.
-    Don't provide an itemised list of the objects, since they will be displayed to the user anyway.
-    Your summary should take account what the user prompt is, and the information in the retrieved objects,
-    and be a natural continuation of the conversation history, whilst summarising the information.
-    """.strip())
+    summary = dspy.OutputField(
+        description="""
+        The summary of the retrieved objects. You can use markdown formatting.
+        Don't provide an itemised list of the objects, since they will be displayed to the user anyway.
+        Your summary should take account what the user prompt is, and the information in the retrieved objects,
+        and be a natural continuation of the conversation history, whilst summarising the information.
+        """.strip()
+    )
 
 class TextResponsePrompt(dspy.Signature):
     """
@@ -139,6 +141,17 @@ class TextResponsePrompt(dspy.Signature):
         In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
         """.strip(),
         format = str
+    )
+    recursion_limit_reached = dspy.InputField(
+        description="""
+        Whether the recursion limit has been reached.
+        If True, then you are only providing a text response because the searching/querying process has reached its limit.
+        If there is available information, then it has previously been deemed not enough to satisfy the users request. 
+        However, you should still use what information is available to you to answer the user's prompt.
+        If nothing is relevant, then you should just respond with a simple text response, apologising that you cannot answer the users query,
+        and suggesting alternatives that you think would help.
+        """.strip(),
+        format = bool
     )
     response = dspy.OutputField(
         description="""

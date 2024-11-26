@@ -63,32 +63,32 @@ class AgenticQuery:
         })
         yield Status(f"Writing query")
 
-        try:
-            with dspy.context(lm = complex_lm):
+        # try:
+        with dspy.context(lm = complex_lm):
 
-                # Run the query executor (write and execute the query)
-                response, query = self.querier(
-                    user_prompt = user_prompt, 
-                    previous_queries = self.previous_queries, 
-                    data_queried = data_queried,
-                    collection_information = collection_information,
-                    previous_reasoning = previous_reasoning,
-                    current_message = current_message
-                )
+            # Run the query executor (write and execute the query)
+            response, query = self.querier(
+                user_prompt = user_prompt, 
+                previous_queries = self.previous_queries, 
+                data_queried = data_queried,
+                collection_information = collection_information,
+                previous_reasoning = previous_reasoning,
+                current_message = current_message
+            )
 
-        except Exception as e:
-            yield Error(f"Error in query execution: {e}")
+        # except Exception as e:
+        #     yield Error(f"Error in query execution: {e}")
 
+        # If the query is not possible, yield a generic retrieval and return nothing
+        if query is None:
+            yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [user_prompt]})
+            return
+        
         if self.verbosity > 0:
             backend_print(f"[yellow]Query code[/yellow]: {query.code}")
             backend_print(f"[yellow]Query output type[/yellow]: {query.output_type}")
             backend_print(f"[yellow]Query collection name[/yellow]: {query.collection_name}")
             backend_print(f"[yellow]Query return type[/yellow]: {query.return_type}")
-
-        # If the query is not possible, yield a generic retrieval and return nothing
-        if query is None:
-            yield GenericRetrieval([], {"collection_name": query.collection_name, "impossible_prompts": [user_prompt]})
-            return
 
         current_message, message_update = update_current_message(current_message, query.text_return)
 
