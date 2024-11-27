@@ -1,12 +1,22 @@
 import dspy
+from rich import print
+from rich.panel import Panel
 
+# Util
 from elysia.util.logging import backend_print
 from elysia.util.parsing import update_current_message, format_aggregation_response
 
+# Globals
 from elysia.tree import complex_lm
-from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch, TreeUpdate
-from elysia.text.objects import Response, Code
+
+# Objects
+from elysia.api.objects import TreeUpdate, Status, Error, Warning, Branch
+from elysia.tree.objects import TreeData, ActionData, DecisionData
+from elysia.tree.objects import Returns
+from elysia.text.objects import Response
 from elysia.aggregating.objects import GenericAggregation
+
+# Prompt Executors
 from elysia.aggregating.prompt_executors import AggregateExecutor
 
 class AgenticAggregate:
@@ -14,8 +24,10 @@ class AgenticAggregate:
     def __init__(self, 
                  aggregate_initialiser_filepath: str = "elysia/training/dspy_models/aggregate_initialiser/fewshot_k12.json", 
                  aggregate_executor_filepath: str = "elysia/training/dspy_models/aggregate_executor/fewshot_k12.json",
-                 collection_names: list[str] = None):
+                 collection_names: list[str] = None,
+                 verbosity: int = 0):
         
+        self.verbosity = verbosity
         self.collection_names = collection_names
         self.aggregate_executor = AggregateExecutor(collection_names=collection_names).activate_assertions()
     
@@ -29,15 +41,16 @@ class AgenticAggregate:
                     self.previous_aggregations.append({"collection_name": collection_name, "previous_aggregations": metadata["previous_aggregations"]})  
 
     async def __call__(self, 
-            user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs
+            tree_data: TreeData,
+            action_data: ActionData,
+            decision_data: DecisionData
         ):
-        
-        data_queried = kwargs.get("data_queried", [])
-        collection_information = kwargs.get("collection_information", [])
-        current_message = kwargs.get("current_message", "")
+
+        # set some temporary variables
+        current_message = tree_data.current_message
         
         # Get some metadata about the collection
-        self._find_previous_aggregations(available_information)
+        self._find_previous_aggregations(decision_data.available_information)
 
         # -- Step 2: Aggregate
         Branch({
@@ -46,23 +59,25 @@ class AgenticAggregate:
         })
         yield Status(f"Writing aggregation")
 
-        try:
-            with dspy.context(lm = complex_lm):
-                response, aggregation = self.aggregate_executor(
-                    user_prompt=user_prompt, 
-                    data_queried=data_queried, 
-                    collection_information=collection_information, 
-                    previous_reasoning=previous_reasoning,
-                    previous_aggregations=self.previous_aggregations
-                )
-
-        except Exception as e:
-            yield Error(f"Error in aggregating: {e}")
-
-        # If the query is not possible, yield a generic retrieval and return nothing
+        with dspy.context(lm = complex_lm):
+            response, aggregation, error_message = self.aggregate_executor(
+                user_prompt=tree_data.user_prompt, 
+                conversation_history=tree_data.conversation_history,
+                data_queried=tree_data.data_queried_string(), 
+                collection_information=action_data.collection_information, 
+                previous_reasoning=tree_data.previous_reasoning,
+                previous_aggregations=self.previous_aggregations
+            )
+            
+        # If there is an error, yield a generic retrieval and return nothing
         if aggregation is None:
-            yield GenericAggregation([], {"collection_name": aggregation.collection_name, "impossible_prompts": [user_prompt]})
+            yield GenericAggregation([], {"collection_name": aggregation.collection_name, "impossible_prompts": [tree_data.user_prompt]})
+            if error_message != "":
+                yield Error(error_message)
             return
+
+        if self.verbosity > 0:
+            print(Panel.fit(aggregation.code, title="Aggregation code", padding=(1,1), border_style="yellow"))
 
         current_message, message_update = update_current_message(current_message, aggregation.text_return)
 
@@ -82,9 +97,7 @@ class AgenticAggregate:
         }
 
         # Yield results to front end
-        if message_update != "":
-            yield Response([{"text": message_update}], {})
-        yield Code([{"text": aggregation.code, "language": "python", "title": "Aggregation"}], {})
+        yield Response([{"text": message_update}], {})
         yield TreeUpdate(from_node="aggregate", to_node="aggregate_executor", reasoning=aggregation.reasoning, last = False)
         yield Status(f"Aggregated from {aggregation.collection_name}")
 

@@ -222,6 +222,23 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             """.strip(), 
             format = str
         )
+        conversation_history = dspy.InputField(
+            description="""
+            The conversation history between the user and the assistant (you), including all previous messages.
+            During this conversation, the assistant has also generated some information, which is also relevant to the decision.
+            This information is stored in `available_information` field.
+            If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses should use these as context.
+            The history is a list of dictionaries of the format:
+            [
+                {
+                    "role": "user" or "assistant",
+                    "content": The message
+                }
+            ]
+            In the order which the messages were sent.
+            """.strip(),
+            format = str
+        )
         previous_reasoning = dspy.InputField(
             desc="""
             Your reasoning that you have output from previous decisions.
@@ -365,6 +382,28 @@ class ObjectSummaryPrompt(dspy.Signature):
     These objects can be of any type, and you should summarise them in a way that is useful to the user.
     """
     objects = dspy.InputField(desc="The objects to summarise.", format = list[dict])
+    current_message = dspy.InputField(
+        description="""
+        The current message you, the assistant, have written to send to the user. 
+        This message has not been sent yet, you will add text to it, to be sent to the user later.
+        In essence, the concatenation of this field, current_message, and the response field, will be sent to the user.
+        """.strip(),
+        format = str
+    )
+
+    text_return = dspy.OutputField(
+        desc="""
+        Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
+        You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
+        Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
+        Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
+        Do not ask any questions, and do not ask the user to confirm or approve of your actions.
+        You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
+        If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
+        Use gender neutral language.
+        """.strip(),
+        format = str
+    )
     summaries = dspy.OutputField(desc="""
         The summaries of each individaual object, in a list of strings.
         Your output should be a list of strings in Python format, e.g. `["summary_1", "summary_2", ...]`.

@@ -232,14 +232,14 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
 
         user_prompt = dspy.InputField(desc="The user's original query")
         reference = dspy.InputField(desc="""
-            Information about the state of the world NOW such as the date and time, used to frame the query.
+            Information about the state of the world NOW such as the date and time, used to frame the aggregation.
             """.strip(), 
             format = str
         )
         previous_reasoning = dspy.InputField(
             desc="""
             Your reasoning that you have output from previous decisions.
-            This is so you can use the information from previous decisions to help you decide what type of query to create.
+            This is so you can use the information from previous decisions to help you decide what type of aggregation to create.
 
             This is a dictionary of the form:
             {
@@ -259,6 +259,22 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             
             Use this to base your current action from previous reasoning.
             """.strip(), 
+            format = str
+        )
+        conversation_history = dspy.InputField(
+            description="""
+            The conversation history between the user and the assistant (you), including all previous messages.
+            During this conversation, the assistant has also generated some information, which is also relevant to the decision.
+            If this is non-empty, then you have already been speaking to the user, and these were your responses, so future responses should use these as context.
+            The history is a list of dictionaries of the format:
+            [
+                {
+                    "role": "user" or "assistant",
+                    "content": The message
+                }
+            ]
+            In the order which the messages were sent.
+            """.strip(),
             format = str
         )
         data_queried = dspy.InputField(
@@ -290,6 +306,15 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             You will be given one of these for each collection that you can choose from.
             Use this to determine which collection to aggregate over, based on the user prompt.
             """.strip(), 
+            format = str
+        )
+
+        previous_aggregations = dspy.InputField(
+            description="""
+            A list of previous aggregations that have been performed.
+            Use this so that you can avoid performing the same aggregation twice.
+            Do not use any code that exists within this list, only use the information to avoid performing the same aggregation twice.
+            """.strip(),
             format = str
         )
         

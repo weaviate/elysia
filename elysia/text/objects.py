@@ -1,5 +1,8 @@
 import json
 
+# Objects
+from elysia.api.objects import Update
+
 class Text:
     def __init__(self, objects: list[dict], metadata: dict = {}):
         self.objects = objects
@@ -25,7 +28,15 @@ class Text:
     
     def return_value(self):
         return self.text
-    
+
+    def to_frontend(self, conversation_id: str, query_id: str = None):
+        return Update.to_frontend_json(
+            "text",
+            conversation_id,
+            query_id,
+            self.to_json()
+        )
+
 class Response(Text):
     def __init__(self, objects: list[dict], metadata: dict = {}):
         super().__init__(objects, metadata)
@@ -35,8 +46,3 @@ class Summary(Text):
     def __init__(self, objects: list[dict], metadata: dict = {}):
         super().__init__(objects, metadata)
         self.type = "summary"
-
-class Code(Text):
-    def __init__(self, objects: list[dict], metadata: dict = {}):
-        super().__init__(objects, metadata)
-        self.type = "code"

@@ -6,6 +6,7 @@ os.chdir("../..")
 
 from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData
 from elysia.api.app import *
+from elysia.tree import complex_lm, base_lm
 from rich import print
 
 import json
@@ -38,7 +39,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="retrieve 10 random trousers",
+    query="summarise what is verba?. return True for is_query_possible",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"
@@ -53,48 +54,49 @@ class fake_websocket:
 
 await process(query_payload.dict(), fake_websocket())
 
-test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["ecommerce"].objects
 
-for obj in test_return_objects:
-    print(obj)
+# test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["ecommerce"].objects
 
-object_relevance_payload = ObjectRelevanceData(
-    user_id="2",
-    conversation_id="1",
-    query_id = query_payload.query_id,
-    objects=test_return_objects
-)
-object_relevance_response = await object_relevance(object_relevance_payload)
-print(json.loads(object_relevance_response.body)["any_relevant"])
+# for obj in test_return_objects:
+#     print(obj)
 
-
-
-query_payload2 = QueryData(
-    query="retrieve the most recent github issue",
-    query_id="whatduhek2",
-    user_id="2",
-    conversation_id="1"
-)
-
-class fake_websocket:
-    async def send_json(self, data: dict):
-        print(data) 
-        if data["type"] == "tree_update":
-            print(f"connection from {data['payload']['node']} to {data['payload']['decision']}")
-
-await process(query_payload2.dict(), fake_websocket())
+# object_relevance_payload = ObjectRelevanceData(
+#     user_id="2",
+#     conversation_id="1",
+#     query_id = query_payload.query_id,
+#     objects=test_return_objects
+# )
+# object_relevance_response = await object_relevance(object_relevance_payload)
+# print(json.loads(object_relevance_response.body)["any_relevant"])
 
 
-test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["example_verba_github_issues"].objects
 
-for obj in test_return_objects:
-    print(obj)
+# query_payload2 = QueryData(
+#     query="can you give me more t-shirts around that price point?",
+#     query_id="whatduhek2",
+#     user_id="2",
+#     conversation_id="1"
+# )
 
-object_relevance_payload = ObjectRelevanceData(
-    user_id="2",
-    conversation_id="1",
-    query_id = query_payload2.query_id,
-    objects=test_return_objects
-)
-object_relevance_response = await object_relevance(object_relevance_payload)
-print(json.loads(object_relevance_response.body)["any_relevant"])
+# class fake_websocket:
+#     async def send_json(self, data: dict):
+#         print(data) 
+#         if data["type"] == "tree_update":
+#             print(f"connection from {data['payload']['node']} to {data['payload']['decision']}")
+
+# await process(query_payload2.dict(), fake_websocket())
+
+
+# test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["example_verba_github_issues"].objects
+
+# for obj in test_return_objects:
+#     print(obj)
+
+# object_relevance_payload = ObjectRelevanceData(
+#     user_id="2",
+#     conversation_id="1",
+#     query_id = query_payload2.query_id,
+#     objects=test_return_objects
+# )
+# object_relevance_response = await object_relevance(object_relevance_payload)
+# print(json.loads(object_relevance_response.body)["any_relevant"])

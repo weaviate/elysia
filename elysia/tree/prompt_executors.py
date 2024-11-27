@@ -1,8 +1,17 @@
 import dspy
 import json
-from elysia.tree.prompt_templates import construct_decision_prompt, InputPrompt
-from elysia.tree.objects import Returns
-from elysia.globals.reference import reference as default_reference
+
+# Prompt Templates
+from elysia.tree.prompt_templates import (
+    construct_decision_prompt, 
+    InputPrompt
+)
+
+# Objects
+from elysia.tree.objects import TreeData, DecisionData
+
+# Globals
+from elysia.globals.reference import create_reference
 
 class DecisionExecutor(dspy.Module):
 
@@ -10,51 +19,30 @@ class DecisionExecutor(dspy.Module):
         self.router = dspy.ChainOfThought(construct_decision_prompt(available_tasks))
     
     def forward(self, 
-                user_prompt: str, 
-                instruction: str,
-                available_tasks: list[dict], 
-                available_information: str,
-                conversation_history: list[dict],
-                completed_tasks: list[str],
-                data_queried: list[str],
-                decision_tree: dict,
-                future_tasks: dict,
-                previous_reasoning: dict,
-                collection_names: list[str],
-                reference: dict = default_reference,
-                current_message: str = "",
-                tree_count: str = "",
-                idx: int = 0,
-                **kwargs) -> tuple[dict, bool]:
-
-        available_tasks_str = json.dumps(available_tasks)
-        decision_tree_str = json.dumps(decision_tree)
+                tree_data: TreeData,
+                decision_data: DecisionData, 
+                idx: int = 0) -> tuple[dict, bool]:
 
         decision = self.router(
-            user_prompt=user_prompt,
-            reference=reference,
-            instruction=instruction,
-            completed_tasks=completed_tasks,
-            available_tasks=available_tasks_str,
-            decision_tree=decision_tree_str,
-            available_information=available_information,
-            collection_names=collection_names,
-            data_queried=data_queried,
-            future_information=future_tasks,
-            conversation_history=conversation_history,
-            previous_reasoning=previous_reasoning,
-            current_message=current_message,
-            tree_count=tree_count,
-            config = {"temperature": 0.7+0.01*idx},
-            **kwargs # kwargs handles task=task for training
+            user_prompt=tree_data.user_prompt,
+            instruction=decision_data.instruction,
+            reference=create_reference(),
+            conversation_history=tree_data.conversation_history,
+            previous_reasoning=tree_data.previous_reasoning,
+            tree_count=decision_data.tree_count_string(),
+            data_queried=tree_data.data_queried_string(),
+            current_message=tree_data.current_message,
+            available_tasks=decision_data.available_tasks,
+            available_information=decision_data.available_information.to_llm_str(),
+            future_information=decision_data.future_information,
+            config={"temperature": 0.7+0.01*idx} # ensures randomness in LLM
         )
 
         # assert that the task name is correct
-        dspy.Assert(decision.task in available_tasks, 
+        dspy.Assert(decision.task in decision_data.available_tasks, 
                     f"""Decision task is not in available tasks: 
-                    {decision.task} not in {available_tasks}
+                    {decision.task} not in {decision_data.available_tasks}
                     Ensure that the task name is correct and that the task exists in the available_tasks field.""")
-
 
         try:
             completed = eval(decision.all_actions_completed)

@@ -19,11 +19,11 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "Summarize the last 10 GitHub Tickets"
+        "use the aggregate function to tell me the average price of trouser products in ecommerce"
     )
 
-    print(tree.conversation_history[-1]["content"])
-    print(tree.returns.retrieved["example_verba_github_issues"].objects)
+    
+    # print(tree.returns.retrieved["example_verba_github_issues"].objects)
     # print(tree.returns.aggregation["example_verba_github_issues"].metadata["last_code"])
     
     # tree.process_sync(

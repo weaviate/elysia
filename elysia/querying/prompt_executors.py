@@ -2,22 +2,24 @@ import dspy
 import datetime
 from typing import Any, Generator
 
+# Weaviate functions for code execution
 from weaviate.classes.query import Filter, Sort
 from weaviate.collections.classes.internal import QueryReturn
 from weaviate.classes.aggregate import GroupByAggregate
 
-from typing import Callable
-
-from elysia.tree.objects import Returns
+# Globals
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
+
+# Prompt Templates
 from elysia.querying.prompt_templates import (
     construct_query_prompt, 
     ObjectSummaryPrompt,  
 )
+
+# Util
 from elysia.util.logging import backend_print
 from elysia.util.parsing import format_datetime
-from elysia.tree.objects import Error
 
 class SafetyException(Exception):
     def __init__(self, message: str):
@@ -174,6 +176,7 @@ class QueryExecutor(dspy.Module):
         self, 
         user_prompt: str, 
         previous_queries: list, 
+        conversation_history: list[dict],
         data_queried: list,
         previous_reasoning: dict,
         collection_information: list,
@@ -181,20 +184,21 @@ class QueryExecutor(dspy.Module):
     ) -> Generator[Any, Any, Any]:
 
         # run query code generation
-        # try:
-        prediction = self.query_prompt(
-            user_prompt=user_prompt, 
-            reference=create_reference(),
-            previous_reasoning=previous_reasoning,
-            collection_information=collection_information,
-            previous_queries=previous_queries,
-            current_message=current_message,
-            data_queried=data_queried
-        )
-        # except Exception as e:
-        #     backend_print(f"Error in query creator prompt: {e}")
-        #     # Return empty values when there's an error
-        #     return QueryReturn(objects=[]), None
+        try:
+            prediction = self.query_prompt(
+                user_prompt=user_prompt, 
+                reference=create_reference(),
+                conversation_history=conversation_history,
+                previous_reasoning=previous_reasoning,
+                collection_information=collection_information,
+                previous_queries=previous_queries,
+                current_message=current_message,
+                data_queried=data_queried
+            )
+        except Exception as e:
+            backend_print(f"Error in query creator prompt: {e}")
+            # Return empty values when there's an error
+            return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
 
         try:
             is_query_possible = eval(prediction.is_query_possible)
@@ -204,10 +208,10 @@ class QueryExecutor(dspy.Module):
                 dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_prompt)
             except Exception as e:
                 backend_print(f"Error getting is_query_possible: {e}")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
 
         if not is_query_possible:
-            return QueryReturn(objects=[]), None
+            return QueryReturn(objects=[]), None, ""
 
         dspy.Suggest(
             prediction.code not in previous_queries,
@@ -227,11 +231,11 @@ class QueryExecutor(dspy.Module):
             
             except SafetyException as e:
                 backend_print(f"[bold red]Safety error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Safety error while executing code: {e}"
             
             except Exception as e:
                 backend_print(f"[bold red]Error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Error while executing code: {e}"
             
         except Exception as e:
 
@@ -242,13 +246,13 @@ class QueryExecutor(dspy.Module):
                             )
             except SafetyException as e:
                 backend_print(f"[bold red]Safety error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Safety error while executing code: {e}"
             
             except Exception as e:
                 backend_print(f"[bold red]Error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Error while executing code: {e}"
             
-        return response, prediction
+        return response, prediction, ""
 
 class ObjectSummaryExecutor(dspy.Module):
 
@@ -256,8 +260,8 @@ class ObjectSummaryExecutor(dspy.Module):
         super().__init__()
         self.object_summary_prompt = dspy.ChainOfThought(ObjectSummaryPrompt)
 
-    def forward(self, objects: list[dict]):
-        prediction = self.object_summary_prompt(objects=objects)
+    def forward(self, objects: list[dict], current_message: str):
+        prediction = self.object_summary_prompt(objects=objects, current_message=current_message)
 
         try:
             summary_list = eval(prediction.summaries)

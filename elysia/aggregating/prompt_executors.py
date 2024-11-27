@@ -1,10 +1,16 @@
 import dspy
 
+# Globals
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
+
+# Util
 from elysia.util.logging import backend_print
+
+# Prompt Templates
 from elysia.aggregating.prompt_templates import construct_aggregate_prompt
 
+# Weaviate functions for code execution
 from weaviate.classes.query import Filter, Sort, Metrics
 from weaviate.classes.aggregate import GroupByAggregate
 
@@ -31,15 +37,18 @@ class AggregateExecutor(dspy.Module):
         data_queried: list, 
         collection_information: list,
         previous_reasoning: dict, 
-        previous_aggregations: list
+        previous_aggregations: list,
+        conversation_history: list[dict]
     ) -> str:
         
         prediction = self.aggregate_prompt(
             user_prompt=user_prompt, 
             reference=create_reference(), 
+            conversation_history=conversation_history,
             previous_reasoning=previous_reasoning,
             data_queried=data_queried,
-            collection_information=collection_information
+            collection_information=collection_information,
+            previous_aggregations=previous_aggregations
         )
 
         try:
@@ -51,10 +60,10 @@ class AggregateExecutor(dspy.Module):
             except Exception as e:
                 backend_print(f"Error getting is_aggregation_possible: {e}")
                 # Return empty values when there's an error
-                return None, None
+                return None, None, f"Error in LLM call: {e}"
 
         if not is_aggregation_possible:
-            return None, None
+            return None, None, ""
 
         dspy.Suggest(
             prediction.code not in previous_aggregations,
@@ -73,6 +82,6 @@ class AggregateExecutor(dspy.Module):
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing aggregation code: {e}")
-                return None, None
+                return None, None, f"Error executing aggregation code: {e}"
             
-        return response, prediction
+        return response, prediction, ""
