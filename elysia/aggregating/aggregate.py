@@ -9,6 +9,7 @@ from elysia.tree import complex_lm
 
 # Objects
 from elysia.api.objects import TreeUpdate, Status, Error, Warning, Branch
+from elysia.tree.objects import TreeData, ActionData, DecisionData
 from elysia.tree.objects import Returns
 from elysia.text.objects import Response
 from elysia.aggregating.objects import GenericAggregation
@@ -36,15 +37,13 @@ class AgenticAggregate:
                     self.previous_aggregations.append({"collection_name": collection_name, "previous_aggregations": metadata["previous_aggregations"]})  
 
     async def __call__(self, 
-            user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs
+            tree_data: TreeData,
+            action_data: ActionData,
+            decision_data: DecisionData
         ):
         
-        data_queried = kwargs.get("data_queried", [])
-        collection_information = kwargs.get("collection_information", [])
-        current_message = kwargs.get("current_message", "")
-        
         # Get some metadata about the collection
-        self._find_previous_aggregations(available_information)
+        self._find_previous_aggregations(decision_data.available_information)
 
         # -- Step 2: Aggregate
         Branch({
@@ -56,10 +55,11 @@ class AgenticAggregate:
         try:
             with dspy.context(lm = complex_lm):
                 response, aggregation = self.aggregate_executor(
-                    user_prompt=user_prompt, 
-                    data_queried=data_queried, 
-                    collection_information=collection_information, 
-                    previous_reasoning=previous_reasoning,
+                    user_prompt=tree_data.user_prompt, 
+                    conversation_history=tree_data.conversation_history,
+                    data_queried=tree_data.data_queried_string(), 
+                    collection_information=action_data.collection_information, 
+                    previous_reasoning=tree_data.previous_reasoning,
                     previous_aggregations=self.previous_aggregations
                 )
 

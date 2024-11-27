@@ -95,28 +95,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
-        # completed_tasks = dspy.InputField(
-        #     description="""
-        #     A list of tasks that have already been completed.
-        #     This is so you know some history of what has been done, so you can avoid repeating tasks, and also so you know what is available to the user, to better decide which property to choose.
-        #     This is a list of dicts, where each dict may have different information based on what the task was.
-        #     The format is:
-        #     - id: the id of the task
-        #     - options: a list of the available tasks at the time, with their descriptions as the values
-        #     - decision: the name of the task that was decided on at the time
-        #     - instruction: the prompt/instruction for this particular decision
-        #     - metadata: any metadata that was returned from the task, this is not as important as the other fields
-        #     """.strip(),
-        #     format = str
-        # )
-        # collection_names = dspy.InputField(
-        #     description="""
-        #     A list of the names of the collections that exist to be queried. 
-        #     Use this to determine if all (necessary) collections have been queried, combined with the data_queried field.
-        #     This should inform your decision on whether to query another collection or not.
-        #     """.strip(),
-        #     format = str
-        # )
+
         tree_count = dspy.InputField(
             description="""
             Currently, the number of completed decision trees that you have run through.
@@ -128,6 +107,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = int
         )
+        
         data_queried = dspy.InputField(
             description="""
             A list of items, showing whether a query has been completed or not.
@@ -137,6 +117,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
+        
         current_message = dspy.InputField(
             description="""
             The current message you, the assistant, have written to send to the user. 
@@ -162,6 +143,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
+        
         available_information = dspy.InputField(
             description="""
             A list of information that is available to the user, based on the history of completed tasks.
@@ -171,6 +153,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
+        
         future_information = dspy.InputField(
             description="""
             For each task, what future tasks are available after selecting this action.
@@ -186,31 +169,6 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
-        # decision_tree = dspy.InputField(
-        #     description="""
-        #     A full nested dictionary of the entire decision tree.
-        #     This is the _full set_ of tasks available to you _in the future ONLY_, so you should not pick any tasks in this field now.
-        #     This is a dictionary of the format:
-        #     {
-        #         "id": id of the task, semi-descriptive
-        #         "instruction": instruction for the task, very descriptive, detailing what the task is about
-        #         "options": a dictionary of the available options for the task, with the tasks as the keys, the values are dictionaries with the same keys as above,
-        #         e.g.
-        #         {
-        #             "option_1": {
-        #                 "id": id of the task, semi-descriptive
-        #                 "instruction": instruction for the task, very descriptive, detailing what the task is about
-        #                 "options": {"option_1_1": {...}, "option_1_2": {...}}
-        #             }
-        #         }
-        #     }
-        #     etc.
-        #     Tasks that depend on other tasks are nested within the options of the current task.
-        #     You should NOT pick any tasks in this field, as it will cause an error.
-        #     Use this field to evaluate what paths you can take in the future. This will help you pick a preliminary task for later reward.
-        #     """.strip(),
-        #     format=str
-        # )
 
         # Output fields
         task: TaskLiteral = dspy.OutputField(
@@ -223,6 +181,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
+        
         all_actions_completed_reasoning = dspy.OutputField(
             description="""
             Break down all the requests in the user_prompt, and evaluate whether all the possible actions that can be taken to answer the user have been taken.
@@ -230,6 +189,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             You should also see if there are any other actions that could have been taken in the past that need to be completed.
             """.strip()
         )
+        
         all_actions_completed = dspy.OutputField(
             description="""
             _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), 
@@ -243,6 +203,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format=bool
         )
+        
         reasoning_update_message = dspy.OutputField(
             desc="""
             Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). 
@@ -262,6 +223,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip(),
             format = str
         )
+        
         full_chat_response = dspy.OutputField(
             description="""
             The response to the user's prompt. Use gender neutral language.

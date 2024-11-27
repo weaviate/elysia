@@ -37,15 +37,18 @@ class AggregateExecutor(dspy.Module):
         data_queried: list, 
         collection_information: list,
         previous_reasoning: dict, 
-        previous_aggregations: list
+        previous_aggregations: list,
+        conversation_history: list[dict]
     ) -> str:
         
         prediction = self.aggregate_prompt(
             user_prompt=user_prompt, 
             reference=create_reference(), 
+            conversation_history=conversation_history,
             previous_reasoning=previous_reasoning,
             data_queried=data_queried,
-            collection_information=collection_information
+            collection_information=collection_information,
+            previous_aggregations=previous_aggregations
         )
 
         try:

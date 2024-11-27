@@ -26,7 +26,6 @@ from elysia.util.collection_metadata import (
     get_collection_data,
 )
 
-
 # API Types
 from elysia.api.api_types import (
     QueryData, 
@@ -58,7 +57,7 @@ class TreeManager:
         if user_id not in self.trees:
             self.trees[user_id] = {}
         if conversation_id not in self.trees[user_id]:
-            self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id, collection_names=collection_names)
+            self.trees[user_id][conversation_id] = Tree(verbosity=1, conversation_id=conversation_id, collection_names=collection_names)
 
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees :

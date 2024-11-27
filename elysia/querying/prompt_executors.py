@@ -176,6 +176,7 @@ class QueryExecutor(dspy.Module):
         self, 
         user_prompt: str, 
         previous_queries: list, 
+        conversation_history: list[dict],
         data_queried: list,
         previous_reasoning: dict,
         collection_information: list,
@@ -187,6 +188,7 @@ class QueryExecutor(dspy.Module):
         prediction = self.query_prompt(
             user_prompt=user_prompt, 
             reference=create_reference(),
+            conversation_history=conversation_history,
             previous_reasoning=previous_reasoning,
             collection_information=collection_information,
             previous_queries=previous_queries,
@@ -258,8 +260,8 @@ class ObjectSummaryExecutor(dspy.Module):
         super().__init__()
         self.object_summary_prompt = dspy.ChainOfThought(ObjectSummaryPrompt)
 
-    def forward(self, objects: list[dict]):
-        prediction = self.object_summary_prompt(objects=objects)
+    def forward(self, objects: list[dict], current_message: str):
+        prediction = self.object_summary_prompt(objects=objects, current_message=current_message)
 
         try:
             summary_list = eval(prediction.summaries)

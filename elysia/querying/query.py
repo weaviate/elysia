@@ -1,4 +1,6 @@
 import dspy
+from rich import print
+from rich.panel import Panel
 
 # Util
 from elysia.util.logging import backend_print
@@ -14,7 +16,7 @@ from elysia.querying.prompt_executors import (
 from elysia.tree import complex_lm
 
 # Objects
-from elysia.tree.objects import Returns
+from elysia.tree.objects import Returns, TreeData, ActionData, DecisionData
 from elysia.text.objects import Response
 from elysia.api.objects import Status, Warning, Error, Branch, TreeUpdate
 from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval, EcommerceRetrieval
@@ -42,7 +44,6 @@ class AgenticQuery:
         self.querier.available_collections = collection_names
 
     def _find_previous_queries(self, available_information: Returns):
-
         self.previous_queries = []
         for collection_name in self.collection_names:
             if collection_name in available_information.retrieved:
@@ -50,14 +51,18 @@ class AgenticQuery:
                 if "previous_queries" in metadata:
                     self.previous_queries.append({"collection_name": collection_name, "previous_queries": metadata["previous_queries"]})  
         
-    async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
+    async def __call__(
+            self,
+            tree_data: TreeData,
+            action_data: ActionData,
+            decision_data: DecisionData
+        ):
         
-        data_queried = kwargs.get("data_queried", [])
-        collection_information = kwargs.get("collection_information", [])
-        current_message = kwargs.get("current_message", "")
-
         # Get some metadata about the collection
-        self._find_previous_queries(available_information)
+        self._find_previous_queries(decision_data.available_information)
+
+        # Save some variables for use only in this function
+        current_message = tree_data.current_message
 
         # Query the collection
         Branch({
@@ -71,11 +76,12 @@ class AgenticQuery:
 
             # Run the query executor (write and execute the query)
             response, query = self.querier(
-                user_prompt = user_prompt, 
+                user_prompt = tree_data.user_prompt, 
+                conversation_history = tree_data.conversation_history,
                 previous_queries = self.previous_queries, 
-                data_queried = data_queried,
-                collection_information = collection_information,
-                previous_reasoning = previous_reasoning,
+                data_queried = tree_data.data_queried_string(),
+                collection_information = action_data.collection_information,
+                previous_reasoning = tree_data.previous_reasoning,
                 current_message = current_message
             )
 
@@ -84,11 +90,11 @@ class AgenticQuery:
 
         # If the query is not possible, yield a generic retrieval and return nothing
         if query is None:
-            yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [user_prompt]})
+            yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [tree_data.user_prompt]})
             return
         
         if self.verbosity > 0:
-            backend_print(f"[yellow]Query code[/yellow]: {query.code}")
+            print(Panel.fit(query.code, title="Query code", padding=(1,1), border_style="yellow"))
             backend_print(f"[yellow]Query output type[/yellow]: {query.output_type}")
             backend_print(f"[yellow]Query collection name[/yellow]: {query.collection_name}")
             backend_print(f"[yellow]Query return type[/yellow]: {query.return_type}")
@@ -96,8 +102,7 @@ class AgenticQuery:
         current_message, message_update = update_current_message(current_message, query.text_return)
 
         # Yield results to front end
-        if message_update != "":
-            yield Response([{"text": message_update}], {})
+        yield Response([{"text": message_update}], {})
         yield TreeUpdate(from_node="query", to_node="query_executor", reasoning=query.reasoning, last = query.return_type != "summary")
         yield Status(f"Retrieved {len(response.objects)} objects from {query.collection_name}")
 
@@ -121,9 +126,11 @@ class AgenticQuery:
             try:
 
                 # Run the object summariser
-                summary_list, summariser = self.object_summariser(objects)
+                summary_list, summariser = self.object_summariser(objects, current_message)
+                current_message, message_update = update_current_message(current_message, summariser.text_return)
 
                 # Yield results to front end
+                yield Response([{"text": message_update}], {})
                 yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning=summariser.reasoning, last = True)
                 yield Status(f"Summarised {len(summariser)} objects")
 

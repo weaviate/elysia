@@ -9,6 +9,12 @@ from rich import print
 from elysia.tree.tree import Tree
 from elysia.tree import base_lm, complex_lm
 
+"""
+After lunch:
+add conversation history to other actions e.g. query and agg
+aggregate gets same love as query
+"""
+
 if __name__ == "__main__":
 
     tree = Tree(
@@ -22,8 +28,8 @@ if __name__ == "__main__":
         "Summarize the last 10 GitHub Tickets"
     )
 
-    print(tree.conversation_history[-1]["content"])
-    print(tree.returns.retrieved["example_verba_github_issues"].objects)
+    
+    # print(tree.returns.retrieved["example_verba_github_issues"].objects)
     # print(tree.returns.aggregation["example_verba_github_issues"].metadata["last_code"])
     
     # tree.process_sync(
