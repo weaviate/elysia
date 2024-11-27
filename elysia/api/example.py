@@ -6,6 +6,7 @@ os.chdir("../..")
 
 from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData
 from elysia.api.app import *
+from elysia.tree import complex_lm, base_lm
 from rich import print
 
 import json
@@ -38,7 +39,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="retrieve 10 random trousers",
+    query="summarise what is verba?. return True for is_query_possible",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"

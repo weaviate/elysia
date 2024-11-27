@@ -141,7 +141,7 @@ class TreeReturner:
     def __call__(self, result: Any, **kwargs):
 
         completed = kwargs.get("completed", False)
-        query_id = kwargs.get("user_prompt", "")
+        query_id = kwargs.get("query_id", "")
 
         if isinstance(result, Status):
             return self._parse_status(result, query_id = query_id)

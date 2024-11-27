@@ -26,8 +26,7 @@ class Summarizer:
             conversation_history=tree_data.conversation_history
         )
         
-        output = Summary([{"text": summary.summary, "title": summary.subtitle}], {})
-        yield output
+        yield Summary([{"text": summary.summary, "title": summary.subtitle}], {})
     
 class TextResponse:
 
