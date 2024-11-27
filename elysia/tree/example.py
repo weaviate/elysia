@@ -9,12 +9,6 @@ from rich import print
 from elysia.tree.tree import Tree
 from elysia.tree import base_lm, complex_lm
 
-"""
-After lunch:
-add conversation history to other actions e.g. query and agg
-aggregate gets same love as query
-"""
-
 if __name__ == "__main__":
 
     tree = Tree(
@@ -25,7 +19,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "aggregate and tell me the average price of shrekcore products in ecommerce"
+        "use the aggregate function to tell me the average price of trouser products in ecommerce"
     )
 
     

@@ -60,10 +60,10 @@ class AggregateExecutor(dspy.Module):
             except Exception as e:
                 backend_print(f"Error getting is_aggregation_possible: {e}")
                 # Return empty values when there's an error
-                return None, None
+                return None, None, f"Error in LLM call: {e}"
 
         if not is_aggregation_possible:
-            return None, None
+            return None, None, ""
 
         dspy.Suggest(
             prediction.code not in previous_aggregations,
@@ -82,6 +82,6 @@ class AggregateExecutor(dspy.Module):
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing aggregation code: {e}")
-                return None, None
+                return None, None, f"Error executing aggregation code: {e}"
             
-        return response, prediction
+        return response, prediction, ""

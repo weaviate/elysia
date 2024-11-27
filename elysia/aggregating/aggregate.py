@@ -59,23 +59,21 @@ class AgenticAggregate:
         })
         yield Status(f"Writing aggregation")
 
-        try:
-            with dspy.context(lm = complex_lm):
-                response, aggregation = self.aggregate_executor(
-                    user_prompt=tree_data.user_prompt, 
-                    conversation_history=tree_data.conversation_history,
-                    data_queried=tree_data.data_queried_string(), 
-                    collection_information=action_data.collection_information, 
-                    previous_reasoning=tree_data.previous_reasoning,
-                    previous_aggregations=self.previous_aggregations
-                )
-
-        except Exception as e:
-            yield Error(f"Error in aggregating: {e}")
-
-        # If the query is not possible, yield a generic retrieval and return nothing
+        with dspy.context(lm = complex_lm):
+            response, aggregation, error_message = self.aggregate_executor(
+                user_prompt=tree_data.user_prompt, 
+                conversation_history=tree_data.conversation_history,
+                data_queried=tree_data.data_queried_string(), 
+                collection_information=action_data.collection_information, 
+                previous_reasoning=tree_data.previous_reasoning,
+                previous_aggregations=self.previous_aggregations
+            )
+            
+        # If there is an error, yield a generic retrieval and return nothing
         if aggregation is None:
             yield GenericAggregation([], {"collection_name": aggregation.collection_name, "impossible_prompts": [tree_data.user_prompt]})
+            if error_message != "":
+                yield Error(error_message)
             return
 
         if self.verbosity > 0:

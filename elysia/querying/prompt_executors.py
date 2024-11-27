@@ -184,21 +184,21 @@ class QueryExecutor(dspy.Module):
     ) -> Generator[Any, Any, Any]:
 
         # run query code generation
-        # try:
-        prediction = self.query_prompt(
-            user_prompt=user_prompt, 
-            reference=create_reference(),
-            conversation_history=conversation_history,
-            previous_reasoning=previous_reasoning,
-            collection_information=collection_information,
-            previous_queries=previous_queries,
-            current_message=current_message,
-            data_queried=data_queried
-        )
-        # except Exception as e:
-        #     backend_print(f"Error in query creator prompt: {e}")
-        #     # Return empty values when there's an error
-        #     return QueryReturn(objects=[]), None
+        try:
+            prediction = self.query_prompt(
+                user_prompt=user_prompt, 
+                reference=create_reference(),
+                conversation_history=conversation_history,
+                previous_reasoning=previous_reasoning,
+                collection_information=collection_information,
+                previous_queries=previous_queries,
+                current_message=current_message,
+                data_queried=data_queried
+            )
+        except Exception as e:
+            backend_print(f"Error in query creator prompt: {e}")
+            # Return empty values when there's an error
+            return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
 
         try:
             is_query_possible = eval(prediction.is_query_possible)
@@ -208,10 +208,10 @@ class QueryExecutor(dspy.Module):
                 dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_prompt)
             except Exception as e:
                 backend_print(f"Error getting is_query_possible: {e}")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
 
         if not is_query_possible:
-            return QueryReturn(objects=[]), None
+            return QueryReturn(objects=[]), None, ""
 
         dspy.Suggest(
             prediction.code not in previous_queries,
@@ -231,11 +231,11 @@ class QueryExecutor(dspy.Module):
             
             except SafetyException as e:
                 backend_print(f"[bold red]Safety error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Safety error while executing code: {e}"
             
             except Exception as e:
                 backend_print(f"[bold red]Error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Error while executing code: {e}"
             
         except Exception as e:
 
@@ -246,13 +246,13 @@ class QueryExecutor(dspy.Module):
                             )
             except SafetyException as e:
                 backend_print(f"[bold red]Safety error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Safety error while executing code: {e}"
             
             except Exception as e:
                 backend_print(f"[bold red]Error while executing code: {e}[/bold red]")
-                return QueryReturn(objects=[]), None
+                return QueryReturn(objects=[]), None, f"Error while executing code: {e}"
             
-        return response, prediction
+        return response, prediction, ""
 
 class ObjectSummaryExecutor(dspy.Module):
 

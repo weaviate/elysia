@@ -71,11 +71,10 @@ class AgenticQuery:
         })
         yield Status(f"Writing query")
 
-        # try:
         with dspy.context(lm = complex_lm):
 
             # Run the query executor (write and execute the query)
-            response, query = self.querier(
+            response, query, error_message = self.querier(
                 user_prompt = tree_data.user_prompt, 
                 conversation_history = tree_data.conversation_history,
                 previous_queries = self.previous_queries, 
@@ -85,12 +84,10 @@ class AgenticQuery:
                 current_message = current_message
             )
 
-        # except Exception as e:
-        #     yield Error(f"Error in query execution: {e}")
-
-        # If the query is not possible, yield a generic retrieval and return nothing
         if query is None:
             yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [tree_data.user_prompt]})
+            if error_message != "":
+                yield Error(error_message)
             return
         
         if self.verbosity > 0:
