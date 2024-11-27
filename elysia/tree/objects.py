@@ -1,45 +1,12 @@
 import json
-import uuid
-import datetime
 from rich import print
 
+# Util
 from elysia.util.parsing import objects_dict_to_str, format_datetime, remove_whitespace
-from elysia.text.objects import Text, Response
 
-class Branch:
-    def __init__(self, updates: dict):
-        self.updates = updates
-
-class Status:
-    def __init__(self, status: str):
-        self.status = status
-
-    def to_json(self, conversation_id: str, query_id: str = None):
-        return {
-            "type": "status",
-            "conversation_id": conversation_id,
-            "query_id": query_id,
-            "id": "sta-" + str(uuid.uuid4()),
-            "payload": {
-                "text": self.status
-            }
-        }
-    
-class Warning:
-    def __init__(self, text: str):
-        self.text = text
-    
-class Error:
-    def __init__(self, text: str):
-        self.text = text
-
-class TreeUpdate:
-
-    def __init__(self, from_node: str, to_node: str, reasoning: str, last: bool = False):
-        self.from_node = from_node
-        self.to_node = to_node
-        self.reasoning = reasoning
-        self.last = last
+# Objects
+from elysia.text.objects import Text
+from elysia.api.objects import Update
 
 class Objects:
     def __init__(self, objects: list[dict | str], metadata: dict = {}):
@@ -93,6 +60,17 @@ class Objects:
     def return_value(self, idx: int):
         return self.objects[idx]
 
+    def to_frontend(self, conversation_id: str, query_id: str = None):
+        return Update.to_frontend_json(
+            "result",
+            conversation_id,
+            query_id,
+            {
+                "type": self.type,
+                "code": self.metadata.get("last_code", {}),
+                **self.to_json()
+            }
+        )
 
 class SelfInfo(Objects):
     def __init__(self, name: str = "Elysia"):

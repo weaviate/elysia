@@ -1,7 +1,13 @@
 import dspy
 import json
-from elysia.tree.prompt_templates import construct_decision_prompt, InputPrompt
-from elysia.tree.objects import Returns
+
+# Prompt Templates
+from elysia.tree.prompt_templates import (
+    construct_decision_prompt, 
+    InputPrompt
+)
+
+# Globals
 from elysia.globals.reference import reference as default_reference
 
 class DecisionExecutor(dspy.Module):

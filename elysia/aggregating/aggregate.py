@@ -1,12 +1,19 @@
 import dspy
 
+# Util
 from elysia.util.logging import backend_print
 from elysia.util.parsing import update_current_message, format_aggregation_response
 
+# Globals
 from elysia.tree import complex_lm
-from elysia.tree.objects import Returns, Objects, Status, Warning, Error, Branch, TreeUpdate
-from elysia.text.objects import Response, Code
+
+# Objects
+from elysia.api.objects import TreeUpdate, Status, Error, Warning, Branch
+from elysia.tree.objects import Returns
+from elysia.text.objects import Response
 from elysia.aggregating.objects import GenericAggregation
+
+# Prompt Executors
 from elysia.aggregating.prompt_executors import AggregateExecutor
 
 class AgenticAggregate:
@@ -84,7 +91,6 @@ class AgenticAggregate:
         # Yield results to front end
         if message_update != "":
             yield Response([{"text": message_update}], {})
-        yield Code([{"text": aggregation.code, "language": "python", "title": "Aggregation"}], {})
         yield TreeUpdate(from_node="aggregate", to_node="aggregate_executor", reasoning=aggregation.reasoning, last = False)
         yield Status(f"Aggregated from {aggregation.collection_name}")
 

@@ -9,27 +9,30 @@ import asyncio
 import nest_asyncio
 import datetime
 
-# from elysia.text.prompt_executors import SummarizingExecutor, TextResponseExecutor
-from elysia.text.text import Summarizer, TextResponse
-from elysia.querying.agentic_query import AgenticQuery
+# Actions
+from elysia.text.text import Summarizer
+from elysia.querying.query import AgenticQuery
 from elysia.aggregating.aggregate import AgenticAggregate
+
+#  Decision Prompt executors
 from elysia.tree.prompt_executors import DecisionExecutor, InputExecutor
+
+# Util
 from elysia.util.parsing import remove_whitespace, update_current_message, format_datetime
 from elysia.util.logging import backend_print
-from elysia.util.api import (
-    parse_result, 
-    parse_finished, 
-    parse_error, 
-    parse_warning,
-    parse_text,
-    parse_tree_update
-)
-from elysia.tree import base_lm, complex_lm
-from elysia.tree.objects import Returns, Objects, Status, Branch, TreeUpdate, Error, Warning
-from elysia.text.objects import Text, Response, Summary, Code
+
+# Objects
+from elysia.tree.objects import Returns, Objects
+from elysia.api.objects import Status, TreeUpdate, Error, Warning, Completed
+from elysia.text.objects import Text, Response, Summary
 from elysia.querying.objects import Retrieval
 from elysia.aggregating.objects import Aggregation
+
+# globals
 from elysia.globals.weaviate_client import client
+from elysia.tree import base_lm, complex_lm
+
+# training
 from elysia.training.prompt_executors import TrainingDecisionExecutor
 
 class RecursionLimitException(Exception):
@@ -131,30 +134,33 @@ class DecisionNode:
         }
     
 class TreeReturner:
+    """
+    Class to parse the output of the tree to the frontend.
+    """
     def __init__(self, conversation_id: str, tree_index: int = 0):
         self.conversation_id = conversation_id
         self.tree_index = tree_index
 
-    def _parse_error(self, error: str, query_id: str):
-        return parse_error(error, self.conversation_id, query_id)
+    def _parse_error(self, error: Error, query_id: str):
+        return error.to_frontend(self.conversation_id, query_id)
     
-    def _parse_warning(self, warning: str, query_id: str):
-        return parse_warning(warning, self.conversation_id, query_id)
+    def _parse_warning(self, warning: Warning, query_id: str):
+        return warning.to_frontend(self.conversation_id, query_id)
 
     def _parse_status(self, status: Status, query_id: str):
-        return status.to_json(self.conversation_id, query_id)
+        return status.to_frontend(self.conversation_id, query_id)
     
-    def _parse_tree_update(self, node_id: str, decision: str, reasoning: str, reset: bool, query_id: str):
-        return parse_tree_update(node_id, self.tree_index, decision, reasoning, self.conversation_id, reset, query_id)
+    def _parse_tree_update(self, tree_update: TreeUpdate, query_id: str, reset: bool = False):
+        return tree_update.to_frontend(self.tree_index, self.conversation_id, query_id, reset)
     
-    def _parse_result(self, result: Objects, code: str, query_id: str):
-        return parse_result(result, code, self.conversation_id, query_id)
+    def _parse_completed(self, query_id: str):
+        return Completed().to_frontend(self.conversation_id, query_id)
     
-    def _parse_finished(self, query_id: str):
-        return parse_finished(self.conversation_id, query_id)
+    def _parse_result(self, result: Objects, query_id: str):
+        return result.to_frontend(self.conversation_id, query_id)
     
     def _parse_text(self, text: Text, query_id: str):
-        return parse_text(text, self.conversation_id, query_id)
+        return text.to_frontend(self.conversation_id, query_id)
 
 class BranchVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -509,11 +515,9 @@ class Tree:
 
             if isinstance(result, TreeUpdate):
                 yield self.returner._parse_tree_update(
-                    result.from_node, 
-                    result.to_node, 
-                    result.reasoning, 
-                    result.last and not completed,
-                    query_id = self.prompt_to_query_id[user_prompt]
+                    tree_update=result, 
+                    query_id = self.prompt_to_query_id[user_prompt],
+                    reset = result.last and not completed,
                 )
 
             if isinstance(result, Objects):
@@ -522,7 +526,6 @@ class Tree:
                 if len(result.objects) > 0:
                     yield self.returner._parse_result(
                         result, 
-                        code=result.metadata["last_code"], 
                         query_id = self.prompt_to_query_id[user_prompt]
                     )
 
@@ -683,7 +686,17 @@ class Tree:
 
                 if message_update != "" and not completed:
                     yield self.returner._parse_text(Response([{"text": message_update}], {}), query_id = self.prompt_to_query_id[user_prompt])
-                yield self.returner._parse_tree_update(current_decision_node.id, task, decision.reasoning, False, query_id = self.prompt_to_query_id[user_prompt])
+
+                yield self.returner._parse_tree_update(
+                    tree_update=TreeUpdate(
+                        from_node=current_decision_node.id,
+                        to_node=task,
+                        reasoning=decision.reasoning,
+                        last=False
+                    ),
+                    query_id = self.prompt_to_query_id[user_prompt],
+                    reset = False
+                )
                 
                 self.previous_reasoning[f"tree_{recursion_counter+1}"][current_decision_node.id] = decision.reasoning
                 self.previous_info.append(current_decision_node.construct_as_previous_info())
@@ -713,7 +726,7 @@ class Tree:
             if decision.full_chat_response != "" and decision.task != "summarize":
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
-            yield self.returner._parse_finished(query_id = self.prompt_to_query_id[user_prompt])
+            yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])
 
             if self.verbosity >= 1:
                 backend_print(f"[bold green]Model identified overall goal as completed![/bold green]")

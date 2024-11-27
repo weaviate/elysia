@@ -70,7 +70,7 @@ print(json.loads(object_relevance_response.body)["any_relevant"])
 
 
 query_payload2 = QueryData(
-    query="retrieve the most recent github issue",
+    query="can you give me more t-shirts around that price point?",
     query_id="whatduhek2",
     user_id="2",
     conversation_id="1"

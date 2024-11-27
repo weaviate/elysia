@@ -2,22 +2,24 @@ import dspy
 import datetime
 from typing import Any, Generator
 
+# Weaviate functions for code execution
 from weaviate.classes.query import Filter, Sort
 from weaviate.collections.classes.internal import QueryReturn
 from weaviate.classes.aggregate import GroupByAggregate
 
-from typing import Callable
-
-from elysia.tree.objects import Returns
+# Globals
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
+
+# Prompt Templates
 from elysia.querying.prompt_templates import (
     construct_query_prompt, 
     ObjectSummaryPrompt,  
 )
+
+# Util
 from elysia.util.logging import backend_print
 from elysia.util.parsing import format_datetime
-from elysia.tree.objects import Error
 
 class SafetyException(Exception):
     def __init__(self, message: str):

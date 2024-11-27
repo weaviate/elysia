@@ -1,139 +1,166 @@
-from weaviate.classes.query import Filter
-from elysia.globals.weaviate_client import client
+import dspy
 
-from elysia.globals.reference import create_reference
-
+# Util
 from elysia.util.logging import backend_print
-from elysia.querying.prompt_executors import QueryRewriterExecutor
-from elysia.tree.objects import Returns, GenericRetrieval, ConversationRetrieval
+from elysia.util.parsing import update_current_message
 
-class Query:
+# Prompt Executors
+from elysia.querying.prompt_executors import (
+    QueryExecutor, 
+    ObjectSummaryExecutor
+)
 
-    def __init__(self, collection_name: str):
-        self.collection_name = collection_name
-        self.collection = client.collections.get(collection_name)
+# Globals
+from elysia.tree import complex_lm
+
+# Objects
+from elysia.tree.objects import Returns
+from elysia.text.objects import Response
+from elysia.api.objects import Status, Warning, Error, Branch, TreeUpdate
+from elysia.querying.objects import GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval, EcommerceRetrieval
+
+class AgenticQuery:
+
+    def __init__(self, 
+                 query_filepath: str = "elysia/training/dspy_models/query/fewshot_k8.json", 
+                 collection_names: list[str] = None, 
+                 return_types: dict[str, str] = None,
+                 verbosity: int = 0): 
+        
+        self.verbosity = verbosity
+        self.collection_names = collection_names
+
+        self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
+        self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
+        
+        if len(query_filepath) > 0:
+            self.querier.load(query_filepath)
+            backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_filepath}[/italic magenta]")
+
+    def set_collection_names(self, collection_names: list[str]):
+        self.collection_names = collection_names
+        self.querier.available_collections = collection_names
 
     def _find_previous_queries(self, available_information: Returns):
 
-        previous_queries = []
-        if self.collection_name in available_information.retrieved:
-            metadata = available_information.retrieved[self.collection_name].metadata
-            if "previous_queries" in metadata:
-                previous_queries.extend(metadata["previous_queries"])
-
-        return previous_queries
-    
-    def query(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
-
-        previous_queries = self._find_previous_queries(available_information)
-
-        if rewrite_query:
-            query_rewriter = QueryRewriterExecutor()
-            query = query_rewriter(user_prompt=user_prompt, previous_queries=previous_queries)
-            previous_queries.append(query)
-        else:
-            query = user_prompt
-
-        metadata = {"previous_queries": previous_queries, "collection_name": self.collection_name}
-
-        if type == "hybrid":
-            output = self.hybrid(query, limit)
-        elif type == "semantic":
-            output = self.near_text(query, limit)
-        else:
-            raise ValueError(f"Invalid query type: {type}")
+        self.previous_queries = []
+        for collection_name in self.collection_names:
+            if collection_name in available_information.retrieved:
+                metadata = available_information.retrieved[collection_name].metadata
+                if "previous_queries" in metadata:
+                    self.previous_queries.append({"collection_name": collection_name, "previous_queries": metadata["previous_queries"]})  
         
-        return output, metadata
+    async def __call__(self, user_prompt: str, available_information: Returns, previous_reasoning: dict, **kwargs):
+        
+        data_queried = kwargs.get("data_queried", [])
+        collection_information = kwargs.get("collection_information", [])
+        current_message = kwargs.get("current_message", "")
 
-    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
-        return self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
-    
-class MessageQuery(Query):
-    """
-    Applicable to slack conversations and emails.
-    """
+        # Get some metadata about the collection
+        self._find_previous_queries(available_information)
 
-    def fetch_items_in_conversation(self, conversation_id: str):
-        """
-        Use Weaviate to fetch all messages in a conversation based on the conversation ID.
-        """
+        # Query the collection
+        Branch({
+            "name": "Query Executor",
+            "description": "Write code and query the collection to retrieve objects."
+        })
+        yield Status(f"Writing query")
 
-        items_in_conversation = self.collection.query.fetch_objects(
-            filters=Filter.by_property("conversation_id").equal(conversation_id)
-        )
-        items_in_conversation = [obj for obj in items_in_conversation.objects]
+        # try:
+        with dspy.context(lm = complex_lm):
 
-        return items_in_conversation
+            # Run the query executor (write and execute the query)
+            response, query = self.querier(
+                user_prompt = user_prompt, 
+                previous_queries = self.previous_queries, 
+                data_queried = data_queried,
+                collection_information = collection_information,
+                previous_reasoning = previous_reasoning,
+                current_message = current_message
+            )
 
-    def return_all_messages_in_conversation(self, response):
-        """
-        Return all messages in a conversation based on the response from Weaviate.
-        """
+        # except Exception as e:
+        #     yield Error(f"Error in query execution: {e}")
 
-        returned_objects = [None] * len(response.objects)
-        for i, o in enumerate(response.objects):
-            items_in_conversation = self.fetch_items_in_conversation(o.properties["conversation_id"])
-            to_return = [{
-                k: v for k, v in item.properties.items()
-            } for item in items_in_conversation]
-            to_return.sort(key = lambda x: int(x["message_index"]))
-            returned_objects[i] = (to_return, o.properties["message_index"])
+        # If the query is not possible, yield a generic retrieval and return nothing
+        if query is None:
+            yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [user_prompt]})
+            return
+        
+        if self.verbosity > 0:
+            backend_print(f"[yellow]Query code[/yellow]: {query.code}")
+            backend_print(f"[yellow]Query output type[/yellow]: {query.output_type}")
+            backend_print(f"[yellow]Query collection name[/yellow]: {query.collection_name}")
+            backend_print(f"[yellow]Query return type[/yellow]: {query.return_type}")
 
-        return returned_objects
+        current_message, message_update = update_current_message(current_message, query.text_return)
 
-    def near_text(self, query: str, limit: int = 10):
+        # Yield results to front end
+        if message_update != "":
+            yield Response([{"text": message_update}], {})
+        yield TreeUpdate(from_node="query", to_node="query_executor", reasoning=query.reasoning, last = query.return_type != "summary")
+        yield Status(f"Retrieved {len(response.objects)} objects from {query.collection_name}")
 
-        # backend_print(f"Querying collection ([italic magenta]semantic[/italic magenta]): {self.collection.name} with query: {query}")
-        response = self.collection.query.near_text(
-            query = query,
-            limit = limit
-        )
+        # Add the query code to the previous queries
+        self.previous_queries.append(query.code)
 
-        return self.return_all_messages_in_conversation(response)
+        # Get the objects from the response (query executor)
+        objects = []
+        for obj in response.objects:
+            objects.append({k: v for k, v in obj.properties.items()})
+            objects[-1]["uuid"] = obj.uuid.hex
 
-    def hybrid(self, query: str, limit: int = 10):
+        # -- (Optional) Step 4: Summarise the objects
+        if query.output_type == "summary":
+            Branch({
+                "name": "Object Summariser",
+                "description": "Generate itemised summaries of the retrieved objects."
+            })
+            yield Status(f"Generating summaries of the retrieved objects")
 
-        # backend_print(f"Querying collection ([italic magenta]hybrid[/italic magenta]): {self.collection.name} with query: {query}")
-        response = self.collection.query.hybrid(
-            query = query,
-            limit = limit
-        )
+            try:
 
-        return self.return_all_messages_in_conversation(response)
+                # Run the object summariser
+                summary_list, summariser = self.object_summariser(objects)
 
-    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
-        output, metadata = self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
-        return ConversationRetrieval(output, metadata)
+                # Yield results to front end
+                yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning=summariser.reasoning, last = True)
+                yield Status(f"Summarised {len(summariser)} objects")
 
-class IssueQuery(Query):
-    """
-    Applicable to github issues.
-    """
-    def near_text(self, query: str, limit: int = 10):
+                # attach summaries to objects
+                for i, obj in enumerate(objects):
+                    if i < len(summary_list):
+                        obj["summary"] = summary_list[i]
+                    else:
+                        obj["summary"] = ""
+            
+            except Exception as e:
+                yield Error(f"Error in object summarisation: {e}")
 
-        # backend_print(f"Querying collection ([italic magenta]semantic[/italic magenta]): {self.collection.name} with query: {query}")
-        response = self.collection.query.near_text(
-            query = query,
-            limit = limit
-        )
+        # If no summarisation, attach empty strings
+        else:
+            yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="This step was skipped because it was determined that the output type was not a summary.", last = True)
+            for obj in objects:
+                obj["summary"] = ""
 
-        return [{k: v for k, v in obj.properties.items()} for obj in response.objects]
-    
-    def hybrid(self, query: str, limit: int = 10):
+        metadata = {
+            "previous_queries": [query.code], 
+            "collection_name": query.collection_name,
+            "last_code": {
+                "language": "python",
+                "title": "Query",
+                "text": query.code
+            }
+        }
 
-        # backend_print(f"Querying collection ([italic magenta]hybrid[/italic magenta]): {self.collection.name} with query: {query}")
-        response = self.collection.query.hybrid(
-            query = query,
-            limit = limit
-        )
-
-        return [{k: v for k, v in obj.properties.items()} for obj in response.objects]
-    
-    def __call__(self, user_prompt: str, available_information: Returns, limit: int = 10, type: str = "hybrid", rewrite_query: bool = True, **kwargs):
-        output, metadata = self.query(user_prompt, available_information, limit, type, rewrite_query, **kwargs)
-        return GenericRetrieval(output, metadata)
-
-QueryOptions = {
-    "message": MessageQuery,
-    "issue": IssueQuery
-}
+        if query.return_type == "conversation":
+            yield ConversationRetrieval(objects, metadata)
+        elif query.return_type == "message":
+            yield MessageRetrieval(objects, metadata)
+        elif query.return_type == "ticket":
+            yield TicketRetrieval(objects, metadata)
+        elif query.return_type == "ecommerce":
+            yield EcommerceRetrieval(objects, metadata)
+        else:
+            yield GenericRetrieval(objects, metadata)
+        

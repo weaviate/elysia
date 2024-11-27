@@ -1,5 +1,9 @@
 import dspy
+
+# Prompt Templates
 from elysia.text.prompt_templates import SummarizingPrompt, TextResponsePrompt
+
+# Globals
 from elysia.globals.reference import create_reference
 
 class SummarizingExecutor(dspy.Module):

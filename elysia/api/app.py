@@ -1,13 +1,11 @@
-import os
 import logging
 import asyncio
-import json
 import spacy
 import psutil
 import time
-import websockets  # Add this with other imports
 from pathlib import Path
 
+# FastAPI
 from fastapi import FastAPI, WebSocket, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,9 +13,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.websockets import WebSocketDisconnect
 
+# Tree
 from elysia.tree.tree import Tree, RecursionLimitException
+
+# Objects
+from elysia.api.objects import Error
+
+# Util
 from elysia.util.logging import backend_print
-from elysia.util.api import parse_error
+from elysia.util.collection_metadata import (
+    get_collection_data_types,
+    get_collection_data,
+)
+
+
+# API Types
 from elysia.api.api_types import (
     QueryData, 
     GetCollectionData, 
@@ -29,17 +39,12 @@ from elysia.api.api_types import (
     ObjectRelevanceData,
     InitialiseTreeData
 )
-from elysia.util.collection_metadata import (
-    get_collection_data_types,
-    get_collection_data,
-)
+
+# Globals
 from elysia.globals.weaviate_client import client
+
+# Prompt Executors for separate endpoints
 from elysia.api.prompt_executors import TitleCreatorExecutor, ObjectRelevanceExecutor
-
-# Load the English language model
-nlp = spacy.load("en_core_web_sm")
-
-collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations", "ecommerce"]
 
 class TreeManager:
     """
@@ -63,10 +68,11 @@ class TreeManager:
         return self.trees[user_id][conversation_id]
 
 
+# ==== FastAPI ====
+
 # App variable declaration
 version = "0.1.0"
 logger = logging.getLogger("uvicorn")
-
 
 # app declaration
 app = FastAPI(title="Elysia API", version=version)
@@ -79,10 +85,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global variables, to be changed to user-based later
+
+# ===== Global Variables ===== (to be changed to user-based later)
+
 global tree_manager
 tree_manager = TreeManager()
 
+# Load the English language model for NER
+nlp = spacy.load("en_core_web_sm")
+
+# Global collection names (hardcoded for now)
+collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations", "ecommerce"]
+
+# =============================
+
+
+# === Endpoints ===
 
 # Request validation exception handler
 @app.exception_handler(RequestValidationError)
@@ -202,9 +220,17 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.error(f"Error in WebSocket: {str(e)}")
                 try:
                     if data and "conversation_id" in data:
-                        await websocket.send_json(parse_error(str(e), data["conversation_id"]))
+                        error = Error(
+                            message=str(e),
+                            conversation_id=data["conversation_id"]
+                        )   
+                        await websocket.send_json(error)
                     else:
-                        await websocket.send_json(parse_error(str(e), ""))
+                        error = Error(
+                            message=str(e),
+                            conversation_id=""
+                        )
+                        await websocket.send_json(error)
                 except RuntimeError:
                     logger.warning(
                         "Failed to send error message, WebSocket might be closed"

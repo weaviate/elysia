@@ -1,10 +1,16 @@
 import dspy
 
+# Globals
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
+
+# Util
 from elysia.util.logging import backend_print
+
+# Prompt Templates
 from elysia.aggregating.prompt_templates import construct_aggregate_prompt
 
+# Weaviate functions for code execution
 from weaviate.classes.query import Filter, Sort, Metrics
 from weaviate.classes.aggregate import GroupByAggregate
 
