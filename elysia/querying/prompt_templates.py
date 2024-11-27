@@ -410,3 +410,58 @@ class ObjectSummaryPrompt(dspy.Signature):
         """.strip(), 
         format = list[str]
     )
+
+class DataMappingPrompt(dspy.Signature):
+    """
+    You are an expert at mapping data fields to existing field names.
+    """
+
+    input_data_fields = dspy.InputField(desc="The input fields to map.", format = str)
+    output_data_fields = dspy.InputField(desc="The output fields to map to.", format = str)
+    collection_information = dspy.InputField(desc="""
+        Information about the collection.
+        This is of the form:
+        {
+            "name": collection name,
+            "length": number of objects in the collection,
+            "summary": summary of the collection,
+            "fields": {
+                "field_name": {
+                    "groups": a comprehensive list of all unique text values that exist in the field. if the field is not text, this should be an empty list,
+                    "mean": mean of the field. if the field is text, this refers to the means length (in tokens) of the texts in this field. if the type is a list, this refers to the mean length of the lists,
+                    "range": minimum and maximum values of the length.
+                    "type": the data type of the field.
+                },
+                ...
+            }
+        }
+        """.strip(), 
+        format = str
+    )
+    example_objects = dspy.InputField(desc="Example objects to help you understand the data.", format = list[dict])
+
+    field_mapping = dspy.OutputField(
+        desc="""
+        Your output should be a dictionary of the form:
+        {
+            "input_field_name": "output_field_name",
+            ...
+        }
+        E.g.
+        {
+            "title": "name",
+            ...
+        }
+        would map the `title` field to the `name` field.
+        If there is no mapping, you should include an empty string, e.g.
+        {
+            "title": "",
+            ...
+        }
+        Complete all the fields, even if some of them are empty.
+        But you can leave out certain output_field's if they are not needed.
+        In summary, you should ALWAYS include all input fields as keys of the dictionary, but you can leave out certain output_field's if they are not needed.
+        This should be formatted as a Python dictionary and nothing else.
+        """.strip(), 
+        format = str
+    )

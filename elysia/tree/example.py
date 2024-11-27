@@ -19,7 +19,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "can you search the real estate collection for properties in london?"
+        "what is verba? use generic return type. return True for is_query_possible",
     )
 
     

@@ -164,3 +164,7 @@ class ConversationRetrieval(Retrieval):
             print("\n\n")
         return ""
     
+class MappedRetrieval(Retrieval):
+    def __init__(self, objects: list[dict], metadata: dict):
+        super().__init__(objects, metadata)
+        self.type = "mapped"

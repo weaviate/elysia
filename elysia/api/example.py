@@ -39,7 +39,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="summarise what is verba?. return True for is_query_possible",
+    query="what is verba? use generic return type. return True for is_query_possible",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"
