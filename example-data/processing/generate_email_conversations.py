@@ -116,11 +116,12 @@ if __name__ == "__main__":
 
     dspy.settings.configure(lm = dspy.LM(model="gpt-4o-mini", max_tokens=10000))
 
-    df = pd.read_csv("verba_github_issues.csv")
+    df = pd.read_csv("../verba_github_issues.csv")
     generator = EmailChainGenerator()
 
     email_chains = []
-    num_issues = 100
+    num_issues = len(df)
+    id = 0
     for i in tqdm(range(num_issues)):
         
         num_chains = random.randint(0, 3)
@@ -151,13 +152,14 @@ if __name__ == "__main__":
             # add metadata to the chain
             chain = {
                 "issue_id": df.iloc[i]["id"].item(),
-                "conversation_id": idx,
+                "conversation_id": id,
                 "conversation": generation,
                 "summary": summary
             }
 
             email_chains.append(chain)
             previous_chains.append(summary)
+            id += 1
 
         # error
 

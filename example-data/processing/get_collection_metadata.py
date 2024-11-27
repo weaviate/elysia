@@ -2,7 +2,7 @@ import spacy
 import dspy
 import os
 import random
-
+import datetime
 import weaviate
 import weaviate.classes as wvc
 from weaviate.classes.init import Auth
@@ -20,6 +20,7 @@ from weaviate.collections.classes.aggregate import (
     AggregateInteger
 )
 
+from elysia.util.parsing import format_datetime
 from elysia.globals.weaviate_client import client
 from elysia.util.collection_metadata import get_collection_data_types
 from rich import print
@@ -131,8 +132,20 @@ def aggregate_by_data_type(collection, data_type, property, full_response = None
                 maximum=True
             )]
         )
-        out["range"] = [response.properties[property].minimum, response.properties[property].maximum]
-        out["average"] = response.properties[property].median
+        minimum = response.properties[property].minimum
+        if isinstance(minimum, datetime.datetime):
+            minimum = format_datetime(minimum)
+
+        maximum = response.properties[property].maximum
+        if isinstance(maximum, datetime.datetime):
+            maximum = format_datetime(maximum)
+
+        average = response.properties[property].median
+        if isinstance(average, datetime.datetime):
+            average = format_datetime(average)
+
+        out["range"] = [minimum, maximum]
+        out["average"] = average
 
     elif data_type.endswith("[]"):
 

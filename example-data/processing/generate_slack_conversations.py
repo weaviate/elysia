@@ -102,11 +102,12 @@ if __name__ == "__main__":
 
     dspy.settings.configure(lm = dspy.LM(model="gpt-4o-mini"))
 
-    df = pd.read_csv("verba_github_issues.csv")
+    df = pd.read_csv("../verba_github_issues.csv")
     generator = SlackConversationGenerator()
 
     slack_conversations = []
-    num_issues = 100
+    num_issues = len(df)
+    id = 0
     for i in tqdm(range(num_issues)):
         
         num_conversations = random.randint(0, 3)
@@ -135,13 +136,14 @@ if __name__ == "__main__":
             # add metadata to the conversation
             conversation = {
                 "issue_id": df.iloc[i]["id"].item(),
-                "conversation_id": idx,
+                "conversation_id": id,
                 "conversation": generation,
                 "summary": summary
             }
 
             slack_conversations.append(conversation)
             previous_conversations.append(summary)
+            id += 1
 
     with open("verba_slack_conversations.jsonl", "w") as f:
         for conversation in slack_conversations:
