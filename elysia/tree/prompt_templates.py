@@ -65,6 +65,30 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
 
+        # Collection information for user to ask basic questions about collection
+        collection_information = dspy.InputField(desc="""
+            Information about each of the collections, so that you can choose which collection to query, as well as understand the format of the collection you will eventually query.
+            This is of the form:
+            {
+                "name": collection name,
+                "length": number of objects in the collection,
+                "summary": summary of the collection,
+                "fields": {
+                    "field_name": {
+                        "groups": a comprehensive list of all unique text values that exist in the field. if the field is not text, this should be an empty list,
+                        "mean": mean of the field. if the field is text, this refers to the means length (in tokens) of the texts in this field. if the type is a list, this refers to the mean length of the lists,
+                        "range": minimum and maximum values of the length.
+                        "type": the data type of the field.
+                    },
+                    ...
+                }
+            }
+            You will be given one of these for each collection that you are available to the user.
+            Use this to determine what task to decide on, since some the user might be asking for something impossible.
+            Err on the side of caution, bias towards _trying_ to answer the user's query. You should be certain that the task is impossible if you think it is.
+            """.strip(), 
+            format = str
+        )
         # Communication-based input fields
         previous_reasoning = dspy.InputField(
             description="""

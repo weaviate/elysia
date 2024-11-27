@@ -79,10 +79,10 @@ class DecisionNode:
             out[node] = self.options[node]["future"]
         return out
 
-    def decide(self, tree_data: TreeData, decision_data: DecisionData, **kwargs):
+    def decide(self, tree_data: TreeData, decision_data: DecisionData, action_data: ActionData, **kwargs):
         
         # run LLM
-        output, self.completed = self.decision_executor(tree_data, decision_data)
+        output, self.completed = self.decision_executor(tree_data, decision_data, action_data)
 
         # if training, the task is given input
         if self.training:
@@ -105,9 +105,10 @@ class DecisionNode:
             self, 
             tree_data: TreeData,
             decision_data: DecisionData, 
+            action_data: ActionData,
             **kwargs
         ):
-        return self.decide(tree_data, decision_data, **kwargs)
+        return self.decide(tree_data, decision_data, action_data, **kwargs)
     
 class TreeReturner:
     """
@@ -630,6 +631,7 @@ class Tree:
                 decision, action_fn, model_completed = current_decision_node(
                     tree_data=self.tree_data,
                     decision_data=self.decision_data,
+                    action_data=self.action_data,
                     **training_kwargs
                 )
 

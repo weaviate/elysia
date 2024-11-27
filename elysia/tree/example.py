@@ -19,7 +19,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "use the aggregate function to tell me the average price of trouser products in ecommerce"
+        "can you search the real estate collection for properties in london?"
     )
 
     

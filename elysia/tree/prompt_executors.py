@@ -8,7 +8,7 @@ from elysia.tree.prompt_templates import (
 )
 
 # Objects
-from elysia.tree.objects import TreeData, DecisionData
+from elysia.tree.objects import TreeData, DecisionData, ActionData
 
 # Globals
 from elysia.globals.reference import create_reference
@@ -21,6 +21,7 @@ class DecisionExecutor(dspy.Module):
     def forward(self, 
                 tree_data: TreeData,
                 decision_data: DecisionData, 
+                action_data: ActionData,
                 idx: int = 0) -> tuple[dict, bool]:
 
         decision = self.router(
@@ -28,6 +29,7 @@ class DecisionExecutor(dspy.Module):
             instruction=decision_data.instruction,
             reference=create_reference(),
             conversation_history=tree_data.conversation_history,
+            collection_information=action_data.collection_information,
             previous_reasoning=tree_data.previous_reasoning,
             tree_count=decision_data.tree_count_string(),
             data_queried=tree_data.data_queried_string(),
