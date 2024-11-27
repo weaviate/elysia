@@ -25,7 +25,7 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "Summarize the last 10 GitHub Tickets"
+        "aggregate and tell me the average price of shrekcore products in ecommerce"
     )
 
     

@@ -232,14 +232,14 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
 
         user_prompt = dspy.InputField(desc="The user's original query")
         reference = dspy.InputField(desc="""
-            Information about the state of the world NOW such as the date and time, used to frame the query.
+            Information about the state of the world NOW such as the date and time, used to frame the aggregation.
             """.strip(), 
             format = str
         )
         previous_reasoning = dspy.InputField(
             desc="""
             Your reasoning that you have output from previous decisions.
-            This is so you can use the information from previous decisions to help you decide what type of query to create.
+            This is so you can use the information from previous decisions to help you decide what type of aggregation to create.
 
             This is a dictionary of the form:
             {

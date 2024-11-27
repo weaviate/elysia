@@ -493,7 +493,7 @@ class Tree:
 
         if isinstance(action_result, Aggregation):
             self.decision_data.available_information.add_aggregation(collection_name=action_result.metadata["collection_name"], objects=action_result)
-            self.tree_data.update_list("data_queried", action_result.metadata["collection_name"], {
+            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], {
                 "type": "aggregation",
                 "count": len(action_result.objects),
                 "prompt": user_prompt

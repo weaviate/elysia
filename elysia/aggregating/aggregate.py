@@ -1,4 +1,6 @@
 import dspy
+from rich import print
+from rich.panel import Panel
 
 # Util
 from elysia.util.logging import backend_print
@@ -22,8 +24,10 @@ class AgenticAggregate:
     def __init__(self, 
                  aggregate_initialiser_filepath: str = "elysia/training/dspy_models/aggregate_initialiser/fewshot_k12.json", 
                  aggregate_executor_filepath: str = "elysia/training/dspy_models/aggregate_executor/fewshot_k12.json",
-                 collection_names: list[str] = None):
+                 collection_names: list[str] = None,
+                 verbosity: int = 0):
         
+        self.verbosity = verbosity
         self.collection_names = collection_names
         self.aggregate_executor = AggregateExecutor(collection_names=collection_names).activate_assertions()
     
@@ -41,6 +45,9 @@ class AgenticAggregate:
             action_data: ActionData,
             decision_data: DecisionData
         ):
+
+        # set some temporary variables
+        current_message = tree_data.current_message
         
         # Get some metadata about the collection
         self._find_previous_aggregations(decision_data.available_information)
@@ -68,8 +75,11 @@ class AgenticAggregate:
 
         # If the query is not possible, yield a generic retrieval and return nothing
         if aggregation is None:
-            yield GenericAggregation([], {"collection_name": aggregation.collection_name, "impossible_prompts": [user_prompt]})
+            yield GenericAggregation([], {"collection_name": aggregation.collection_name, "impossible_prompts": [tree_data.user_prompt]})
             return
+
+        if self.verbosity > 0:
+            print(Panel.fit(aggregation.code, title="Aggregation code", padding=(1,1), border_style="yellow"))
 
         current_message, message_update = update_current_message(current_message, aggregation.text_return)
 
@@ -89,8 +99,7 @@ class AgenticAggregate:
         }
 
         # Yield results to front end
-        if message_update != "":
-            yield Response([{"text": message_update}], {})
+        yield Response([{"text": message_update}], {})
         yield TreeUpdate(from_node="aggregate", to_node="aggregate_executor", reasoning=aggregation.reasoning, last = False)
         yield Status(f"Aggregated from {aggregation.collection_name}")
 
