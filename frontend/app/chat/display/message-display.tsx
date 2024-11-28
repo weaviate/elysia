@@ -10,6 +10,8 @@ import {
   ResultPayload,
   TextPayload,
   Ecommerce,
+  AggregationCollection,
+  AggregationPayload,
 } from "../../types";
 
 import UserMessageDisplay from "./user";
@@ -20,6 +22,10 @@ import WarningDisplay from "./warning";
 import ConversationsDisplay from "./conversations";
 import SummaryDisplay from "./summary";
 import EcommerceDisplay from "./ecommerce";
+import BoringGenericDisplay from "./generic";
+import CollectionDisplay from "./collection";
+import CodeDisplay from "./code";
+import AggregationDisplay from "./aggregation";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -124,12 +130,33 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
               .map((message, index) => (
                 <div key={index + "message"} className="w-full flex">
                   {message.type === "result" && (
-                    <div className="w-full flex flex-col justify-start items-start">
+                    <div className="w-full flex flex-col justify-start items-start gap-3">
+                      <div className="flex flex-col gap-3 w-full">
+                        {(message.payload as ResultPayload).metadata[
+                          "collection_name"
+                        ] && (
+                          <CollectionDisplay
+                            collection_name={
+                              (message.payload as ResultPayload).metadata[
+                                "collection_name"
+                              ]
+                            }
+                            total_objects={
+                              (message.payload as ResultPayload).objects.length
+                            }
+                            routerChangeCollection={routerChangeCollection}
+                          />
+                        )}
+                        {(message.payload as ResultPayload).code && (
+                          <CodeDisplay
+                            payload={(message.payload as ResultPayload).code}
+                          />
+                        )}
+                      </div>
                       {(message.payload as ResultPayload).type === "ticket" && (
                         <TicketsDisplay
                           key={`${index}-${message.id}`}
                           message={message}
-                          routerChangeCollection={routerChangeCollection}
                         />
                       )}
                       {(message.payload as ResultPayload).type ===
@@ -137,7 +164,6 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         <EcommerceDisplay
                           key={`${index}-${message.id}`}
                           payload={message.payload as ResultPayload}
-                          routerChangeCollection={routerChangeCollection}
                         />
                       )}
                       {((message.payload as ResultPayload).type ===
@@ -146,7 +172,6 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                           "message") && (
                         <ConversationsDisplay
                           key={`${index}-${message.id}`}
-                          metadata={(message.payload as ResultPayload).metadata}
                           payload={
                             (message.payload as ResultPayload).type ===
                             "conversation"
@@ -157,7 +182,28 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                                     .objects as ConversationMessage[],
                                 ]
                           }
-                          routerChangeCollection={routerChangeCollection}
+                        />
+                      )}
+                      {((message.payload as ResultPayload).type === "generic" ||
+                        (message.payload as ResultPayload).type ===
+                          "boring_generic") && (
+                        <BoringGenericDisplay
+                          key={`${index}-${message.id}`}
+                          payload={
+                            (message.payload as ResultPayload).objects as {
+                              [key: string]: string;
+                            }[]
+                          }
+                        />
+                      )}
+                      {(message.payload as ResultPayload).type ===
+                        "aggregation" && (
+                        <AggregationDisplay
+                          key={`${index}-${message.id}`}
+                          aggregation={
+                            (message.payload as ResultPayload)
+                              .objects as AggregationPayload[]
+                          }
                         />
                       )}
                     </div>

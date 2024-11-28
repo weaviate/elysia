@@ -4,19 +4,12 @@ import React, { useEffect, useState } from "react";
 
 import { Message, ResultPayload, Ticket } from "../../types";
 import TicketMessageDisplay from "./ticket";
-import { FaDatabase } from "react-icons/fa";
-import CollectionDisplay from "./collection";
-import CodeDisplay from "./code";
 
 interface TicketsDisplayProps {
   message: Message;
-  routerChangeCollection: (collection_id: string) => void;
 }
 
-const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
-  message,
-  routerChangeCollection,
-}) => {
+const TicketsDisplay: React.FC<TicketsDisplayProps> = ({ message }) => {
   const payload = message.payload as ResultPayload;
   const tickets = payload.objects as Ticket[];
 
@@ -32,14 +25,6 @@ const TicketsDisplay: React.FC<TicketsDisplayProps> = ({
 
   return (
     <div className="w-full flex flex-col justify-start items-start gap-3 ">
-      {payload.code && <CodeDisplay payload={payload.code} />}
-      {payload.metadata["collection_name"] && (
-        <CollectionDisplay
-          collection_name={payload.metadata["collection_name"]}
-          total_objects={tickets.length}
-          routerChangeCollection={routerChangeCollection}
-        />
-      )}
       <div className="flex flex-col w-full justify-start items-start gap-3">
         {(ticketCollapsed ? tickets.slice(0, 3) : tickets).map(
           (ticket, idx) => (

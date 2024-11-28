@@ -30,7 +30,15 @@ export type ResponsePayload = {
 };
 
 export type ResultPayload = {
-  type: "text" | "ticket" | "message" | "conversation" | "ecommerce";
+  type:
+    | "text"
+    | "ticket"
+    | "message"
+    | "conversation"
+    | "ecommerce"
+    | "generic"
+    | "boring_generic"
+    | "aggregation";
   /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
   code: CodePayload;
@@ -39,7 +47,29 @@ export type ResultPayload = {
     | Ticket[]
     | ConversationMessage[]
     | ConversationMessage[][] // A list of lists of ConversationMessages
-    | Ecommerce[];
+    | Ecommerce[]
+    | { [key: string]: string }[]
+    | AggregationPayload[];
+};
+
+export type AggregationPayload = {
+  [key: string]: AggregationCollection;
+};
+
+export type AggregationCollection = {
+  [key: string]: AggregationField;
+};
+
+export type AggregationField = {
+  type: "text" | "number";
+  values: AggregationValue[];
+  groups: { [key: string]: AggregationCollection };
+};
+
+export type AggregationValue = {
+  value: string | number;
+  field: string | null;
+  aggregation: "count" | "sum" | "avg" | "minimum" | "maximum" | "mean";
 };
 
 export type TextPayload = {

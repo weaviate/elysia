@@ -30,7 +30,7 @@ export function useConversations(id: string) {
     getDecisionTree(id, conversation_id).then((data) => {
       getCollections().then((collections) => {
         setCollections(collections);
-        const newConversation = {
+        const newConversation: Conversation = {
           ...initialConversation,
           id: conversation_id,
           tree: [data.tree],

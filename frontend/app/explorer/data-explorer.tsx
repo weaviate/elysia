@@ -11,6 +11,8 @@ import { TbPlayerTrackPrevFilled } from "react-icons/tb";
 import { TbPlayerSkipForwardFilled } from "react-icons/tb";
 import { TbPlayerSkipBackFilled } from "react-icons/tb";
 
+import DataTable from "./table";
+
 interface DataExplorerProps {
   collectionData: CollectionData | null;
   collectionLoading: boolean;
@@ -67,53 +69,12 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
         </div>
       </div>
       {!selectedCell ? (
-        <div className="h-[80vh] items-center overflow-scroll w-full flex flex-col p-8 mt-4">
-          {collectionLoading && (
-            <p className="text-primary shine">Loading...</p>
-          )}
-          {!collectionLoading && collectionData && (
-            <div className="w-full flex-col gap-2 items-center justify-center">
-              <table className="table table-auto w-full fade-in">
-                <thead className="table-header-group">
-                  <tr className="">
-                    {Object.keys(collectionData.properties).map((key) => (
-                      <th
-                        key={key}
-                        className="p-2 cursor-pointer items-start justify-start bg-background  border-2 border-background rounded-md"
-                      >
-                        <p className="truncate text-xs text-primary font-light">
-                          {key}
-                        </p>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {collectionData.items.map((item, index) => (
-                    <tr
-                      key={index}
-                      className="bg-background hover:text-primary text-secondary hover:bg-foreground transition-all cursor-pointer duration-300 ease-in-out"
-                      onClick={() => setSelectedCell(item)}
-                    >
-                      {Object.keys(collectionData.properties).map((key) => (
-                        <td
-                          key={key}
-                          className="p-3 whitespace-nowrap min-w-[100px] max-w-[400px] truncate"
-                        >
-                          <div className="flex items-center justify-start">
-                            <p className="text-xs font-light">
-                              {item[key] !== undefined ? item[key] : ""}
-                            </p>
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <DataTable
+          data={collectionData?.items || []}
+          header={Object.keys(collectionData?.properties || {})}
+          loading={collectionLoading}
+          setSelectedCell={setSelectedCell}
+        />
       ) : (
         <div className="h-[90vh] items-start justify-start gap-5 overflow-scroll w-full flex p-4 flex-col mt-4 fade-in">
           <div className="flex items-end justify-end w-full">

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 
-import { Conversation, DecisionTreeNode, Message, Query } from "../types";
+import { Conversation, DecisionTreeNode, Query } from "../types";
 
 import QueryInput from "./user-input";
 import MessageDisplay from "./display/message-display";
@@ -11,7 +11,6 @@ import { RiFlowChart } from "react-icons/ri";
 import FlowDisplay from "./flow-display";
 import { ReactFlowProvider } from "@xyflow/react";
 import SelectDropdown from "../navigation/select-dropdown";
-import { FaCircle } from "react-icons/fa";
 
 interface ChatInterfaceProps {
   currentConversation: string;

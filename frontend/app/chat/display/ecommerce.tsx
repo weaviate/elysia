@@ -2,33 +2,19 @@
 
 import React from "react";
 import { Ecommerce, ResultPayload } from "../../types";
-import CollectionDisplay from "./collection";
-import CodeDisplay from "./code";
 
 interface EcommerceDisplayProps {
   payload: ResultPayload;
-  routerChangeCollection: (collection_id: string) => void;
 }
 
-const EcommerceDisplay: React.FC<EcommerceDisplayProps> = ({
-  payload,
-  routerChangeCollection,
-}) => {
+const EcommerceDisplay: React.FC<EcommerceDisplayProps> = ({ payload }) => {
   const products = payload.objects as Ecommerce[];
   return (
     <div className="w-full flex flex-col gap-4">
-      {payload.code && <CodeDisplay payload={payload.code} />}
-      {payload.metadata["collection_name"] && (
-        <CollectionDisplay
-          collection_name={payload.metadata["collection_name"]}
-          total_objects={products.length}
-          routerChangeCollection={routerChangeCollection}
-        />
-      )}
       <div className="w-full flex gap-4 overflow-x-auto pb-4">
-        {products.map((product) => (
+        {products.map((product, idx) => (
           <div
-            key={product.name}
+            key={`${idx}-${product.name}`}
             className="flex flex-col gap-2 w-[20vw] flex-shrink-0 bg-background_alt p-4 rounded-lg shadow-xl"
           >
             <div className="flex flex-col gap-2 items-start justify-start">
