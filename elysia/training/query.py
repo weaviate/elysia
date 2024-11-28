@@ -59,6 +59,7 @@ def load_example_from_dict(d: dict):
     return dspy.Example({k: v for k, v in d.items()}).with_inputs(
         "user_prompt", 
         "previous_queries", 
+        "conversation_history",
         "data_queried", 
         "previous_reasoning", 
         "collection_information", 
@@ -99,7 +100,7 @@ def create_example(
     # generate by running a tree up to a certain point
     tree = Tree(
         collection_names=available_collections,
-        verbosity=2,
+        verbosity=0,
         training_route=route,
         training_decision_output=True
     )
@@ -120,14 +121,16 @@ def create_example(
     if "sort" in code:
         sort_start = code.index('Sort.by_property("')
         sort_end = code.index(')', sort_start)
-        sort_property = code[sort_start+15:sort_end]
+        sort_property = code[sort_start+len("Sort.by_property("):sort_end]
+        sort_property = sort_property[sort_property.find('"')+1:sort_property.rfind('"')]
 
         text_return += f", sorting by {sort_property}"
 
     if "filters" in code:
         filter_start = code.index('Filter.by_property("')
         filter_end = code.index(')', filter_start)
-        filter_property = code[filter_start+15:filter_end]
+        filter_property = code[filter_start+len("Filter.by_property("):filter_end]
+        filter_property = filter_property[filter_property.find('"')+1:filter_property.rfind('"')]
 
         text_return += f", filtering by {filter_property}"
 
@@ -137,26 +140,31 @@ def create_example(
     tree.process_sync(user_prompt)
 
     # arguments output from tree
-    available_information = tree.returns
-    previous_reasoning = tree.previous_reasoning
-    collection_information = tree.collection_information
-    current_message = tree.current_message
-    data_queried = tree.data_queried_str
+    available_information = tree.decision_data.available_information
+    previous_reasoning = tree.tree_data.previous_reasoning
+    collection_information = tree.action_data.collection_information
+    current_message = tree.tree_data.current_message
+    data_queried = tree.tree_data.data_queried
+    conversation_history = tree.tree_data.conversation_history
 
     text_return = current_message + " " + text_return
 
     # find previous queries
     previous_queries = find_previous_queries(available_information)
-
-
+ 
     # return dspy example
     return dspy.Example(
+        # inputs
         user_prompt=user_prompt, 
         previous_queries=previous_queries, 
+        conversation_history=conversation_history,
         data_queried=data_queried,
         previous_reasoning=previous_reasoning,
         collection_information=collection_information,
         current_message=current_message,
+        is_query_possible=True,
+        
+        # outputs
         code=code,
         collection_name=collection_name,
         return_type=return_type,
@@ -166,6 +174,7 @@ def create_example(
     ).with_inputs(
         "user_prompt", 
         "previous_queries", 
+        "conversation_history",
         "data_queried", 
         "previous_reasoning", 
         "collection_information", 
@@ -173,7 +182,7 @@ def create_example(
     )
     
 
-def make_examples():
+def make_examples(force=False):
 
     #  save the examples
     filepath = os.path.join(
@@ -184,7 +193,7 @@ def make_examples():
 
     filename = "query.json"
 
-    if not os.path.exists(os.path.join(filepath, filename)):
+    if not os.path.exists(os.path.join(filepath, filename)) or force:
         data = [
             create_example(
                 user_prompt="List and sort the most common issues from the verba github issues collection from 2024.",
@@ -196,7 +205,7 @@ def make_examples():
                         Filter.by_property("issue_created_at").less_than(format_datetime(datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)))
                     ),
                     sort = Sort.by_property("issue_created_at", ascending=False), # sort so most recent is first
-                    limit=30 # an arbitrary large number
+                    limit=30 
                 )
                 """,
                 return_type="ticket",
@@ -250,10 +259,10 @@ def make_examples():
                 code="""
                 collection.query.fetch_objects(
                     filters=(
-                        Filter.by_property("message_timestamp").greater_than(format_datetime(datetime.datetime(2024, 9, 1, tzinfo=datetime.timezone.utc))) # last 2 months
+                        Filter.by_property("message_timestamp").greater_than(format_datetime(datetime.datetime(2024, 9, 1, tzinfo=datetime.timezone.utc))) 
                     ),
-                    sort = Sort.by_property("message_timestamp", ascending=False), # sort so most recent is first (only for fetch_objects)
-                    limit=30 # an arbitrary large number
+                    sort = Sort.by_property("message_timestamp", ascending=False),
+                    limit=30 
                 )
                 """,
                 return_type="message",
@@ -355,6 +364,8 @@ def make_examples():
         with open(os.path.join(filepath, filename), "w") as f:
             out = [example.toDict() for example in data]
             json.dump(out, f)
+        
+        print(f"Examples saved to {os.path.join(filepath, filename)}")
 
     else:
         with open(os.path.join(filepath, filename), "r") as f:
@@ -363,9 +374,9 @@ def make_examples():
     return data
 
 
-def train_query_fewshot():
+def train_query_fewshot(force=True):
     
-    train = make_examples()
+    train = make_examples(force=force)
 
     query_executor = QueryExecutor(available_collections, available_return_types)
     
@@ -388,6 +399,9 @@ def train_query_fewshot():
     # Save the file in the created directory
     full_filepath = os.path.join(filepath, f"fewshot_k{num_fewshot_demos}.json")
     trained_fewshot.save(full_filepath)
+
+    print("Training completed!")
+    print(f"Model saved to {full_filepath}")
 
 
 if __name__ == "__main__":

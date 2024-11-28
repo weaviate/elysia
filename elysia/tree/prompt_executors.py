@@ -19,31 +19,39 @@ class DecisionExecutor(dspy.Module):
         self.router = dspy.ChainOfThought(construct_decision_prompt(available_tasks))
     
     def forward(self, 
-                tree_data: TreeData,
-                decision_data: DecisionData, 
-                action_data: ActionData,
+                user_prompt: str,
+                instruction: str,
+                conversation_history: list[dict],
+                collection_information: list,
+                previous_reasoning: dict,
+                tree_count: str,
+                data_queried: list,
+                current_message: str,
+                available_tasks: list[dict],
+                available_information: list,
+                future_information: list,
                 idx: int = 0) -> tuple[dict, bool]:
 
         decision = self.router(
-            user_prompt=tree_data.user_prompt,
-            instruction=decision_data.instruction,
+            user_prompt=user_prompt,
+            instruction=instruction,
             reference=create_reference(),
-            conversation_history=tree_data.conversation_history,
-            collection_information=action_data.collection_information,
-            previous_reasoning=tree_data.previous_reasoning,
-            tree_count=decision_data.tree_count_string(),
-            data_queried=tree_data.data_queried_string(),
-            current_message=tree_data.current_message,
-            available_tasks=decision_data.available_tasks,
-            available_information=decision_data.available_information.to_llm_str(),
-            future_information=decision_data.future_information,
+            conversation_history=conversation_history,
+            collection_information=collection_information,
+            previous_reasoning=previous_reasoning,
+            tree_count=tree_count,
+            data_queried=data_queried,
+            current_message=current_message,
+            available_tasks=available_tasks,
+            available_information=available_information,
+            future_information=future_information,
             config={"temperature": 0.7+0.01*idx} # ensures randomness in LLM
         )
 
         # assert that the task name is correct
-        dspy.Assert(decision.task in decision_data.available_tasks, 
+        dspy.Assert(decision.task in available_tasks, 
                     f"""Decision task is not in available tasks: 
-                    {decision.task} not in {decision_data.available_tasks}
+                    {decision.task} not in {available_tasks}
                     Ensure that the task name is correct and that the task exists in the available_tasks field.""")
 
         try:

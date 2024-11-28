@@ -110,14 +110,31 @@ class QueryExecutor(dspy.Module):
             "target_vector", "include_vector", "return_metadata", "return_properties",
             "return_references"
         ]
-        
-        # Extract parameter names from the query
+
+        # Outer brackets (that wrap the main function call)
         param_start = query_code.find("(")
         param_end = query_code.rfind(")")
+
+        # If there are no outer brackets, there are no parameters
         if param_start == -1 or param_end == -1:
             return False, "No parameters detected."
         
         params_text = query_code[param_start+1:param_end]
+
+
+        param_names = params_text.split("=")
+        # param_names = [p.split(",") for p in param_names]
+        # param_names = [item.strip() for sublist in param_names for item in sublist]
+        # param_names = [p.split("\n") for p in param_names]
+        # param_names = [item.strip() for sublist in param_names for item in sublist]
+        # param_names = [p for p in param_names if p != "" and not p.startswith("#")]
+        # param_names = [param_names[i].strip() for i in range(0, len(param_names), 2)]
+
+        # params_list = [p.strip() for p in params_list if p.strip() != ""]
+        # params_list = [p.split("\n") for p in params_list]
+        # params_list = [item.strip() for sublist in params_list for item in sublist]
+        # params_list = [p for p in params_list if "(" not in p and ")" not in p]
+
         param_names = [p.split("=")[0].strip() for p in params_text.split(",") if "=" in p]
         
         # Track bracket depth to only parse top-level parameters
@@ -148,9 +165,10 @@ class QueryExecutor(dspy.Module):
         # Don't forget the last parameter
         if '=' in current_param and bracket_depth == 0:
             param_names.append(current_param.split('=')[0].strip())
-            
-        if not all(param in allowed_params for param in param_names):
-            return False, "Invalid parameter detected."
+
+        for param in param_names:
+            if param not in allowed_params:
+                return False, f"Invalid parameter detected: {param}."
 
         # Check parentheses balance
         if query_code.count("(") != query_code.count(")"):
@@ -202,7 +220,7 @@ class QueryExecutor(dspy.Module):
             return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
 
         try:
-            is_query_possible = eval(prediction.is_query_possible)
+            is_query_possible = eval(prediction.is_query_possible, {}, {})
             assert isinstance(is_query_possible, bool)
         except Exception as e:
             try:
@@ -242,7 +260,14 @@ class QueryExecutor(dspy.Module):
 
             try:
                 dspy.Assert(False, 
-                            f"Error executing query code:\n{prediction.code}\nERROR: {e}", 
+                            f"""
+                            Error executing query code:
+                            {prediction.code}
+                            The ERROR message was: {e}
+                            Ensure that the query code is valid python output.
+                            Or you should set is_query_possible to False if you want to stop the query from being executed.
+                            """
+                            , 
                             target_module=self.query_prompt
                             )
             except SafetyException as e:

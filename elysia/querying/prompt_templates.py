@@ -340,7 +340,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
         )
 
         code = dspy.OutputField(
-            desc="The generated query code only. Do not enclose it in quotes or in ```. Just the code only.",
+            desc="The generated query code only. Do not enclose it in quotes or in ```. Just the code only. Do not add any comments.",
             format = str
         )
 

@@ -82,7 +82,19 @@ class DecisionNode:
     def decide(self, tree_data: TreeData, decision_data: DecisionData, action_data: ActionData, **kwargs):
         
         # run LLM
-        output, self.completed = self.decision_executor(tree_data, decision_data, action_data)
+        output, self.completed = self.decision_executor(
+            user_prompt=tree_data.user_prompt,
+            instruction=decision_data.instruction,
+            conversation_history=tree_data.conversation_history,
+            collection_information=action_data.collection_information,
+            previous_reasoning=tree_data.previous_reasoning,
+            tree_count=decision_data.tree_count_string(),
+            data_queried=tree_data.data_queried_string(),
+            current_message=tree_data.current_message,
+            available_tasks=decision_data.available_tasks,
+            available_information=decision_data.available_information.to_llm_str(),
+            future_information=decision_data.future_information
+        )
 
         # if training, the task is given input
         if self.training:
@@ -165,10 +177,10 @@ class TreeReturner:
             return self._parse_text(result, query_id = query_id)
 
         if isinstance(result, Error):
-            return self._parse_error(result.text, query_id = query_id)
+            return self._parse_error(result, query_id = query_id)
 
         if isinstance(result, Warning):
-            return self._parse_warning(result.text, query_id = query_id)
+            return self._parse_warning(result, query_id = query_id)
         
 class BranchVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -297,7 +309,7 @@ class Tree:
             options = {
                 "search": {
                     "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names),
+                    "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(self.querier.return_types.keys()),
                     "action": None,
                     "next": "search",
                 },
@@ -635,8 +647,12 @@ class Tree:
                     **training_kwargs
                 )
 
+                # extract task
+                if self.training_route is None:
+                    task = decision.task
+
                 # additional end criteria, task picked is "text_response"
-                if decision.task == "text_response":
+                if task == "text_response":
                     model_completed = True
 
                 # additional end criteria, recursion limit reached
@@ -647,7 +663,7 @@ class Tree:
 
                 # set current variables (if not in training mode)
                 if self.training_route is None:
-                    task = decision.task
+                    task = task
                     completed = model_completed
                 
                 # update the current message
@@ -701,7 +717,7 @@ class Tree:
 
             self.decision_data.num_trees_completed += 1
 
-            if decision.full_chat_response != "" and decision.task != "summarize":
+            if decision.full_chat_response != "" and task != "summarize":
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
             yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])

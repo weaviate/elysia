@@ -1,7 +1,7 @@
 import dspy
 import json
 from elysia.training.prompt_templates import construct_training_decision_prompt
-from elysia.globals.reference import reference as default_reference
+from elysia.globals.reference import create_reference
 
 class TrainingDecisionExecutor(dspy.Module):
 
@@ -9,45 +9,34 @@ class TrainingDecisionExecutor(dspy.Module):
         self.router = dspy.Predict(construct_training_decision_prompt(available_tasks))
     
     def forward(self, 
-                user_prompt: str, 
+                user_prompt: str,
                 instruction: str,
-                available_tasks: list[dict], 
-                available_information: str,
                 conversation_history: list[dict],
-                completed_tasks: list[str],
-                data_queried: list[str],
-                decision_tree: dict,
-                future_tasks: dict,
+                collection_information: list,
                 previous_reasoning: dict,
-                collection_names: list[str],
-                reference: dict = default_reference,
-                current_message: str = "",
-                tree_count: str = "",
-                task: str = "",
-                idx: int = 0) -> tuple[dict, bool]:
-
-        # convert available_tasks to a string
-        # available_tasks_list = list(available_tasks.keys()) # provide the task names 
-        # available_tasks_str = str(available_tasks_list) + "\n" + json.dumps(available_tasks) # append the task descriptions
-        available_tasks_str = json.dumps(available_tasks)
-        decision_tree_str = json.dumps(decision_tree)
+                tree_count: str,
+                data_queried: list,
+                current_message: str,
+                available_tasks: list[dict],
+                available_information: list,
+                future_information: list,
+                idx: int = 0,
+                **kwargs) -> tuple[dict, bool]:
 
         decision = self.router(
+            task = kwargs.get("task", ""),
             user_prompt=user_prompt,
-            reference=reference,
+            reference=create_reference(),
             instruction=instruction,
-            completed_tasks=completed_tasks,
-            available_tasks=available_tasks_str,
-            decision_tree=decision_tree_str,
-            available_information=available_information,
-            collection_names=collection_names,
-            data_queried=data_queried,
-            future_information=future_tasks,
             conversation_history=conversation_history,
+            collection_information=collection_information,
             previous_reasoning=previous_reasoning,
-            current_message=current_message,
             tree_count=tree_count,
-            task=task,
+            data_queried=data_queried,
+            current_message=current_message,
+            available_tasks=available_tasks,
+            available_information=available_information,
+            future_information=future_information,
             config = {"temperature": 0.7+0.01*idx}
         )
 

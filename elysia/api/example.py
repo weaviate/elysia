@@ -39,7 +39,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="what is verba? use generic return type. return True for is_query_possible",
+    query="retrieve edward's last message",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"
@@ -54,6 +54,15 @@ class fake_websocket:
 
 await process(query_payload.dict(), fake_websocket())
 
+
+
+query_payload = QueryData(
+    query="what was the conversation attached to that?",
+    query_id="whatduhek",
+    user_id="2",
+    conversation_id="1"
+)
+await process(query_payload.dict(), fake_websocket())
 
 # test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["ecommerce"].objects
 

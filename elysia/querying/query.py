@@ -44,7 +44,9 @@ class AgenticQuery:
         self.data_mapper = DataMappingExecutor().activate_assertions(max_backtracks=1)
         if len(query_filepath) > 0:
             self.querier.load(query_filepath)
-            backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_filepath}[/italic magenta]")
+
+            if self.verbosity > 0:
+                backend_print(f"[green]Loaded querier[/green] model at [italic magenta]{query_filepath}[/italic magenta]")
 
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names
@@ -91,9 +93,9 @@ class AgenticQuery:
                 current_message = current_message
             )
 
-        if query is None:
+        if query is None: # either an error or the query is impossible
             yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [tree_data.user_prompt]})
-            if error_message != "":
+            if error_message != "": # an error in the prompt executor
                 yield Error(error_message)
             return
         

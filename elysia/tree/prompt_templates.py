@@ -40,7 +40,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             description="The query that the user is asking"
         )
         instruction = dspy.InputField(
-            description="The instruction for the decision. Pay close attention to this. You must choose a task based on this instruction alone.",
+            description="The instruction for the decision. Pay close attention to this. This is your guidance for the decision.",
             format = str
         )
         reference = dspy.InputField(

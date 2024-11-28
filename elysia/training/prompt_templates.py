@@ -42,7 +42,7 @@ def construct_training_decision_prompt(available_tasks_list: list[str] = None) -
             description="The query that the user is asking"
         )
         instruction = dspy.InputField(
-            description="The instruction for the decision. Pay close attention to this. You must choose a task based on this instruction alone.",
+            description="The instruction for the decision.",
             format = str
         )
         reference = dspy.InputField(
@@ -66,6 +66,31 @@ def construct_training_decision_prompt(available_tasks_list: list[str] = None) -
             """.strip(),
             format = str
         )
+
+        # Collection information for user to ask basic questions about collection
+        collection_information = dspy.InputField(desc="""
+            Information about each of the collections, so that you can choose which collection to query, as well as understand the format of the collection you will eventually query.
+            This is of the form:
+            {
+                "name": collection name,
+                "length": number of objects in the collection,
+                "summary": summary of the collection,
+                "fields": {
+                    "field_name": {
+                        "groups": a comprehensive list of all unique text values that exist in the field. if the field is not text, this should be an empty list,
+                        "mean": mean of the field. if the field is text, this refers to the means length (in tokens) of the texts in this field. if the type is a list, this refers to the mean length of the lists,
+                        "range": minimum and maximum values of the length.
+                        "type": the data type of the field.
+                    },
+                    ...
+                }
+            }
+            You will be given one of these for each collection that you are available to the user.
+            Use this to determine what task to decide on, since some the user might be asking for something impossible.
+            Err on the side of caution, bias towards _trying_ to answer the user's query. You should be certain that the task is impossible if you think it is.
+            """.strip(), 
+            format = str
+        )        
 
         # Communication-based input fields
         previous_reasoning = dspy.InputField(
@@ -173,10 +198,12 @@ def construct_training_decision_prompt(available_tasks_list: list[str] = None) -
             """.strip(),
             format = str
         )
-        text_return = dspy.OutputField(
+        reasoning_update_message = dspy.OutputField(
             desc="""
-            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
-            You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user specific to the task you have just decided on.
+            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). 
+            If this field is empty, this is a new message you are starting.
+            You should write out exactly what it says in current_message, and then afterwards, 
+            continue with your new reasoning to communicate anything else to the user specific to the task you have just decided on.
             Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
             Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
             Do not ask any questions, and do not ask the user to confirm or approve of your actions.
@@ -186,6 +213,19 @@ def construct_training_decision_prompt(available_tasks_list: list[str] = None) -
             This is displayed to the user as non-primary text, so stick to this brief exactly.
             You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
             Use gender neutral language.
+            You should always add an extra sentence to the current_message field, summarising your reasoning and explaining the decision.
+            """.strip(),
+            format = str
+        )
+        full_chat_response = dspy.OutputField(
+            description="""
+            The response to the user's prompt. Use gender neutral language.
+            Use current_message to frame your response, as if you are continuing the paragraph.
+            But this field should be a full response to the user's prompt, so try to answer the user's prompt in full.
+            You should still use what information is available to you to answer the user's prompt.
+            If nothing is relevant, then you should just respond with a simple text response, apologising that you cannot answer the users query.
+            If the recursion limit has been reached, it is likely some or all of the information is not relevant, so you should answer based on what is available.
+            If possible, you should apologise for anything you cannot achieve, and suggest alternative ways of prompting that you think would help, based on what you know about the decision process.
             """.strip(),
             format = str
         )
