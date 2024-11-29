@@ -38,6 +38,7 @@ class AgenticQuery:
         
         self.verbosity = verbosity
         self.collection_names = collection_names
+        self.return_types = return_types
 
         self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
