@@ -41,3 +41,7 @@ class ObjectRelevanceData(BaseModel):
     conversation_id: str
     query_id: str
     objects: list[dict]
+
+class ProcessCollectionData(BaseModel):
+    collection_name: str
+    force: bool

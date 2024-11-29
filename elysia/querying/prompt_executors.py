@@ -14,8 +14,7 @@ from elysia.globals.reference import create_reference
 # Prompt Templates
 from elysia.querying.prompt_templates import (
     construct_query_prompt, 
-    ObjectSummaryPrompt,  
-    DataMappingPrompt
+    ObjectSummaryPrompt 
 )
 
 # Util
@@ -219,15 +218,7 @@ class QueryExecutor(dspy.Module):
             # Return empty values when there's an error
             return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
 
-        try:
-            is_query_possible = eval(prediction.is_query_possible, {}, {})
-            assert isinstance(is_query_possible, bool)
-        except Exception as e:
-            try:
-                dspy.Assert(False, f"Error getting is_query_possible: {e}", target_module=self.query_prompt)
-            except Exception as e:
-                backend_print(f"Error getting is_query_possible: {e}")
-                return QueryReturn(objects=[]), None, f"Error in LLM call: {e}"
+        is_query_possible = prediction.is_query_possible
 
         if not is_query_possible:
             return QueryReturn(objects=[]), None, ""
@@ -296,40 +287,3 @@ class ObjectSummaryExecutor(dspy.Module):
 
         return summary_list, prediction
     
-
-class DataMappingExecutor(dspy.Module):
-
-    def __init__(self):
-        super().__init__()
-        self.data_mapping_prompt = dspy.ChainOfThought(DataMappingPrompt)
-    
-    def forward(
-        self, 
-        input_data_fields: list, 
-        output_data_fields: list,
-        collection_information: dict,
-        example_objects: list[dict]
-    ):
-        prediction = self.data_mapping_prompt(
-            input_data_fields=input_data_fields, 
-            output_data_fields=output_data_fields,
-            collection_information=collection_information,
-            example_objects=example_objects
-        )
-
-        try: 
-            mapping = eval(prediction.field_mapping, {}, {})
-            assert isinstance(mapping, dict)
-        except Exception as e:
-
-            try:
-                dspy.Assert(
-                    False, 
-                    f"Error converting field mapping to dictionary: {e}", 
-                    target_module=self.data_mapping_prompt
-                )
-            except Exception as e:
-                backend_print(f"[bold red]Error converting field mapping to dictionary: {e}[/bold red]")
-                return {}, prediction, f"Error converting field mapping to dictionary: {e}"
-
-        return mapping, prediction, ""

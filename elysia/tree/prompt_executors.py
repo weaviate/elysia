@@ -47,20 +47,7 @@ class DecisionExecutor(dspy.Module):
             future_information=future_information,
             config={"temperature": 0.7+0.01*idx} # ensures randomness in LLM
         )
-
-        # assert that the task name is correct
-        dspy.Assert(decision.task in available_tasks, 
-                    f"""Decision task is not in available tasks: 
-                    {decision.task} not in {available_tasks}
-                    Ensure that the task name is correct and that the task exists in the available_tasks field.""")
-
-        try:
-            completed = eval(decision.all_actions_completed)
-            assert isinstance(completed, bool)
-        except Exception as e:
-            print(f"Error reading completed output as boolean: {e}")
-            return decision, False
-
+        completed = decision.all_actions_completed
         return decision, completed
 
 class InputExecutor(dspy.Module):

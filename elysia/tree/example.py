@@ -19,8 +19,10 @@ if __name__ == "__main__":
     )
 
     tree.process_sync(
-        "what is verba? use generic return type. return True for is_query_possible",
+        "what is Elysia?",
     )
+
+
 
     
     # print(tree.returns.retrieved["example_verba_github_issues"].objects)

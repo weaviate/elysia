@@ -9,8 +9,7 @@ from elysia.util.parsing import update_current_message
 # Prompt Executors
 from elysia.querying.prompt_executors import (
     QueryExecutor, 
-    ObjectSummaryExecutor,
-    DataMappingExecutor
+    ObjectSummaryExecutor
 )
 
 # Globals
@@ -42,7 +41,6 @@ class AgenticQuery:
 
         self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
-        self.data_mapper = DataMappingExecutor().activate_assertions(max_backtracks=1)
         if len(query_filepath) > 0:
             self.querier.load(query_filepath)
 
@@ -156,56 +154,6 @@ class AgenticQuery:
             yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="This step was skipped because it was determined that the output type was not a summary.", last = True)
             for obj in objects:
                 obj["summary"] = ""
-
-        # -- (Optional) Step 5: Map the fields
-        if query.return_type == "generic":
-            Branch({
-                "name": "Data Mapper",
-                "description": "Map the fields of the retrieved objects to the fields of the generic return type."
-            })
-            yield Status(f"Formatting data output")
-
-            try:
-                input_fields = ["title", "subtitle", "text", "time", "image", "url", "status"]
-                output_fields = list(objects[0].keys())[:-1] # don't include summary
-
-                # find collection information
-                for collection in action_data.collection_information:
-                    if collection["name"] == query.collection_name:
-                        collection_information = collection
-                        break
-
-                mapping, mapper, error_message = self.data_mapper(
-                    input_data_fields = input_fields, 
-                    output_data_fields = output_fields,
-                    collection_information = collection_information,
-                    example_objects = objects[:3]
-                )
-
-            except Exception as e:
-                yield Error(f"Error in data mapping: {e}")
-
-            mapped_objects = []
-            for obj in objects:
-                mapped_object = {}
-                for key, value in mapping.items():
-                    if value in obj and value != "summary" and value != "":
-                        mapped_object[key] = obj[value]
-                mapped_objects.append(mapped_object)
-            
-            metadata = {
-                "previous_queries": [query.code], 
-                "collection_name": query.collection_name,
-                "last_code": {
-                    "language": "python",
-                    "title": "Query",
-                    "text": query.code
-                }
-            }
-                
-            yield MappedRetrieval(mapped_objects, metadata)
-            yield GenericRetrieval(objects, metadata)
-            return
 
         metadata = {
             "previous_queries": [query.code], 

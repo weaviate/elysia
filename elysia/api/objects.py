@@ -61,7 +61,7 @@ class Warning(Update):
 
     def to_frontend(self, conversation_id: str, query_id: str = None):
         return super().to_frontend(conversation_id, query_id, {
-                "text": self.text
+            "text": self.text
         })
     
 class Error(Update):
@@ -74,7 +74,7 @@ class Error(Update):
 
     def to_frontend(self, conversation_id: str, query_id: str = None):
         return super().to_frontend(conversation_id, query_id, {
-                "text": self.text
+            "text": self.text
         })
 
 class Completed(Update):
