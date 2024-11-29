@@ -45,3 +45,7 @@ class ObjectRelevanceData(BaseModel):
 class ProcessCollectionData(BaseModel):
     collection_name: str
     force: bool
+
+class DebugData(BaseModel):
+    conversation_id: str
+    user_id: str

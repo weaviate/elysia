@@ -14,7 +14,6 @@ from fastapi.exceptions import RequestValidationError
 from starlette.websockets import WebSocketDisconnect
 
 # Tree
-from elysia.tree import base_lm, complex_lm
 from elysia.tree.tree import Tree, RecursionLimitException
 
 # Objects
@@ -41,7 +40,8 @@ from elysia.api.api_types import (
     GetObjectData,
     ObjectRelevanceData,
     InitialiseTreeData,
-    ProcessCollectionData
+    ProcessCollectionData,
+    DebugData
 )
 
 # Globals
@@ -430,8 +430,11 @@ async def process_collection(data: ProcessCollectionData, websocket: WebSocket):
 async def process_collection_websocket(websocket: WebSocket):
     await help_websocket(websocket, process_collection)
 
-@app.get("/api/debug")
-async def debug():
+@app.post("/api/debug")
+async def debug(data: DebugData):
+    tree = tree_manager.get_tree(data.user_id, data.conversation_id)
+    base_lm = tree.base_lm
+    complex_lm = tree.complex_lm
     out = {
         "base_lm": {
             "model": base_lm.model,

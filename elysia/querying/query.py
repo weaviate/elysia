@@ -12,8 +12,6 @@ from elysia.querying.prompt_executors import (
     ObjectSummaryExecutor
 )
 
-# Globals
-from elysia.tree import complex_lm
 
 # Objects
 from elysia.tree.objects import (
@@ -30,6 +28,8 @@ from elysia.querying.objects import (
 class AgenticQuery:
 
     def __init__(self, 
+                 base_lm: dspy.LM,
+                 complex_lm: dspy.LM,
                  query_filepath: str = "elysia/training/dspy_models/query/fewshot_k8.json", 
                  collection_names: list[str] = None, 
                  return_types: dict[str, str] = None,
@@ -38,6 +38,10 @@ class AgenticQuery:
         self.verbosity = verbosity
         self.collection_names = collection_names
         self.return_types = return_types
+
+
+        self.base_lm = base_lm
+        self.complex_lm = complex_lm
 
         self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
@@ -79,7 +83,7 @@ class AgenticQuery:
         })
         yield Status(f"Writing query")
 
-        with dspy.context(lm = complex_lm):
+        with dspy.context(lm = self.complex_lm):
 
             # Run the query executor (write and execute the query)
             response, query, error_message = self.querier(

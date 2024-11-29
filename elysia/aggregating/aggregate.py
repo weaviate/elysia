@@ -6,9 +6,6 @@ from rich.panel import Panel
 from elysia.util.logging import backend_print
 from elysia.util.parsing import update_current_message, format_aggregation_response
 
-# Globals
-from elysia.tree import complex_lm
-
 # Objects
 from elysia.api.objects import TreeUpdate, Status, Error, Warning, Branch
 from elysia.tree.objects import TreeData, ActionData, DecisionData
@@ -22,12 +19,16 @@ from elysia.aggregating.prompt_executors import AggregateExecutor
 class AgenticAggregate:
 
     def __init__(self, 
+                 base_lm: dspy.LM,
+                 complex_lm: dspy.LM,
                  aggregate_initialiser_filepath: str = "elysia/training/dspy_models/aggregate_initialiser/fewshot_k12.json", 
                  aggregate_executor_filepath: str = "elysia/training/dspy_models/aggregate_executor/fewshot_k12.json",
                  collection_names: list[str] = None,
                  verbosity: int = 0):
         
         self.verbosity = verbosity
+        self.base_lm = base_lm
+        self.complex_lm = complex_lm
         self.collection_names = collection_names
         self.aggregate_executor = AggregateExecutor(collection_names=collection_names).activate_assertions()
     
@@ -59,7 +60,7 @@ class AgenticAggregate:
         })
         yield Status(f"Writing aggregation")
 
-        with dspy.context(lm = complex_lm):
+        with dspy.context(lm = self.complex_lm):
             response, aggregation, error_message = self.aggregate_executor(
                 user_prompt=tree_data.user_prompt, 
                 conversation_history=tree_data.conversation_history,

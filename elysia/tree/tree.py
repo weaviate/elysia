@@ -2,6 +2,7 @@ import json
 import os
 import ast
 import inspect
+import dspy
 from typing import Callable, List, Any, Dict
 from rich import print
 from rich.panel import Panel
@@ -31,7 +32,6 @@ from elysia.aggregating.objects import Aggregation
 
 # globals
 from elysia.globals.weaviate_client import client
-from elysia.tree import base_lm, complex_lm
 
 # training
 from elysia.training.prompt_executors import TrainingDecisionExecutor
@@ -229,6 +229,13 @@ class Tree:
         self.dspy_model = dspy_model
         self.collection_names = collection_names
 
+        # set up LLMs in dspy
+
+        self.base_lm = dspy.LM(model="gpt-4o-mini", max_tokens=6000)
+        self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
+
+        dspy.settings.configure(lm=self.base_lm)
+
         # keep track of the number of trees completed
         self.num_trees_completed = 0
         self.max_recursions = 5
@@ -248,10 +255,14 @@ class Tree:
                 "ecommerce": "retrieve individual products, including all fields of the product.",
                 "generic": "retrieve any other type of information that does not fit into the other categories."
             },
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm,
             verbosity=verbosity
         )
 
         self.aggregator = AgenticAggregate(
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm,
             collection_names=collection_names
         )
 
