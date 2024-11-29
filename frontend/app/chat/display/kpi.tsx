@@ -1,7 +1,5 @@
-"use client";
-
-import React from "react";
 import { AggregationValue } from "@/app/types";
+
 interface KPIDisplayProps {
   parent_field: string;
   values: AggregationValue[];
@@ -14,22 +12,19 @@ const KPIDisplay: React.FC<KPIDisplayProps> = ({
   type,
 }) => {
   return (
-    <div className="w-full flex flex-grow gap-2 ">
+    <div className="flex flex-wrap gap-2">
       {values.map((value, idx) => (
         <div
           key={`${idx}-${value.value}`}
-          className="flex flex-col gap-2 w-full items-center justify-center border-secondary border rounded-lg p-2 shadow-lg"
+          className="cursor-pointer hover:bg-foreground flex flex-col gap-2 min-w-[100px] aspect-square items-center justify-center border-secondary bg-background_alt border rounded-lg p-2 shadow-lg"
         >
-          <p className="font-bold text-xs text-secondary w-full">
+          <p className="font-bold text-[11px] text-secondary w-full">
             {value.field ? value.field : parent_field}
           </p>
-          <p
-            className="text-2xl font-bold shadow-lg"
-            key={`${idx}-${value.value}`}
-          >
+          <p className="text-xl font-bold shadow-lg">
             {type === "number" ? Number(value.value).toFixed(2) : value.value}
           </p>
-          <p className="text-xs text-secondary">
+          <p className="text-[11px] text-secondary">
             {value.aggregation.toUpperCase()}
           </p>
         </div>

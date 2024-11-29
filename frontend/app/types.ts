@@ -38,7 +38,8 @@ export type ResultPayload = {
     | "ecommerce"
     | "generic"
     | "boring_generic"
-    | "aggregation";
+    | "aggregation"
+    | "mapped";
   /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
   code: CodePayload;

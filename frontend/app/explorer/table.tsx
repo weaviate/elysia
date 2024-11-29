@@ -18,7 +18,7 @@ const DataTable: React.FC<DataTableProps> = ({
   if (!data) return null;
 
   return (
-    <div className="h-[80vh] items-center overflow-scroll w-full flex flex-col p-8 mt-4">
+    <div className="items-center overflow-scroll flex-grow w-full flex flex-col p-4">
       {loading && <p className="text-primary shine">Loading...</p>}
       {!loading && data && (
         <div className="w-full flex-col gap-2 items-center justify-center">
