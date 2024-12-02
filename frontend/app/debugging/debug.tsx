@@ -3,16 +3,24 @@
 import React, { useEffect, useState } from "react";
 import { DebugMessage, DebugResponse } from "./types";
 import MarkdownMessageDisplay from "../chat/display/markdown";
+import { Conversation } from "../types";
 
 interface DebugViewProps {
   debug: DebugResponse | null;
   fetchDebug: () => void;
+  currentConversation: string;
+  conversations: Conversation[];
 }
 
-const DebugView: React.FC<DebugViewProps> = ({ debug, fetchDebug }) => {
+const DebugView: React.FC<DebugViewProps> = ({
+  debug,
+  fetchDebug,
+  currentConversation,
+  conversations,
+}) => {
   useEffect(() => {
     fetchDebug();
-  }, []);
+  }, [currentConversation, conversations]);
 
   if (!debug) return null;
 

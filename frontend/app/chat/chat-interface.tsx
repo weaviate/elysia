@@ -148,7 +148,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <FlowDisplay currentTrees={currentTrees} />
         </ReactFlowProvider>
       ) : (
-        <DebugView debug={debug} fetchDebug={fetchDebug} />
+        <DebugView
+          debug={debug}
+          fetchDebug={fetchDebug}
+          currentConversation={currentConversation}
+        />
       )}
     </div>
   );
