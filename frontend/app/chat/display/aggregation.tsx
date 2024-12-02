@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AggregationCollection,
   AggregationField,
@@ -11,23 +11,27 @@ import KPIDisplay from "./kpi";
 interface AggregationFieldDisplayProps {
   fieldName: string;
   field: AggregationField;
+  depth: number;
 }
 
 const AggregationFieldDisplay: React.FC<AggregationFieldDisplayProps> = ({
   fieldName,
   field,
+  depth,
 }) => {
   const { type, values, groups } = field;
   return (
     <div className="flex flex-col gap-6 w-full  ">
       <KPIDisplay parent_field={fieldName} values={values} type={type} />
       {groups && Object.keys(groups).length > 0 && (
-        <div className="flex flex-wrap gap-2 bg-background_alt p-3 rounded-lg">
+        <div className="flex flex-wrap gap-2 ">
           {Object.entries(groups).map(([groupName, groupCollection], idx) => (
             <AggregationCollectionDisplay
               key={`${idx}-${groupName}`}
               collectionName={groupName}
               collection={groupCollection}
+              depth={depth + 1}
+              _collapsed={depth + 1 > 0 ? true : false}
             />
           ))}
         </div>
@@ -39,21 +43,38 @@ const AggregationFieldDisplay: React.FC<AggregationFieldDisplayProps> = ({
 interface AggregationCollectionDisplayProps {
   collectionName: string;
   collection: AggregationCollection;
+  depth: number;
+  _collapsed: boolean;
 }
 
 const AggregationCollectionDisplay: React.FC<
   AggregationCollectionDisplayProps
-> = ({ collectionName, collection }) => {
+> = ({ collectionName, collection, depth, _collapsed }) => {
+  const [collapsed, setCollapsed] = useState(_collapsed);
+
   return (
-    <div className="flex flex-col gap-2">
-      <p className="font-bold text-[11px] text-secondary">{collectionName}</p>
-      {Object.entries(collection).map(([fieldName, field], idx) => (
-        <AggregationFieldDisplay
-          key={`${idx}-${fieldName}`}
-          fieldName={fieldName}
-          field={field}
-        />
-      ))}
+    <div
+      className={`flex flex-col gap-2 p-3 rounded-lg ${
+        depth > 0 ? "bg-foreground" : ""
+      } ${collapsed ? "h-10" : ""}`}
+    >
+      <button
+        onClick={() => setCollapsed((prev) => !prev)}
+        className="w-full flex justify-start items-start"
+      >
+        <p className="font-bold text-[11px] text-secondary hover:text-primary transition-all duration-300">
+          {collectionName}
+        </p>
+      </button>
+      {!collapsed &&
+        Object.entries(collection).map(([fieldName, field], idx) => (
+          <AggregationFieldDisplay
+            key={`${idx}-${fieldName}`}
+            fieldName={fieldName}
+            field={field}
+            depth={depth}
+          />
+        ))}
     </div>
   );
 };
@@ -78,6 +99,8 @@ const AggregationDisplay: React.FC<AggregationDisplayProps> = ({
                 key={`${payloadIdx}-${idx}-${collectionName}`}
                 collectionName={collectionName}
                 collection={collection}
+                depth={0}
+                _collapsed={false}
               />
             )
           )}
