@@ -32,6 +32,7 @@ message = {
 ticket = {
     "title": "the title of the ticket. string",
     "subtitle": "the subtitle of the ticket. string",
+    "author": "the author of the ticket. string",
     "content": "the text of the ticket. string",
     "created_at": "the timestamp of the original creation time/date of the ticket in any format. datetime/string/other",
     "updated_at": "the timestamp of the last update time/date of the ticket in any format. datetime/string/other",
