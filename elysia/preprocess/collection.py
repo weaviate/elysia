@@ -339,32 +339,21 @@ class CollectionPreprocessor:
             yield self.process_update(progress=1)
 
 
-async def main():
-    preprocessor = CollectionPreprocessor()
-    async for result in preprocessor("Weaviate_chunks_jina_v2_small", force=True):
-        print(result)
-
 if __name__ == "__main__":
     import dspy
     lm = dspy.LM(model="claude-3-5-haiku-20241022")
     dspy.settings.configure(lm=lm)
 
-    # preprocessor = CollectionPreprocessor()
+    preprocessor = CollectionPreprocessor()
 
-    # async for result in preprocessor("ecommerce", force=True):
-    #     print(result)
+    async for result in preprocessor("ecommerce", force=True):
+        print(result)
 
-    # async for result in preprocessor("example_verba_github_issues", force=True):
-    #     print(result)
+    async for result in preprocessor("example_verba_github_issues", force=True):
+        print(result)
 
-    # async for result in preprocessor("example_verba_slack_conversations", force=True):
-    #     print(result)
+    async for result in preprocessor("example_verba_slack_conversations", force=True):
+        print(result)
 
-    # async for result in preprocessor("example_verba_email_chains", force=True):
-    #     print(result)
-
-    # async for result in preprocessor("VERBA_Embedding_text_embedding_3_small", force=True):
-    #     print(result)
-
-    import asyncio
-    asyncio.run(main())
+    async for result in preprocessor("example_verba_email_chains", force=True):
+        print(result)
