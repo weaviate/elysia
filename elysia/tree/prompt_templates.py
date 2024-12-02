@@ -230,20 +230,16 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         
         reasoning_update_message: str = dspy.OutputField(
             desc="""
-            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). 
-            If this field is empty, this is a new message you are starting.
-            You should write out exactly what it says in current_message, and then afterwards, 
-            continue with your new reasoning to communicate anything else to the user specific to the task you have just decided on.
-            Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
-            Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
-            Do not ask any questions, and do not ask the user to confirm or approve of your actions.
-            Your action is _already_ decided, so do not ask the user anything, you are explaining what is already happening.
-            If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
-            Do NOT attempt to complete the task within this field, or to answer the user's query. You are only communicating your reasoning for the decision in a step-wise fashion. 
-            This is displayed to the user as non-primary text, so stick to this brief exactly.
-            You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
-            Use gender neutral language.
-            You should always add an extra sentence to the current_message field, summarising your reasoning and explaining the decision.
+            Begin this field with the text in the current_message field, which is your message _so far_ to the user. 
+            Avoid repeating yourself (from the current_message field). 
+            If this field is empty, this is a new message you are starting. 
+            You should write out exactly what it says in current_message, and then add one additional sentence that succinctly summarizes your reasoning for the decision. 
+            Do not complete the task or answer the user's query within this field; it is solely for communicating your reasoning. 
+            Communicate this in a friendly and engaging manner, as if explaining your reasoning to the user in a chat message. 
+            Do not ask any questions or seek confirmation from the user, as your task is already decided. 
+            If current_message is empty, write only a new message. 
+            You should only add one extra sentence to the current_message field, and that is it. 
+            Use gender-neutral language.
             """.strip(),
             format = str
         )

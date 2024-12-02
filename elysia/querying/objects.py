@@ -16,12 +16,15 @@ class Retrieval(Objects):
 
         super().__init__(objects, metadata)
 
-    def to_json(self, idx: int = None):
-        
-        if idx is not None:
-            self.objects = [self.objects[idx]]
+    def to_json(self, objects: list[dict] = None, idx: int = None):
 
-        for object in self.objects:
+        if objects is None:
+            objects = self.objects
+
+        if idx is not None:
+            objects = [objects[idx]]
+
+        for object in objects:
             for key, value in object.items():
                 
                 if isinstance(value, datetime.datetime):
@@ -38,9 +41,9 @@ class Retrieval(Objects):
                     object[key] = str(value)
                 
                 if isinstance(object[key], str) and object[key].startswith("[") and object[key].endswith("]"):
-                    object[key] = eval(object[key])
+                    object[key] = eval(object[key], {}, {})
 
-        return super().to_json()
+        return super().to_json(objects=objects)
     
 class GenericRetrieval(Retrieval):
     def __init__(self, objects: list[dict], metadata: dict):
@@ -127,8 +130,11 @@ class ConversationRetrieval(Retrieval):
 
         return returned_objects
 
-    def to_json(self):
-        for conversation in self.objects:
+    def to_json(self, objects: list[dict] = None):
+        if objects is None:
+            objects = self.objects
+
+        for conversation in objects:
             for message in conversation:
                 for key, value in message.items():
                     if isinstance(value, datetime.datetime):
@@ -148,7 +154,7 @@ class ConversationRetrieval(Retrieval):
                         message[key] = eval(message[key])
         return {
             "metadata": self.metadata,
-            "objects": self.objects
+            "objects": objects
         }
 
     def _map_objects(self, objects: list[dict], mapping: dict):

@@ -132,6 +132,9 @@ class TreeReturner:
         self.tree_index = tree_index
         self.mappings = mappings
 
+    def set_tree_index(self, tree_index: int):
+        self.tree_index = tree_index
+
     def _parse_error(self, error: Error, query_id: str):
         return error.to_frontend(self.conversation_id, query_id)
     
@@ -636,7 +639,7 @@ class Tree:
         self.num_trees_completed = 0
         self.tree_data.soft_reset()
         self.tree_index += 1
-        self.returner = TreeReturner(conversation_id=self.conversation_id, tree_index=self.tree_index)
+        self.returner.set_tree_index(self.tree_index)
 
     def add_decision_node(self, id: str, instruction: str, options: dict[str, dict[str, str]], root: bool = False):
         decision_node = DecisionNode(

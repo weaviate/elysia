@@ -65,16 +65,19 @@ class Objects:
                 # metadata = not list means overwrite
                 self.metadata[key] = value
 
-    def to_json(self):
+    def to_json(self, objects: list[dict] = None):
+        if objects is None:
+            objects = self.objects
+            
         return {
             "metadata": self.metadata,
-            "objects": self.objects
+            "objects": objects
         }
     
     def mapped_to_json(self, mapping: dict):
         return {
             "metadata": self.metadata,
-            "objects": self._map_objects(self.objects, mapping)
+            "objects": self.to_json(objects=self._map_objects(self.objects, mapping))
         }
     
     def return_value(self, idx: int):

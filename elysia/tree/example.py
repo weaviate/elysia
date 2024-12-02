@@ -23,7 +23,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "what was the last conversation?",
+        "Summarize the last 10 GitHub Tickets",
     )
 
     tree.base_lm.inspect_history(5)
