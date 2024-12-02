@@ -23,7 +23,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "what was the last message by edward?",
+        "what was the last message by edward? use epic_generic return type",
     )
 
     tree.base_lm.inspect_history(5)
