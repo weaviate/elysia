@@ -1,3 +1,5 @@
+"use server";
+
 import { DebugResponse } from "./types";
 
 export async function getDebug(user_id: string, conversation_id: string) {
