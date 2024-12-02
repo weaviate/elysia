@@ -16,7 +16,9 @@ const KPIDisplay: React.FC<KPIDisplayProps> = ({
       {values.map((value, idx) => (
         <div
           key={`${idx}-${value.value}`}
-          className="cursor-pointer hover:bg-foreground flex flex-col gap-2 min-w-[100px] aspect-square items-center justify-center border-secondary bg-background_alt border rounded-lg p-2 shadow-lg"
+          className={`cursor-pointer hover:bg-foreground_alt flex flex-col gap-2 min-w-[100px] aspect-square items-center justify-center border-secondary ${
+            idx % 2 === 0 ? "bg-background" : "bg-foreground"
+          } border rounded-lg p-2 shadow-lg`}
         >
           <p className="font-bold text-[11px] text-secondary w-full">
             {value.field ? value.field : parent_field}
