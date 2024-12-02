@@ -36,18 +36,18 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         """
 
         # Regular input fields
-        user_prompt = dspy.InputField(
+        user_prompt: str = dspy.InputField(
             description="The query that the user is asking"
         )
-        instruction = dspy.InputField(
+        instruction: str = dspy.InputField(
             description="The instruction for the decision. Pay close attention to this. This is your guidance for the decision.",
             format = str
         )
-        reference = dspy.InputField(
+        reference: dict = dspy.InputField(
             description="Information about the state of the world NOW such as the date and time, used to frame the decision making.",
             format = str
         )
-        conversation_history = dspy.InputField(
+        conversation_history: list[dict] = dspy.InputField(
             description="""
             The conversation history between the user and the assistant (you), including all previous messages.
             During this conversation, the assistant has also generated some information, which is also relevant to the decision.
@@ -66,7 +66,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         )
 
         # Collection information for user to ask basic questions about collection
-        collection_information = dspy.InputField(desc="""
+        collection_information: dict = dspy.InputField(desc="""
             Information about each of the collections, so that you can choose which collection to query, as well as understand the format of the collection you will eventually query.
             This is of the form:
             {
@@ -90,7 +90,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
         # Communication-based input fields
-        previous_reasoning = dspy.InputField(
+        previous_reasoning: dict = dspy.InputField(
             description="""
             Your reasoning that you have output from previous decisions.
             This is so you can use the information from previous decisions to help you make the current decision.
@@ -120,7 +120,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
 
-        tree_count = dspy.InputField(
+        tree_count: str = dspy.InputField(
             description="""
             Currently, the number of completed decision trees that you have run through.
             Each tree is a separate pass through the decision tree, so this number informs you of how many times you have gone through the decision tree already.
@@ -132,7 +132,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = int
         )
         
-        data_queried = dspy.InputField(
+        data_queried: str = dspy.InputField(
             description="""
             A list of items, showing whether a query has been completed or not.
             This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.
@@ -142,7 +142,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
         
-        current_message = dspy.InputField(
+        current_message: str = dspy.InputField(
             description="""
             The current message you, the assistant, have written to send to the user. 
             This message has not been sent yet, you will add text to it, to be sent to the user later.
@@ -152,7 +152,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         )
 
         # Task-specific input fields
-        available_tasks = dspy.InputField(
+        available_tasks: list[dict] = dspy.InputField(
             description="""
             A list and description of the tasks that can be completed.
             These are the ONLY tasks that you can choose from to decide which task to complete.
@@ -178,7 +178,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
         
-        future_information = dspy.InputField(
+        future_information: dict = dspy.InputField(
             description="""
             For each task, what future tasks are available after selecting this action.
             This provides context so you know what you can do in the future if you select each task.
@@ -206,7 +206,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
         
-        all_actions_completed_reasoning = dspy.OutputField(
+        all_actions_completed_reasoning: str = dspy.OutputField(
             description="""
             Break down all the requests in the user_prompt, and evaluate whether all the possible actions that can be taken to answer the user have been taken.
             To answer this, you should look at the previous_reasoning field, to see if everything that can be done has been done.
@@ -214,7 +214,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             """.strip()
         )
         
-        all_actions_completed = dspy.OutputField(
+        all_actions_completed: bool = dspy.OutputField(
             description="""
             _After_ completing the task decided on above, and ONLY this task (as well as the other tasks that have already been completed), 
             will all actions that can be taken to answer the user have been taken?
@@ -228,7 +228,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format=bool
         )
         
-        reasoning_update_message = dspy.OutputField(
+        reasoning_update_message: str = dspy.OutputField(
             desc="""
             Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). 
             If this field is empty, this is a new message you are starting.
@@ -248,7 +248,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             format = str
         )
         
-        full_chat_response = dspy.OutputField(
+        full_chat_response: str = dspy.OutputField(
             description="""
             The response to the user's prompt. Use gender neutral language.
             Use current_message to frame your response, as if you are continuing the paragraph.

@@ -2,6 +2,7 @@ import json
 import os
 import ast
 import inspect
+import dspy
 from typing import Callable, List, Any, Dict
 from rich import print
 from rich.panel import Panel
@@ -31,7 +32,6 @@ from elysia.aggregating.objects import Aggregation
 
 # globals
 from elysia.globals.weaviate_client import client
-from elysia.tree import base_lm, complex_lm
 
 # training
 from elysia.training.prompt_executors import TrainingDecisionExecutor
@@ -229,6 +229,13 @@ class Tree:
         self.dspy_model = dspy_model
         self.collection_names = collection_names
 
+        # set up LLMs in dspy
+
+        self.base_lm = dspy.LM(model="gpt-4o-mini", max_tokens=6000)
+        self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
+
+        dspy.settings.configure(lm=self.base_lm)
+
         # keep track of the number of trees completed
         self.num_trees_completed = 0
         self.max_recursions = 5
@@ -241,7 +248,6 @@ class Tree:
         # Define the action agents
         self.querier = AgenticQuery(
             collection_names=collection_names, 
-            # TODO: make this adaptive based on the tree.objects file
             return_types={
                 "conversation": "retrieve full conversations, including all messages and message authors, with timestamps and context of other messages in the conversation.",
                 "message": "retrieve individual messages, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
@@ -249,17 +255,27 @@ class Tree:
                 "ecommerce": "retrieve individual products, including all fields of the product.",
                 "generic": "retrieve any other type of information that does not fit into the other categories."
             },
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm,
             verbosity=verbosity
         )
 
         self.aggregator = AgenticAggregate(
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm,
             collection_names=collection_names
         )
+
+        # Get collection information and initialise error message for collection based errors
+        self.initialise_error_message = ""
+        collection_information, self.removed_collections = self._get_collection_information()
+        if len(self.removed_collections) > 0:
+            self.initialise_error_message = f"The following collections have not been processed yet and have been removed: {self.removed_collections}"
 
         # Define the inputs to prompts
         self.tree_data = TreeData()
         self.action_data = ActionData(
-            collection_information=self._get_collection_information()
+            collection_information=collection_information
         )
         self.decision_data = DecisionData(
             recursion_limit=self.max_recursions,
@@ -366,6 +382,7 @@ class Tree:
 
     def _get_collection_information(self):
         collection_information = []
+        removed_collections = []
         for collection_name in self.collection_names:
             metadata_name = f"ELYSIA_METADATA_{collection_name}__"
             if client.collections.exists(metadata_name):
@@ -388,8 +405,14 @@ class Tree:
                 format_datetime_in_dict(metadata.objects[0].properties)
                 properties.update(metadata.objects[0].properties)
                 collection_information.append(properties)
+            
+            else:
+                # remove the collection from the list if metadata does not exist
+                # TODO: could process at this point but takes lots of time
+                removed_collections.append(collection_name)
+                self.collection_names.remove(collection_name)
 
-        return collection_information
+        return collection_information, removed_collections
 
     def _get_root(self):
         for decision_node in self.decision_nodes.values():            

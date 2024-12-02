@@ -9,7 +9,7 @@ from elysia.util.parsing import objects_dict_to_str, format_datetime, remove_whi
 from elysia.text.objects import Text
 from elysia.api.objects import Update
 
-# -- Retrieval Objects --
+# -- Objects --  # Retrieval/Aggregation/Anything we used code to get data # 
 class Objects:
     """
     Store of returned objects from a query/aggregate/any displayed results.
@@ -84,29 +84,32 @@ class SelfInfo(Objects):
     Mimick the returns object with information about the Elysia app itself.
     So when the user asks about Elysia, the assistant can provide information about itself.
     """
-    def __init__(self, name: str = "Elysia"):
+    def __init__(self):
         objects = [
             {
-                "field": "name",
-                "value": name,
-                "description": "The name of the assistant."
-            },
-            {
-                "field": "description",
-                "value": "A helpful and friendly assistant that can answer questions, query from Weaviate collections, and provide summaries and textual responses.",
-                "description": "A short description of the assistant."
-            },
-            {
-                "field": "purpose",
-                "value": remove_whitespace("""Elysia is an agentic retrieval augmented generation (RAG) service, where users can query from Weaviate collections,
+                "name": "Elysia",
+                "description": "An agentic RAG service in Weaviate.",
+                "purpose": remove_whitespace("""Elysia is an agentic retrieval augmented generation (RAG) service, where users can query from Weaviate collections,
                 and the assistant will retrieve the most relevant information and answer the user's question. This includes a variety
                 of different ways to query, such as by filtering, sorting, querying multiple collections, and providing summaries
-                and textual responses."""),
-                "description": "The purpose of the assistant."
+                and textual responses.
+                                             
+                Elysia will dynamically display retrieved objects from the collections in the frontend.
+                Elysia works via a tree-based approach, where the user's question is used to generate a tree of potential
+                queries to retrieve the most relevant information.
+                Each end of the tree connects to a separate agent that will perform a specific task, such as retrieval, aggregation, or generation.
+                                             
+                The tree itself has decision nodes that determine the next step in the query.
+                The decision nodes are decided via a decision-agent, which decides the task.
+                                             
+                The agents communicate via a series of different prompts, which are stored in the prompt-library.
+                The decision-agent prompts are designed to be as general as possible, so that they can be used for a variety of different tasks.
+                Some of these variables include conversation history, retrieved objects, the user's original question, train of thought via model reasoning, and more.        
+                """),
             }
         ]
         super().__init__(objects, {})
-        self.type = "self_info"
+        self.type = "Elysia_Info"
 
 class Returns:
     """
@@ -285,6 +288,8 @@ class TreeData(PromptData):
         self.conversation_history = conversation_history
         self.data_queried = data_queried
         self.current_message = current_message
+
+        self.data_queried.update({"Elysia": {"prompt": "What is Elysia?", "count": 1}})
 
     def soft_reset(self):
         self.previous_reasoning = {}

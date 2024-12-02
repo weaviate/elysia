@@ -230,13 +230,13 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
         You should not use one of the above examples directly, but rather use them as a guide to create your own aggregation function.
         """
 
-        user_prompt = dspy.InputField(desc="The user's original query")
-        reference = dspy.InputField(desc="""
+        user_prompt: str = dspy.InputField(desc="The user's original query")
+        reference: dict = dspy.InputField(desc="""
             Information about the state of the world NOW such as the date and time, used to frame the aggregation.
             """.strip(), 
             format = str
         )
-        previous_reasoning = dspy.InputField(
+        previous_reasoning: dict = dspy.InputField(
             desc="""
             Your reasoning that you have output from previous decisions.
             This is so you can use the information from previous decisions to help you decide what type of aggregation to create.
@@ -261,7 +261,7 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             """.strip(), 
             format = str
         )
-        conversation_history = dspy.InputField(
+        conversation_history: list[dict] = dspy.InputField(
             description="""
             The conversation history between the user and the assistant (you), including all previous messages.
             During this conversation, the assistant has also generated some information, which is also relevant to the decision.
@@ -277,7 +277,7 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             """.strip(),
             format = str
         )
-        data_queried = dspy.InputField(
+        data_queried: str = dspy.InputField(
             description="""
             A list of items, showing whether a query has been completed or not.
             This is an itemised list, showing which collections have been queried and aggregated over already, and how many items have been retrieved from each (for the query), and a description of the aggregation if it exists.
@@ -286,7 +286,7 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             format = str
         )
 
-        collection_information = dspy.InputField(desc="""
+        collection_information: dict = dspy.InputField(desc="""
             Information about each of the collections, so that you can choose which collection to aggregate over, as well as understand the format of the collection you will eventually aggregate over.
             This is of the form:
             {
@@ -309,7 +309,7 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             format = str
         )
 
-        previous_aggregations = dspy.InputField(
+        previous_aggregations: list[str] = dspy.InputField(
             description="""
             A list of previous aggregations that have been performed.
             Use this so that you can avoid performing the same aggregation twice.
@@ -322,25 +322,24 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             desc="The name of the collection to aggregate over.",
             format = str
         )
-        description = dspy.OutputField(
+        description: str = dspy.OutputField(
             desc="A description of the aggregation you are performing, concise and informative.",
             format = str
         )
-        is_aggregation_possible = dspy.OutputField(
+        is_aggregation_possible: bool = dspy.OutputField(
             desc="""
             A boolean value indicating whether the aggregation is able to return any information. (True/False). Return True if the aggregation is able to return information, and False otherwise.
             Base this decision on the collection metadata, and the user prompt.
             If, for example, the data fields do not likely contain the information the user is asking for, you should return False, as the aggregation is not possible.
             However, if the aggregation is extremely generic, and the user prompt does not specify what to filter on, you should return True.
-            Return True or False only, nothing else.
             """.strip(),
             format = bool
         )
-        code = dspy.OutputField(
-            desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only.",
+        code: str = dspy.OutputField(
+            desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only. Do not include any comments.",
             format = str
         )
-        text_return = dspy.OutputField(
+        text_return: str = dspy.OutputField(
             desc="""
             Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
             You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.

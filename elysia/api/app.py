@@ -19,6 +19,9 @@ from elysia.tree.tree import Tree, RecursionLimitException
 # Objects
 from elysia.api.objects import Error
 
+# Preprocessing
+from elysia.preprocess.collection import CollectionPreprocessor
+
 # Util
 from elysia.util.logging import backend_print
 from elysia.util.collection_metadata import (
@@ -36,7 +39,9 @@ from elysia.api.api_types import (
     SetCollectionsData, 
     GetObjectData,
     ObjectRelevanceData,
-    InitialiseTreeData
+    InitialiseTreeData,
+    ProcessCollectionData,
+    DebugData
 )
 
 # Globals
@@ -54,10 +59,14 @@ class TreeManager:
         self.trees = {}
 
     def add_tree(self, user_id: str, conversation_id: str):
+        
         if user_id not in self.trees:
             self.trees[user_id] = {}
+        
         if conversation_id not in self.trees[user_id]:
             self.trees[user_id][conversation_id] = Tree(verbosity=1, conversation_id=conversation_id, collection_names=collection_names)
+        
+        return self.trees[user_id][conversation_id].initialise_error_message
 
     def get_tree(self, user_id: str, conversation_id: str):
         if user_id not in self.trees :
@@ -99,72 +108,8 @@ collection_names = ["example_verba_github_issues", "example_verba_email_chains",
 # =============================
 
 
-# === Endpoints ===
-
-# Request validation exception handler
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
-    logging.error(f"{request}: {exc_str}")
-    content = {"status_code": 10422, "message": exc_str, "data": None}
-    return JSONResponse(
-        content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
-    )
-
-
-# Health check endpoint
-@app.get("/api/health")
-async def health_check():
-    """
-    Health check endpoint.
-    Returns a 200 status code with a "healthy" status if the API is running.
-    """
-    logger.info("Health check requested")
-    return JSONResponse(content={"status": "healthy"}, status_code=200)
-
-
-@app.post("/api/initialise_tree")
-async def initialise_tree(data: InitialiseTreeData):
-    global tree_manager
-    tree_manager.add_tree(data.user_id, data.conversation_id)
-    return JSONResponse(
-        content={
-            "conversation_id": data.conversation_id,
-            "tree": tree_manager.get_tree(data.user_id, data.conversation_id).tree, 
-            "error": ""
-        }, 
-        status_code=200
-    )
-
-async def process(data: QueryData, websocket: WebSocket):
-    global tree_manager
-    user_prompt = data["query"]
-    query_id = data["query_id"]
-    tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
-    tree.soft_reset()
-    try:
-        async for yielded_result in tree.process(user_prompt, query_id=query_id):
-            try:
-                await websocket.send_json(yielded_result)
-            except WebSocketDisconnect:
-                logger.info("Client disconnected during processing")
-                break
-            # Add a small delay between messages to prevent overwhelming
-            await asyncio.sleep(0.001)
-    except Exception as e:
-        logger.error(f"Error in process function: {str(e)}")
-        await websocket.send_json({
-            "type": "error",
-            "message": "An error occurred during processing"
-        })
-
-# Process endpoint
-@app.websocket("/ws/query")
-async def websocket_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint for processing pipelines.
-    Handles real-time communication for pipeline execution and status updates.
-    """
+# Util for websocket
+async def help_websocket(websocket: WebSocket, ws_route: callable):
     memory_process = psutil.Process()
     initial_memory = memory_process.memory_info().rss
     try:
@@ -189,7 +134,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 start_time = time.time()
                 try:
                     async with asyncio.timeout(60):  # adjust timeout as needed
-                        await process(data, websocket)
+                        await ws_route(data, websocket)
                 except asyncio.TimeoutError:
                     logger.warning("Processing timeout - sending heartbeat")
                     await websocket.send_json({"type": "heartbeat"})
@@ -219,17 +164,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.error(f"Error in WebSocket: {str(e)}")
                 try:
                     if data and "conversation_id" in data:
-                        error = Error(
-                            message=str(e),
-                            conversation_id=data["conversation_id"]
-                        )   
-                        await websocket.send_json(error)
+                        error = Error(text=str(e))   
+                        await websocket.send_json(error.to_frontend(data["conversation_id"]))
                     else:
-                        error = Error(
-                            message=str(e),
-                            conversation_id=""
-                        )
-                        await websocket.send_json(error)
+                        error = Error(text=str(e))
+                        await websocket.send_json(error.to_frontend(""))
+
                 except RuntimeError:
                     logger.warning(
                         "Failed to send error message, WebSocket might be closed"
@@ -244,6 +184,85 @@ async def websocket_endpoint(websocket: WebSocket):
         except RuntimeError:
             logger.info("WebSocket already closed")
 
+# === Endpoints ===
+
+# Request validation exception handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+    logging.error(f"{request}: {exc_str}")
+    content = {"status_code": 10422, "message": exc_str, "data": None}
+    return JSONResponse(
+        content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+    )
+
+
+# Health check endpoint
+@app.get("/api/health")
+async def health_check():
+    """
+    Health check endpoint.
+    Returns a 200 status code with a "healthy" status if the API is running.
+    """
+    logger.info("Health check requested")
+    return JSONResponse(content={"status": "healthy"}, status_code=200)
+
+
+@app.post("/api/initialise_tree")
+async def initialise_tree(data: InitialiseTreeData):
+    global tree_manager
+    error = tree_manager.add_tree(data.user_id, data.conversation_id)
+    return JSONResponse(
+        content={
+            "conversation_id": data.conversation_id,
+            "tree": tree_manager.get_tree(data.user_id, data.conversation_id).tree, 
+            "error": error
+        }, 
+        status_code=200
+    )
+
+async def process(data: QueryData, websocket: WebSocket):
+    
+    global tree_manager
+        
+    tree = tree_manager.get_tree(data["user_id"], data["conversation_id"])
+    tree.soft_reset()
+    
+    try:
+    
+        async for yielded_result in tree.process(data["query"], query_id=data["query_id"]):
+            try:
+                await websocket.send_json(yielded_result)
+            except WebSocketDisconnect:
+                logger.info("Client disconnected during processing")
+                break
+            # Add a small delay between messages to prevent overwhelming
+            await asyncio.sleep(0.001)
+    
+    except Exception as e:
+        logger.error(f"Error in process function: {str(e)}")
+
+        if "conversation_id" in data:
+            await websocket.send_json(
+                Error(
+                    text=str(e)
+                ).to_frontend(data["conversation_id"])
+            )
+        else:
+            await websocket.send_json(
+                Error(
+                    text=str(e)
+                ).to_frontend("")
+            )
+
+# Process endpoint
+@app.websocket("/ws/query")
+async def query_websocket(websocket: WebSocket):
+    """
+    WebSocket endpoint for processing pipelines.
+    Handles real-time communication for pipeline execution and status updates.
+    """
+    await help_websocket(websocket, process)
 
 @app.get("/api/collections")
 async def collections():
@@ -390,3 +409,40 @@ async def object_relevance(data: ObjectRelevanceData):
         }, 
         status_code=200
     )
+
+async def process_collection(data: ProcessCollectionData, websocket: WebSocket):
+    try:
+        preprocessor = CollectionPreprocessor()
+        async for result in preprocessor(data["collection_name"], force=data["force"]):
+            yield websocket.send_json(result)
+            
+    except Exception as e:
+        logger.error(f"Error in process_collection_websocket: {str(e)}")
+        await websocket.send_json({
+            "type": "error",
+            "collection_name": data["collection_name"],
+            "progress": 0,
+            "error": str(e)
+        })
+
+
+@app.websocket("/ws/process_collection")
+async def process_collection_websocket(websocket: WebSocket):
+    await help_websocket(websocket, process_collection)
+
+@app.post("/api/debug")
+async def debug(data: DebugData):
+    tree = tree_manager.get_tree(data.user_id, data.conversation_id)
+    base_lm = tree.base_lm
+    complex_lm = tree.complex_lm
+    out = {
+        "base_lm": {
+            "model": base_lm.model,
+            "chat": [history["messages"] for history in base_lm.history]
+        },
+        "complex_lm": {
+            "model": complex_lm.model,
+            "chat": [history["messages"] for history in complex_lm.history]
+        }
+    }
+    return JSONResponse(content=out, status_code=200)

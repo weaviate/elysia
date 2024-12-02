@@ -51,18 +51,7 @@ class AggregateExecutor(dspy.Module):
             previous_aggregations=previous_aggregations
         )
 
-        try:
-            is_aggregation_possible = eval(prediction.is_aggregation_possible)
-            assert isinstance(is_aggregation_possible, bool)
-        except Exception as e:
-            try:
-                dspy.Assert(False, f"Error getting is_aggregation_possible: {e}", target_module=self.aggregate_prompt)
-            except Exception as e:
-                backend_print(f"Error getting is_aggregation_possible: {e}")
-                # Return empty values when there's an error
-                return None, None, f"Error in LLM call: {e}"
-
-        if not is_aggregation_possible:
+        if not prediction.is_aggregation_possible:
             return None, None, ""
 
         dspy.Suggest(
@@ -78,7 +67,16 @@ class AggregateExecutor(dspy.Module):
 
             try:
                 # assert will raise an error if its failed multiple times
-                dspy.Assert(False, f"Error executing aggregation code:\n{prediction.code}\nERROR: {e}", target_module=self.aggregate_prompt)
+                dspy.Assert(False, 
+                            f"""
+                            Error executing aggregation code:
+                            {prediction.code}
+                            The error was: {e}
+                            Ensure that the output of the code is correct, and that it is a valid Python query.
+                            Do not assume any other functions except what you have been given and do not use any comments.
+                            """.strip(), 
+                            target_module=self.aggregate_prompt
+                        )
             except Exception as e:
                 # in which case we just print the error and return 0 objects
                 backend_print(f"Error executing aggregation code: {e}")

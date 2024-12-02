@@ -216,13 +216,13 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
 
         Assume you have access to the object `collection` which is a Weaviate collection.  
         """
-        user_prompt = dspy.InputField(desc="The user's original query")
-        reference = dspy.InputField(desc="""
+        user_prompt: str = dspy.InputField(desc="The user's original query")
+        reference: dict = dspy.InputField(desc="""
             Information about the state of the world NOW such as the date and time, used to frame the query.
             """.strip(), 
             format = str
         )
-        conversation_history = dspy.InputField(
+        conversation_history: list[dict] = dspy.InputField(
             description="""
             The conversation history between the user and the assistant (you), including all previous messages.
             During this conversation, the assistant has also generated some information, which is also relevant to the decision.
@@ -239,7 +239,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             """.strip(),
             format = str
         )
-        previous_reasoning = dspy.InputField(
+        previous_reasoning: dict = dspy.InputField(
             desc="""
             Your reasoning that you have output from previous decisions.
             This is so you can use the information from previous decisions to help you decide what type of query to create.
@@ -266,7 +266,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
         )
 
 
-        collection_information = dspy.InputField(desc="""
+        collection_information: dict = dspy.InputField(desc="""
             Information about each of the collections, so that you can choose which collection to query, as well as understand the format of the collection you will eventually query.
             This is of the form:
             {
@@ -289,9 +289,9 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             format = str
         )
 
-        data_queried = dspy.InputField(
+        data_queried: str = dspy.InputField(
             description="""
-            A list of items, showing whether a query has been completed or not.
+            An itemised list of items, showing whether a query has been completed or not.
             This is an itemised list, showing which collections have been queried, and how many items have been retrieved from each.
             If there are 0 items retrieved, then the collection _has_ been queried, but no items were found. Use this in your later judgement.
             Use this to determine which collection to query next, based on what has been queried already (and the user prompt).
@@ -299,7 +299,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             format = str
         )
 
-        previous_queries = dspy.InputField(
+        previous_queries: list[str] = dspy.InputField(
             desc="""
             For each collection, a comma separated list of existing code that has been used to query the collection. 
             This can be used to avoid generating duplicate queries. 
@@ -307,7 +307,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             """.strip()
         )
 
-        current_message = dspy.InputField(
+        current_message: str = dspy.InputField(
             description="""
             The current message you, the assistant, have written to send to the user. 
             This message has not been sent yet, you will add text to it, to be sent to the user later.
@@ -326,7 +326,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             format = str
         )
 
-        output_type = dspy.OutputField(
+        output_type: Literal["original", "summary"] = dspy.OutputField(
             desc="""
             One of: 'original' or 'summary'. Output the name exactly as it appears.
             'original' means you will return the original objects returned. Use this most of the time, unless the user has specifically asked for summaries.
@@ -339,12 +339,12 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             format = str
         )
 
-        code = dspy.OutputField(
+        code: str = dspy.OutputField(
             desc="The generated query code only. Do not enclose it in quotes or in ```. Just the code only. Do not add any comments.",
             format = str
         )
 
-        is_query_possible = dspy.OutputField(
+        is_query_possible: bool = dspy.OutputField(
             desc="""
             A boolean value indicating whether the query is able to return any information. (True/False). Return True if the query is able to return information, and False otherwise.
             Base this decision on the collection metadata, and the user prompt.
@@ -356,7 +356,7 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             format = bool
         )
         
-        text_return = dspy.OutputField(
+        text_return: str = dspy.OutputField(
             desc="""
             Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
             You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
@@ -409,59 +409,4 @@ class ObjectSummaryPrompt(dspy.Signature):
         Your output should be a list of strings in Python format, e.g. `["summary_1", "summary_2", ...]`.
         """.strip(), 
         format = list[str]
-    )
-
-class DataMappingPrompt(dspy.Signature):
-    """
-    You are an expert at mapping data fields to existing field names.
-    """
-
-    input_data_fields = dspy.InputField(desc="The input fields to map.", format = str)
-    output_data_fields = dspy.InputField(desc="The output fields to map to.", format = str)
-    collection_information = dspy.InputField(desc="""
-        Information about the collection.
-        This is of the form:
-        {
-            "name": collection name,
-            "length": number of objects in the collection,
-            "summary": summary of the collection,
-            "fields": {
-                "field_name": {
-                    "groups": a comprehensive list of all unique text values that exist in the field. if the field is not text, this should be an empty list,
-                    "mean": mean of the field. if the field is text, this refers to the means length (in tokens) of the texts in this field. if the type is a list, this refers to the mean length of the lists,
-                    "range": minimum and maximum values of the length.
-                    "type": the data type of the field.
-                },
-                ...
-            }
-        }
-        """.strip(), 
-        format = str
-    )
-    example_objects = dspy.InputField(desc="Example objects to help you understand the data.", format = list[dict])
-
-    field_mapping = dspy.OutputField(
-        desc="""
-        Your output should be a dictionary of the form:
-        {
-            "input_field_name": "output_field_name",
-            ...
-        }
-        E.g.
-        {
-            "title": "name",
-            ...
-        }
-        would map the `title` field to the `name` field.
-        If there is no mapping, you should include an empty string, e.g.
-        {
-            "title": "",
-            ...
-        }
-        Complete all the fields, even if some of them are empty.
-        But you can leave out certain output_field's if they are not needed.
-        In summary, you should ALWAYS include all input fields as keys of the dictionary, but you can leave out certain output_field's if they are not needed.
-        This should be formatted as a Python dictionary and nothing else.
-        """.strip(), 
-        format = str
     )
