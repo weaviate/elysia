@@ -19,7 +19,6 @@ conversation =  {
     "timestamp": "the timestamp of the message in any format. datetime/string/other",
     "conversation_id": "the id of the conversation that the message belongs to. integer/string/other",
     "message_id": "the id of the message itself, within the conversation. integer/string/other",
-    "relevant": "boolean flag to indicate whether this is the message retrieved as part of the global conversation. True for one message in the conversation and False for all other messages."
 }
 
 message = {
@@ -28,7 +27,6 @@ message = {
     "timestamp": "the timestamp of the message in any format. datetime/string/other",
     "conversation_id": "the id of the conversation that the message belongs to. integer/string/other",
     "message_id": "the id of the message itself, within the conversation. integer/string/other",
-    "relevant": "boolean flag to indicate whether this is the message retrieved as part of the global conversation. False."
 }
 
 ticket = {

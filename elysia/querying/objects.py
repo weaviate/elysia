@@ -69,6 +69,22 @@ class MessageRetrieval(Retrieval):
         super().__init__(objects, metadata)
         self.type = "message"
 
+    def _map_objects(self, objects: list[dict], mapping: dict):
+        new_objects = []
+        for object in objects:
+            new_object = {key: "" for key in mapping.values()}
+            for key, value in object.items():
+                if key in mapping.keys():
+                    new_object[mapping[key]] = value
+                elif key == "uuid":
+                    new_object["uuid"] = value
+                elif key == "summary":
+                    new_object["summary"] = value
+            
+            new_object["relevant"] = False
+            new_objects.append(new_object)
+        return new_objects
+
 class ConversationRetrieval(Retrieval):
     def __init__(self, objects: list[dict], metadata: dict):
         if objects is None:
@@ -135,36 +151,26 @@ class ConversationRetrieval(Retrieval):
             "objects": self.objects
         }
 
-    def to_str(self):
-        return json.dumps(self.objects)
+    def _map_objects(self, objects: list[dict], mapping: dict):
+        new_objects = []
+        for conversation in objects:
+            new_conversation = []
+            for message in conversation:
+                new_message = {key: "" for key in mapping.values()}
+                for key, value in message.items():
+                    if key in mapping.keys():
+                        new_message[mapping[key]] = value
+                    elif key == "uuid":
+                        new_message["uuid"] = value
+                    elif key == "summary":
+                        new_message["summary"] = value
+                
+                new_message["relevant"] = message["relevant"]
+                new_conversation.append(new_message)
+            new_objects.append(new_conversation)
+        return new_objects
     
-    def to_llm_str(self):
-        out = "{'objects': \n"
-        for i, conversation in enumerate(self.objects):
-            out += "{'conversation_" + str(i+1) + "': "
-            out += json.dumps(conversation) + "}, \n"
-        
-        out += "'metadata': " + json.dumps(self.metadata) + "\n"
-        out += "}"
-        
-        return out
-        
-    def __repr__(self):
-        for i, conversation in enumerate(self.objects):
-            print(f"[bold green]Conversation {i+1}[/bold green]")
-            for j, message in enumerate(conversation):
-                if message["relevant"]:
-                    print(f"[bold green]Message {j+1}[/bold green]:", end="")
-                    print(f"[italic green]{message}[/italic green]")
-                else:
-                    print(f"[bold]Message {j+1}[/bold]:", end="")
-                    print(f"[italic indigo]{message}[/italic indigo]")
-                print("\n")
-            print("-"*100)
-            print("\n\n")
-        return ""
-    
-class MappedRetrieval(Retrieval):
-    def __init__(self, objects: list[dict], metadata: dict):
-        super().__init__(objects, metadata)
-        self.type = "mapped"
+# class MappedRetrieval(Retrieval):
+#     def __init__(self, objects: list[dict], metadata: dict):
+#         super().__init__(objects, metadata)
+#         self.type = "mapped"

@@ -21,7 +21,11 @@ from elysia.api.objects import (
     Status, Warning, Error, Branch, TreeUpdate
 )
 from elysia.querying.objects import (
-    GenericRetrieval, MessageRetrieval, ConversationRetrieval, TicketRetrieval, EcommerceRetrieval, MappedRetrieval
+    GenericRetrieval, 
+    MessageRetrieval, 
+    ConversationRetrieval, 
+    TicketRetrieval, 
+    EcommerceRetrieval
 )
 
 class AgenticQuery:

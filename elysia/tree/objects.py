@@ -47,6 +47,8 @@ class Objects:
                     new_object[mapping[key]] = value
                 elif key == "uuid":
                     new_object["uuid"] = value
+                elif key == "summary":
+                    new_object["summary"] = value
 
             new_objects.append(new_object)
         return new_objects
