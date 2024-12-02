@@ -13,6 +13,7 @@ import { useCollections } from "./explorer/useCollections";
 import DataExplorer from "./explorer/data-explorer";
 import { useRouting } from "./navigation/useRouting";
 import { Message } from "./types";
+import { useDebug } from "./debugging/useDebug";
 
 export default function Home() {
   const [mode, setMode] = useState<"home" | "data-explorer">("home");
@@ -79,6 +80,8 @@ export default function Home() {
     id || ""
   );
 
+  const { fetchDebug } = useDebug(id || "");
+
   useEffect(() => {
     generateIdFromIp().then((id) => {
       setId(id);
@@ -121,6 +124,7 @@ export default function Home() {
           toggleCollectionEnabled={toggleCollectionEnabled}
           handleQuery={handleQuery}
           routerChangeCollection={routerChangeCollection}
+          fetchDebug={fetchDebug}
         />
       )}
       {mode === "data-explorer" && (

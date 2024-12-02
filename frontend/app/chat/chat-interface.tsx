@@ -11,6 +11,9 @@ import { RiFlowChart } from "react-icons/ri";
 import FlowDisplay from "./flow-display";
 import { ReactFlowProvider } from "@xyflow/react";
 import SelectDropdown from "../navigation/select-dropdown";
+import { CgDebug } from "react-icons/cg";
+import { DebugResponse } from "../debugging/types";
+import DebugView from "../debugging/debug";
 
 interface ChatInterfaceProps {
   currentConversation: string;
@@ -21,6 +24,7 @@ interface ChatInterfaceProps {
     conversationId: string
   ) => void;
   handleQuery: (query: string, conversationId: string) => void;
+  fetchDebug: (conversation_id: string) => Promise<DebugResponse>;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -29,13 +33,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   toggleCollectionEnabled,
   handleQuery,
   routerChangeCollection,
+  fetchDebug,
 }) => {
   const [currentQuery, setCurrentQuery] = useState<{
     [key: string]: Query;
   }>({});
   const [currentStatus, setCurrentStatus] = useState<string>("");
 
-  const [mode, setMode] = useState<"chat" | "flow">("chat");
+  const [mode, setMode] = useState<"chat" | "flow" | "debug">("chat");
   const [currentTrees, setCurrentTrees] = useState<DecisionTreeNode[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -98,6 +103,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           >
             <RiFlowChart size={14} />
           </button>
+          <button
+            className={`btn btn-round ${
+              mode === "debug" ? "text-primary" : "text-secondary"
+            }`}
+            onClick={() => setMode("debug")}
+          >
+            <CgDebug size={14} />
+          </button>
         </div>
       </div>
       {mode === "chat" ? (
@@ -128,10 +141,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             />
           </div>
         </div>
-      ) : (
+      ) : mode === "flow" ? (
         <ReactFlowProvider>
           <FlowDisplay currentTrees={currentTrees} />
         </ReactFlowProvider>
+      ) : (
+        <DebugView
+          fetchDebug={fetchDebug}
+          currentConversation={currentConversation}
+          conversations={conversations}
+        />
       )}
     </div>
   );

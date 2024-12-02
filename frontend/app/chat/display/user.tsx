@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { handleNamedEntityRecognition } from "../api";
+import { FaCopy } from "react-icons/fa";
 
 interface UserMessageDisplayProps {
   payload: string[];
@@ -25,6 +26,11 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       setEntitySpans(data.entity_spans);
     });
   }, [payload]);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text || "");
+  };
 
   const renderTextWithHighlights = (text: string) => {
     if (!text || (nounSpans.length === 0 && entitySpans.length === 0))
@@ -111,11 +117,20 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       onClick={onClick}
     >
       <div className="w-full">
-        <div className="flex flex-grow justify-start items-start chat-animation">
+        <div className="flex flex-grow justify-start items-start chat-animation gap-4">
           {!collapsed ? (
-            <p className="text-primary text-3xl text-left">
-              {renderTextWithHighlights(text)}
-            </p>
+            <div className="flex gap-2 items-center">
+              <p className="text-primary text-3xl text-left flex-grow">
+                {renderTextWithHighlights(text)}
+              </p>
+              <button
+                onClick={handleCopy}
+                className="text-secondary hover:text-primary transition-all duration-300"
+                title="Copy to clipboard"
+              >
+                <FaCopy size={12} />
+              </button>
+            </div>
           ) : (
             <p className="text-secondary hover:text-primary text-lg transition-all duration-300 text-left">
               {text}

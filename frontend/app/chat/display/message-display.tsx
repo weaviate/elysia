@@ -124,7 +124,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             </div>
           ))}
         {!collapsed && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             {displayMessages
               .filter((m) => m.type !== "User")
               .map((message, index) => (
@@ -186,7 +186,9 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       )}
                       {((message.payload as ResultPayload).type === "generic" ||
                         (message.payload as ResultPayload).type ===
-                          "boring_generic") && (
+                          "boring_generic" ||
+                        (message.payload as ResultPayload).type ===
+                          "mapped") && (
                         <BoringGenericDisplay
                           key={`${index}-${message.id}`}
                           payload={
