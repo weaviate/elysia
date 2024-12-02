@@ -49,6 +49,7 @@ class ReturnTypeExecutor(dspy.Module):
                 f"Return type {return_type} must be in possible return types. Do not include any return types that are not in possible_return_types keys.",
                 target_module=self.return_type_prompt
             )
+            
         return return_types
 
 class DataMappingExecutor(dspy.Module):

@@ -6,7 +6,6 @@ os.chdir("../..")
 
 from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData
 from elysia.api.app import *
-from elysia.tree import complex_lm, base_lm
 from rich import print
 
 import json
@@ -39,7 +38,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="what is Elysia?",
+    query="what was the last message by edward?",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"
@@ -55,6 +54,15 @@ class fake_websocket:
 await process(query_payload.dict(), fake_websocket())
 
 
+debug_payload = DebugData(
+    conversation_id="1",
+    user_id="2",
+    llm_id="base_lm"
+)
+debug_response = await debug(debug_payload)
+
+history = json.loads(debug_response.body)["chat"]
+print(history)
 # test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["ecommerce"].objects
 
 # for obj in test_return_objects:

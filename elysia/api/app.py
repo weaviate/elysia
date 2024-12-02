@@ -282,6 +282,7 @@ async def collections():
                 "name": collection_name,
                 "total": len(collection),
                 "vectorizer": collection.config.get().vectorizer,  # None when using namedvectors, TODO: implement for named vectors
+                "processed": client.collections.exists(f"ELYSIA_METADATA_{collection_name}__")
             }
         )
 
@@ -394,7 +395,6 @@ async def object_relevance(data: ObjectRelevanceData):
     try:
         tree = tree_manager.get_tree(data.user_id, data.conversation_id)
         user_prompt = tree.query_id_to_prompt[data.query_id]
-        print(user_prompt)
         prediction = object_relevance(user_prompt, data.objects)
         any_relevant = eval(prediction.any_relevant)
         assert isinstance(any_relevant, bool)

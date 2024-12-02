@@ -250,10 +250,10 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         
         full_chat_response: str = dspy.OutputField(
             description="""
-            The response to the user's prompt. Use gender neutral language.
-            Use current_message to frame your response, as if you are continuing the paragraph.
-            But this field should be a full response to the user's prompt, so try to answer the user's prompt in full.
-            You should still use what information is available to you to answer the user's prompt.
+            An independent and complete response to the user's prompt. Use gender neutral language.
+            Do not continue the current_message field, this is a new message you are starting, and should be a natural response to user_prompt,
+            based on what has occurred in the attempts to answer the user's prompt.
+            You can use what information is available to you to answer the user's prompt.
             If nothing is relevant, then you should just respond with a simple text response, apologising that you cannot answer the users query.
             If the recursion limit has been reached, it is likely some or all of the information is not relevant, so you should answer based on what is available.
             If possible, you should apologise for anything you cannot achieve, and suggest alternative ways of prompting that you think would help, based on what you know about the decision process.

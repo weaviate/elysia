@@ -27,11 +27,10 @@ class SafetyException(Exception):
 
 class QueryExecutor(dspy.Module):
 
-    def __init__(self, collection_names: list[str] = None, return_types: list[str] = None):
+    def __init__(self, collection_names: list[str] = None):
         super().__init__()
-        self.query_prompt = dspy.ChainOfThought(construct_query_prompt(collection_names, return_types))
-        self.available_collections = collection_names
-        self.available_return_types = return_types
+        self.query_prompt = dspy.ChainOfThought(construct_query_prompt(collection_names))
+        self.collection_names = collection_names
 
     def _evaluate_code_safety(self, query_code: str) -> tuple[bool, str]:
         # List of dangerous operations/keywords that should not be allowed
@@ -190,6 +189,10 @@ class QueryExecutor(dspy.Module):
    
         return eval(query_code)
 
+    def set_collection_names(self, collection_names: list[str]):
+        self.collection_names = collection_names
+        self.query_prompt = dspy.ChainOfThought(construct_query_prompt(collection_names))
+
     def forward(
         self, 
         user_prompt: str, 
@@ -198,6 +201,7 @@ class QueryExecutor(dspy.Module):
         data_queried: list,
         previous_reasoning: dict,
         collection_information: list,
+        collection_return_types: dict[str, list[str]],
         current_message: str
     ) -> Generator[Any, Any, Any]:
 
@@ -211,6 +215,7 @@ class QueryExecutor(dspy.Module):
                 collection_information=collection_information,
                 previous_queries=previous_queries,
                 current_message=current_message,
+                collection_return_types=collection_return_types,
                 data_queried=data_queried
             )
         except Exception as e:
@@ -226,6 +231,16 @@ class QueryExecutor(dspy.Module):
         dspy.Suggest(
             prediction.code not in previous_queries,
             f"The query code you have produced: {prediction.code} has already been used. Please produce a new query code.",
+            target_module=self.query_prompt
+        )
+
+        dspy.Assert(
+            prediction.return_type in collection_return_types[prediction.collection_name],
+            f"""
+            The return type you have produced: {prediction.return_type} is not one of the return types for the collection {prediction.collection_name}. 
+            If you are choosing {prediction.collection_name}, then the return type must be one of {collection_return_types[prediction.collection_name]} exactly as it appears.
+            Please produce a new return type.
+            """.strip(),
             target_module=self.query_prompt
         )
 

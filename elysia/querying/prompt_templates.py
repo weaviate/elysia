@@ -2,13 +2,10 @@ import dspy
 from typing import Literal, get_args, Union
 
 
-def construct_query_prompt(collection_names: list[str] = None, return_types: list[str] = None) -> dspy.Signature:
+def construct_query_prompt(collection_names: list[str] = None) -> dspy.Signature:
 
     # Create dynamic Literal type from the list, or use str if None
     CollectionLiteral = (Literal[tuple(collection_names)] if collection_names is not None  # type: ignore
-                  else str)
-    
-    ReturnTypeLiteral = (Literal[tuple(return_types)] if return_types is not None  # type: ignore
                   else str)
         
     class QueryCreatorPrompt(dspy.Signature):
@@ -315,14 +312,31 @@ def construct_query_prompt(collection_names: list[str] = None, return_types: lis
             """.strip(),
             format = str
         )
+
+        collection_return_types: dict[str, list[str]] = dspy.InputField(
+            desc="""
+            A dictionary of the return types that you can choose from for each collection.
+            This is of the form:
+            {
+                "collection_name": ["return_type_1", "return_type_2", ...],
+                ...
+            }
+            where `collection_name` is the name of the collection, that _you will decide_, and `return_type_1`, `return_type_2`, etc. are the return types that you can choose from for that collection.
+            The output of `return_type` must be one of the values in the list for the collection. Make sure you pick from the correct collection and do not pick a return type that does not exist for the collection.
+            """.strip(),
+            format = dict[str, list[str]]
+        )
                 
         collection_name: CollectionLiteral = dspy.OutputField(
             desc="The name of the collection to query. Only provide the name exactly as it appears.",
             format = str
         )
 
-        return_type: ReturnTypeLiteral = dspy.OutputField(
-            desc="The type of objects to return. Only provide the type name exactly as it appears.",
+        return_type: str = dspy.OutputField(
+            desc="""
+            The type of objects to return. Only provide the type name exactly as it appears.
+            This must be one of the values in the list for that particular collection.
+            """.strip(),
             format = str
         )
 

@@ -32,6 +32,10 @@ class AgenticAggregate:
         self.collection_names = collection_names
         self.aggregate_executor = AggregateExecutor(collection_names=collection_names).activate_assertions()
     
+    def set_collection_names(self, collection_names: list[str]):
+        self.collection_names = collection_names
+        self.aggregate_executor.set_collection_names(collection_names)
+
     def _find_previous_aggregations(self, available_information: Returns):
 
         self.previous_aggregations = []

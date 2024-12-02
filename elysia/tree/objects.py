@@ -16,9 +16,10 @@ class Objects:
     Has associated objects and metadata.
     """
 
-    def __init__(self, objects: list[dict | str], metadata: dict = {}):
+    def __init__(self, objects: list[dict | str], metadata: dict = {}, type: str = "default"):
         self.objects = self._remove_duplicates(objects)
         self.metadata = metadata
+        self.type = type
 
     def _remove_duplicates(self, objects: list[dict | str]):
         unique_objects = []
@@ -36,6 +37,19 @@ class Objects:
                 unique_objects.append(obj)
                 
         return unique_objects
+    
+    def _map_objects(self, objects: list[dict], mapping: dict):
+        new_objects = []
+        for object in objects:
+            new_object = {key: "" for key in mapping.values()}
+            for key, value in object.items():
+                if key in mapping.keys():
+                    new_object[mapping[key]] = value
+                elif key == "uuid":
+                    new_object["uuid"] = value
+
+            new_objects.append(new_object)
+        return new_objects
 
     def add(self, objects: list[dict], metadata: dict = {}):
         objects = self._remove_duplicates(objects)
@@ -55,19 +69,20 @@ class Objects:
             "objects": self.objects
         }
     
-    def to_str(self):
-        return json.dumps({
+    def mapped_to_json(self, mapping: dict):
+        return {
             "metadata": self.metadata,
-            "objects": objects_dict_to_str(self.objects)
-        })
-    
-    def to_llm_str(self):
-        return self.to_str()
+            "objects": self._map_objects(self.objects, mapping)
+        }
     
     def return_value(self, idx: int):
         return self.objects[idx]
 
-    def to_frontend(self, conversation_id: str, query_id: str = None):
+    def to_frontend(self, conversation_id: str, query_id: str = None, mapping: dict = None):
+        if mapping is None:
+            items = self.to_json()
+        else:
+            items = self.mapped_to_json(mapping)
         return Update.to_frontend_json(
             "result",
             conversation_id,
@@ -75,7 +90,7 @@ class Objects:
             {
                 "type": self.type,
                 "code": self.metadata.get("last_code", {}),
-                **self.to_json()
+                **items
             }
         )
 
@@ -116,119 +131,46 @@ class Returns:
     Store of all objects across different types of queries and responses.
     Essentially the collection of all Objects classes, for retrieval, aggregation, text, and self_info (currently).
     """
-    def __init__(self, retrieved: dict, aggregation: dict, text: Text):
+    def __init__(self, retrieved: list[Objects], aggregation: list[Objects], text: Text):
         self.self_info = SelfInfo()
         self.retrieved = retrieved
         self.aggregation = aggregation
         self.text = text
     
-    def add_retrieval(self, collection_name: str, objects: Objects):
-        if collection_name not in self.retrieved:
-            self.retrieved[collection_name] = objects
-        else:
-            self.retrieved[collection_name].add(objects.objects, objects.metadata)
+    def add_retrieval(self, objects: Objects):
 
-    def add_aggregation(self, collection_name: str, objects: Objects):
-        if collection_name not in self.aggregation:
-            self.aggregation[collection_name] = objects
-        else:
-            self.aggregation[collection_name].add(objects.objects, objects.metadata)
+        # If the object is already in the retrieved, add to it
+        for already_retrieved in self.retrieved:
+            if (
+                already_retrieved.type == objects.type and 
+                already_retrieved.metadata["collection_name"] == objects.metadata["collection_name"]
+            ):
+                already_retrieved.add(objects.objects, objects.metadata)
+                return    
+            
+        # Otherwise, add the object to the list at the end
+        self.retrieved.append(objects)
+
+    def add_aggregation(self, objects: Objects):
+        for already_aggregated in self.aggregation:
+            if (
+                already_aggregated.type == objects.type and 
+                already_aggregated.metadata["collection_name"] == objects.metadata["collection_name"]
+            ):
+                already_aggregated.add(objects.objects, objects.metadata)
+                return
+        self.aggregation.append(objects)
 
     def add_text(self, objects: Objects):
         self.text.add(objects.objects)
 
     def to_json(self):
         return {
-            "retrieval": {collection_name: self.retrieved[collection_name].to_json() for collection_name in self.retrieved},
-            "aggregation": {collection_name: self.aggregation[collection_name].to_json() for collection_name in self.aggregation},
+            "retrieval": [objects.to_json() for objects in self.retrieved],
+            "aggregation": [objects.to_json() for objects in self.aggregation],
             "text": self.text.to_json(),
             "self_info": self.self_info.to_json()
         }
-
-    def to_str(self):
-        return json.dumps({
-            "retrieval": {collection_name: self.retrieved[collection_name].to_str() for collection_name in self.retrieved},
-            "aggregation": {collection_name: self.aggregation[collection_name].to_str() for collection_name in self.aggregation},
-            "text": self.text.to_str(),
-            "self_info": self.self_info.to_str()
-        })
-    
-    def to_llm_str(self):
-        return json.dumps({
-            "retrieval": {collection_name: self.retrieved[collection_name].to_llm_str() for collection_name in self.retrieved},
-            "aggregation": {collection_name: self.aggregation[collection_name].to_llm_str() for collection_name in self.aggregation},
-            "text": self.text.to_llm_str(),
-            "self_info": self.self_info.to_llm_str()
-        })
-    
-    @classmethod
-    def from_json(cls, json_dict: dict):
-        retrieved = {}
-        if "retrieval" in json_dict:
-            for collection_name in json_dict["retrieval"]:
-                retrieved[collection_name] = Objects(json_dict["retrieval"][collection_name]["objects"], json_dict["retrieval"][collection_name]["metadata"])
-
-        aggregation = {}
-        if "aggregation" in json_dict:
-            for collection_name in json_dict["aggregation"]:
-                aggregation[collection_name] = Objects(json_dict["aggregation"][collection_name]["objects"], json_dict["aggregation"][collection_name]["metadata"])
-
-        text = []
-        if "text" in json_dict:
-            text = json_dict["text"]
-
-        if "self_info" in json_dict:
-            self_info = SelfInfo(json_dict["self_info"]["objects"][0]["value"])
-        else:
-            self_info = SelfInfo()
-
-        return cls(retrieved=retrieved, text=Text(text), self_info=self_info)
-
-    def return_retrieval(self, collection_name: str = "", idx = None):
-
-        if collection_name == "":
-            collection_name = list(self.retrieved.keys())[0]
-            print(f"[bold yellow]No collection name specified, defaulting to {collection_name}[/bold yellow]")
-
-        if idx is None:
-            return self.retrieved[collection_name]
-        else:
-            return self.retrieved[collection_name].return_value(idx)
-        
-    def return_aggregation(self, collection_name: str = "", idx = None):
-        if collection_name == "":
-            collection_name = list(self.aggregation.keys())[0]
-            print(f"[bold yellow]No collection name specified, defaulting to {collection_name}[/bold yellow]")
-
-        if idx is None:
-            return self.aggregation[collection_name]
-        else:
-            return self.aggregation[collection_name].return_value(idx)
-    
-    def return_text(self, idx=None):
-        if idx is None:
-            return self.text
-        else:
-            return self.text.return_value(idx)
-    
-    def __repr__(self):
-        if self.retrieved != {}:
-            print(f"[bold green]Retrieved from collections[/bold green]")
-            for collection_name in self.retrieved:
-                print(f"- [italic indigo]{collection_name}[/italic indigo]: {len(self.retrieved[collection_name].objects)} objects")
-            print("\n")
-
-        if self.text != []:
-            for i, text in enumerate(self.text.objects):
-                print(f"[bold green]Text {i+1}[/bold green]")
-                print("-"*100)
-                print(text)
-                print("\n\n")
-        
-        return ""
-
-    def __str__(self):
-        return self.__repr__()
 
 # -----------------------
 
@@ -289,7 +231,7 @@ class TreeData(PromptData):
         self.data_queried = data_queried
         self.current_message = current_message
 
-        self.data_queried.update({"Elysia": {"prompt": "What is Elysia?", "count": 1}})
+        self.data_queried.update({"Elysia": {"prompt": "What is Elysia?", "count": 1, "type": "self_info"}})
 
     def soft_reset(self):
         self.previous_reasoning = {}
@@ -298,8 +240,19 @@ class TreeData(PromptData):
 
     def data_queried_string(self):
         out = ""
-        for collection_name in self.data_queried:
-            out += f" - Queried '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}' and retrieved {self.data_queried[collection_name]['count']} objects\n"
+        for i, collection_name in enumerate(self.data_queried):
+            if self.data_queried[collection_name]["type"] == "self_info":
+                out += f" - [Search {i+1}] Retrieved all information about Elysia, the agentic RAG agent\n"
+            elif self.data_queried[collection_name]["type"] == "retrieval":
+                if "impossible_prompt" in self.data_queried[collection_name]:
+                    out += f" - [Search {i+1}] Attempted to query '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}', but it was judged impossible to complete for this prompt/collection combination\n"
+                else:
+                    out += f" - [Search {i+1}] Queried '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}', retrieved {self.data_queried[collection_name]['count']} objects, returned with type '{self.data_queried[collection_name]['return_type']}' and outputted '{'itemised summaries' if self.data_queried[collection_name]['output_type'] == 'summary' else 'original objects'}'\n"
+            elif self.data_queried[collection_name]["type"] == "aggregation":
+                if "impossible_prompt" in self.data_queried[collection_name]:
+                    out += f" - [Search {i+1}] Attempted to aggregate '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}', but it was judged impossible to complete for this prompt/collection combination\n"
+                else:
+                    out += f" - [Search {i+1}] Aggregated '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}'\n"
         return out
 
 class ActionData(PromptData):
@@ -308,9 +261,14 @@ class ActionData(PromptData):
     """
     def __init__(
             self,
-            collection_information: dict = {}
+            collection_information: dict = {},
+            collection_return_types: dict = {}
         ):
         self.collection_information = collection_information
+        self.collection_return_types = collection_return_types
+
+    def set_collection_names(self, collection_names: list[str]):
+        self.collection_information = {collection_name: self.collection_information[collection_name] for collection_name in collection_names}
 
 class DecisionData(PromptData):
     """

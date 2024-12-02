@@ -35,14 +35,13 @@ class ProcessUpdate:
 
     def to_frontend(
         self,
-        progress: int,
-        total: int,
+        progress: float,
         error: str = ""
     ):
         return {
-            "type": "update" if progress != total else "completed",
+            "type": "update" if progress != 1 else "completed",
             "collection_name": self.collection_name,
-            "progress": float(progress) / float(total),
+            "progress": progress,
             "error": error
         }
     
@@ -51,12 +50,12 @@ class ProcessUpdate:
 
 class CollectionPreprocessor:
 
-    def __init__(self):
+    def __init__(self, threshold_for_missing_fields: float = 0.4):
         self.collection_summariser_executor = CollectionSummariserExecutor()
         self.data_mapping_executor = DataMappingExecutor()
         self.return_type_executor = ReturnTypeExecutor().activate_assertions()
         self.nlp = spacy.load("en_core_web_sm")
-        self.process_update = ProcessUpdate()
+        self.threshold_for_missing_fields = threshold_for_missing_fields
 
     def _summarise_collection(self, collection, properties: dict, summary_sample_size: int = 200):
 
@@ -173,7 +172,6 @@ class CollectionPreprocessor:
 
         return out
 
-
     def _evaluate_return_types(self, collection_summary: str, data_fields: dict, example_objects: list[dict]):
 
         return_types = self.return_type_executor(
@@ -182,6 +180,9 @@ class CollectionPreprocessor:
             example_objects = example_objects,
             possible_return_types = rt.specific_return_types
         )
+
+        if return_types == []:
+            return_types = ["epic_generic"]
 
         return return_types
     
@@ -197,7 +198,7 @@ class CollectionPreprocessor:
 
         return mapping, error_message
     
-    def __call__(
+    async def __call__(
         self, 
         collection_name: str, 
         manageable_sample_size: int = 1000, 
@@ -208,6 +209,7 @@ class CollectionPreprocessor:
         if not client.collections.exists(f"ELYSIA_METADATA_{collection_name}__") or force:
 
             # Start saving the updates
+            self.process_update = ProcessUpdate(collection_name)
             total = len(rt.specific_return_types) + 1 + 1
             progress = 0
             error = ""
@@ -217,7 +219,7 @@ class CollectionPreprocessor:
                 collection = client.collections.get(collection_name)
                 properties = get_collection_data_types(collection_name)
             except Exception as e:
-                yield self.process_update(progress=0, total=total, error=str(e))
+                yield self.process_update(progress=0, error=str(e))
                 return
 
             # Summarise the collection using LLM
@@ -225,10 +227,10 @@ class CollectionPreprocessor:
                 summary = self._summarise_collection(collection, properties, summary_sample_size)
             except Exception as e:
                 error = str(e)
-                yield self.process_update(progress=1, total=total, error=error)
+                yield self.process_update(progress=0, error=error)
                 return
             
-            yield self.process_update(progress=1, total=total)
+            yield self.process_update(progress=1 / float(total))
 
             # Evaluate if the collection is manageable, if not, we will not fetch all objects
             collection_is_manageable = len(collection) < manageable_sample_size
@@ -238,6 +240,8 @@ class CollectionPreprocessor:
                 full_response = collection.query.fetch_objects(
                     limit=len(collection)
                 )
+            else:
+                full_response = None
 
             # Get some example objects
             example_objects = collection.query.fetch_objects(
@@ -259,14 +263,16 @@ class CollectionPreprocessor:
                 for property in properties:
                     out["fields"][property] = self._evaluate_field_statistics(collection, properties, property, full_response)
             except Exception as e:
-                yield self.process_update(progress=1, total=total, error=str(e))
+                yield self.process_update(progress=1 / float(total), error=str(e))
                 return
 
             # Evaluate the return types
             return_types = self._evaluate_return_types(summary, properties, example_objects)
 
-            total = len(return_types) + 1 + 1
-            yield self.process_update(progress=2, total=total)
+            yield self.process_update(progress=2 / float(total))
+            progress = 2 / float(total)
+            remaining_progress = 1 - progress
+            num_remaining = len(return_types)
 
             # Define the mappings
             for return_type in return_types:
@@ -281,14 +287,48 @@ class CollectionPreprocessor:
                 )
 
                 if error_message != "":
-                    yield self.process_update(progress=progress, total=total, error=error_message)
+                    yield self.process_update(progress=progress, error=error_message)
                     return
                 
-                progress += 1
-                yield self.process_update(progress=progress, total=total)
+                progress += min(remaining_progress / num_remaining, 0.99)
+                yield self.process_update(progress=progress)
 
                 out["mappings"][return_type] = mapping
 
+            # Check across all mappings how many missing fields there are
+            new_return_types = []
+            for return_type in return_types:
+                num_missing = sum([m == "" for m in list(out["mappings"][return_type].values())])
+                if num_missing < self.threshold_for_missing_fields * len(out["mappings"][return_type].keys()):
+                    new_return_types.append(return_type)
+            
+            # check for no return types
+            if len(new_return_types) == 0:
+
+                if "epic_generic" in return_types:
+                    new_return_types = ["boring_generic"]
+                else:
+                    new_return_types = ["epic_generic"]
+
+                    # and re-map for generic
+                    mapping, error_message = self._define_mappings(
+                        input_fields=list(rt.epic_generic.keys()), 
+                        output_fields=list(properties.keys()), 
+                        properties=properties, 
+                        collection_information=out, 
+                        example_objects=example_objects
+                    )
+
+                    # and if this one fails
+                    if num_missing == sum([m == "" for m in list(mapping.values())]):
+                        new_return_types = ["boring_generic"] # always the backup
+                    else:
+                        out["mappings"]["epic_generic"] = mapping
+            else:
+                out["mappings"] = {
+                    return_type: out["mappings"][return_type] for return_type in new_return_types
+                }
+                
             # Save to a collection
             if client.collections.exists(f"ELYSIA_METADATA_{collection_name}__"):
                 client.collections.delete(f"ELYSIA_METADATA_{collection_name}__")
@@ -296,16 +336,35 @@ class CollectionPreprocessor:
             metadata_collection = client.collections.create(f"ELYSIA_METADATA_{collection_name}__")
             metadata_collection.data.insert(out)
 
-        yield self.process_update(progress=total, total=total)
+            yield self.process_update(progress=1)
 
 
-# if __name__ == "__main__":
-#     import dspy
-#     lm = dspy.LM(model="claude-3-5-haiku-20241022")
-#     dspy.settings.configure(lm=lm)
+async def main():
+    preprocessor = CollectionPreprocessor()
+    async for result in preprocessor("Weaviate_chunks_jina_v2_small", force=True):
+        print(result)
 
-#     preprocessor = CollectionPreprocessor()
-#     processed = preprocessor("ecommerce", force=True)
+if __name__ == "__main__":
+    import dspy
+    lm = dspy.LM(model="claude-3-5-haiku-20241022")
+    dspy.settings.configure(lm=lm)
 
-#     from rich import print
-#     print(processed)
+    # preprocessor = CollectionPreprocessor()
+
+    # async for result in preprocessor("ecommerce", force=True):
+    #     print(result)
+
+    # async for result in preprocessor("example_verba_github_issues", force=True):
+    #     print(result)
+
+    # async for result in preprocessor("example_verba_slack_conversations", force=True):
+    #     print(result)
+
+    # async for result in preprocessor("example_verba_email_chains", force=True):
+    #     print(result)
+
+    # async for result in preprocessor("VERBA_Embedding_text_embedding_3_small", force=True):
+    #     print(result)
+
+    import asyncio
+    asyncio.run(main())

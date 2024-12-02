@@ -18,7 +18,8 @@ conversation =  {
     "author": "the author of the message. string",
     "timestamp": "the timestamp of the message in any format. datetime/string/other",
     "conversation_id": "the id of the conversation that the message belongs to. integer/string/other",
-    "message_id": "the id of the message itself, within the conversation. integer/string/other"
+    "message_id": "the id of the message itself, within the conversation. integer/string/other",
+    "relevant": "boolean flag to indicate whether this is the message retrieved as part of the global conversation. True for one message in the conversation and False for all other messages."
 }
 
 message = {
@@ -26,7 +27,8 @@ message = {
     "author": "the author of the message. string",
     "timestamp": "the timestamp of the message in any format. datetime/string/other",
     "conversation_id": "the id of the conversation that the message belongs to. integer/string/other",
-    "message_id": "the id of the message itself, within the conversation. integer/string/other"
+    "message_id": "the id of the message itself, within the conversation. integer/string/other",
+    "relevant": "boolean flag to indicate whether this is the message retrieved as part of the global conversation. False."
 }
 
 ticket = {
@@ -60,7 +62,7 @@ ecommerce = {
     "sizes": "the size(s) of the product. list[string/other] / string"
 }
 
-generic = {
+epic_generic = {
     "title": "the title of the information. string",
     "subtitle": "the subtitle of the information. string",
     "content": "the content of the information. string/other",
@@ -76,5 +78,5 @@ types_dict = {
     "message": message,
     "ticket": ticket,
     "ecommerce": ecommerce,
-    "generic": generic
+    "epic_generic": epic_generic
 }

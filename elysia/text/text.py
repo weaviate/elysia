@@ -21,7 +21,7 @@ class Summarizer:
         yield Status("Summarising results")
         summary = self.summarizer(
             user_prompt=tree_data.current_message, 
-            available_information=decision_data.available_information.to_llm_str(),
+            available_information=decision_data.available_information.to_json(),
             previous_reasoning=tree_data.previous_reasoning,
             conversation_history=tree_data.conversation_history
         )
@@ -44,7 +44,7 @@ class TextResponse:
 
         output = self.text_response(
             user_prompt=tree_data.user_prompt, 
-            available_information=decision_data.available_information.to_llm_str(),
+            available_information=decision_data.available_information.to_json(),
             previous_reasoning=tree_data.previous_reasoning,
             conversation_history=tree_data.conversation_history,
             current_message=tree_data.current_message

@@ -32,6 +32,7 @@ from elysia.aggregating.objects import Aggregation
 
 # globals
 from elysia.globals.weaviate_client import client
+from elysia.globals.return_types import all_return_types
 
 # training
 from elysia.training.prompt_executors import TrainingDecisionExecutor
@@ -92,7 +93,7 @@ class DecisionNode:
             data_queried=tree_data.data_queried_string(),
             current_message=tree_data.current_message,
             available_tasks=decision_data.available_tasks,
-            available_information=decision_data.available_information.to_llm_str(),
+            available_information=decision_data.available_information.to_json(),
             future_information=decision_data.future_information
         )
 
@@ -126,9 +127,10 @@ class TreeReturner:
     """
     Class to parse the output of the tree to the frontend.
     """
-    def __init__(self, conversation_id: str, tree_index: int = 0):
+    def __init__(self, conversation_id: str, tree_index: int = 0, mappings: dict = None):
         self.conversation_id = conversation_id
         self.tree_index = tree_index
+        self.mappings = mappings
 
     def _parse_error(self, error: Error, query_id: str):
         return error.to_frontend(self.conversation_id, query_id)
@@ -146,7 +148,13 @@ class TreeReturner:
         return Completed().to_frontend(self.conversation_id, query_id)
     
     def _parse_result(self, result: Objects, query_id: str):
-        return result.to_frontend(self.conversation_id, query_id)
+        mapping = self.mappings[result.metadata["collection_name"]][result.type]
+        inverted_mapping = {v: k for k, v in mapping.items()}
+        return result.to_frontend(
+            self.conversation_id, 
+            query_id, 
+            inverted_mapping
+        )
     
     def _parse_text(self, text: Text, query_id: str):
         return text.to_frontend(self.conversation_id, query_id)
@@ -230,10 +238,8 @@ class Tree:
         self.collection_names = collection_names
 
         # set up LLMs in dspy
-
         self.base_lm = dspy.LM(model="gpt-4o-mini", max_tokens=6000)
         self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
-
         dspy.settings.configure(lm=self.base_lm)
 
         # keep track of the number of trees completed
@@ -245,49 +251,20 @@ class Tree:
         self.decision_history = []
         self.tree_index = -1
 
-        # Define the action agents
-        self.querier = AgenticQuery(
-            collection_names=collection_names, 
-            return_types={
-                "conversation": "retrieve full conversations, including all messages and message authors, with timestamps and context of other messages in the conversation.",
-                "message": "retrieve individual messages, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
-                "ticket": "retrieve individual tickets, including all fields of the ticket.",
-                "ecommerce": "retrieve individual products, including all fields of the product.",
-                "generic": "retrieve any other type of information that does not fit into the other categories."
-            },
-            base_lm=self.base_lm,
-            complex_lm=self.complex_lm,
-            verbosity=verbosity
-        )
-
-        self.aggregator = AgenticAggregate(
-            base_lm=self.base_lm,
-            complex_lm=self.complex_lm,
-            collection_names=collection_names
-        )
-
         # Get collection information and initialise error message for collection based errors
         self.initialise_error_message = ""
-        collection_information, self.removed_collections = self._get_collection_information()
+        self.collection_information, self.removed_collections = self._get_collection_information()
         if len(self.removed_collections) > 0:
             self.initialise_error_message = f"The following collections have not been processed yet and have been removed: {self.removed_collections}"
 
-        # Define the inputs to prompts
-        self.tree_data = TreeData()
-        self.action_data = ActionData(
-            collection_information=collection_information
-        )
-        self.decision_data = DecisionData(
-            recursion_limit=self.max_recursions,
-            available_information=Returns(
-                retrieved = {}, 
-                aggregation = {},
-                text = Text(objects=[], metadata={})
-            )
-        )
+        # get return types for each collection
+        self.collection_return_types = self._get_collection_mappings()
 
         # initialise the returner (for frontend)
-        self.returner = TreeReturner(conversation_id=self.conversation_id)
+        self.returner = TreeReturner(
+            conversation_id=self.conversation_id, 
+            mappings={key: self.collection_information[key]["mappings"] for key in self.collection_information}
+        )
 
         # mapping between query ids and prompts
         self.query_id_to_prompt = {}
@@ -307,8 +284,42 @@ class Tree:
         if self.break_down_instructions:
             self.input_executor = InputExecutor()
 
+        # Define the inputs to prompts
+        self.tree_data = TreeData()
+        self.action_data = ActionData(
+            collection_information={
+                collection_name: {
+                    k: v for k, v in collection_information.items() if k != "mappings"
+                } for collection_name, collection_information in self.collection_information.items()
+            },
+            collection_return_types=self.collection_return_types
+        )
+        self.decision_data = DecisionData(
+            recursion_limit=self.max_recursions,
+            available_information=Returns(
+                retrieved = [], 
+                aggregation = [],
+                text = Text(objects=[], metadata={})
+            )
+        )
+
+        # Define the action agents
+        self.querier = AgenticQuery(
+            collection_names=self.collection_names, 
+            collection_return_types=self.collection_return_types,
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm,
+            verbosity=verbosity
+        )
+
+        self.aggregator = AgenticAggregate(
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm,
+            collection_names=self.collection_names
+        )
+
         # -- Initialise the tree
-        # -- default initialisations ---
+        # default initialisations -
         self.add_decision_node(
             id = "base",
             instruction = """
@@ -325,7 +336,7 @@ class Tree:
             options = {
                 "search": {
                     "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
-                    "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(self.querier.return_types.keys()),
+                    "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(all_return_types.values()),
                     "action": None,
                     "next": "search",
                 },
@@ -381,7 +392,7 @@ class Tree:
                 backend_print(f"  - [magenta]{decision_node.id}[/magenta]: {list(decision_node.options.keys())}")
 
     def _get_collection_information(self):
-        collection_information = []
+        collection_information = {}
         removed_collections = []
         for collection_name in self.collection_names:
             metadata_name = f"ELYSIA_METADATA_{collection_name}__"
@@ -404,7 +415,7 @@ class Tree:
 
                 format_datetime_in_dict(metadata.objects[0].properties)
                 properties.update(metadata.objects[0].properties)
-                collection_information.append(properties)
+                collection_information[collection_name] = properties
             
             else:
                 # remove the collection from the list if metadata does not exist
@@ -413,6 +424,12 @@ class Tree:
                 self.collection_names.remove(collection_name)
 
         return collection_information, removed_collections
+
+    def _get_collection_mappings(self):
+        collection_mappings = {}
+        for collection_name in self.collection_names:
+            collection_mappings[collection_name] = list(self.collection_information[collection_name]["mappings"].keys())
+        return collection_mappings
 
     def _get_root(self):
         for decision_node in self.decision_nodes.values():            
@@ -520,20 +537,33 @@ class Tree:
     def _update_returns(self, action_result: Retrieval, user_prompt: str):
 
         if isinstance(action_result, Retrieval): 
-            self.decision_data.available_information.add_retrieval(collection_name=action_result.metadata["collection_name"], objects=action_result)
-            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], {
+            self.decision_data.available_information.add_retrieval(objects=action_result)
+
+            dict_to_update = {
                 "type": "retrieval",
                 "count": len(action_result.objects),
                 "prompt": user_prompt
-            })
+            }
+            if "return_type" in action_result.metadata:
+                dict_to_update["return_type"] = action_result.metadata["return_type"]
+            if "output_type" in action_result.metadata:
+                dict_to_update["output_type"] = action_result.metadata["output_type"]
+            if "impossible_prompts" in action_result.metadata and action_result.metadata["impossible_prompts"][-1] == user_prompt:
+                dict_to_update["impossible_prompt"] = True
+
+            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], dict_to_update)
 
         if isinstance(action_result, Aggregation):
-            self.decision_data.available_information.add_aggregation(collection_name=action_result.metadata["collection_name"], objects=action_result)
-            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], {
+            self.decision_data.available_information.add_aggregation(objects=action_result)
+            dict_to_update = {
                 "type": "aggregation",
                 "count": len(action_result.objects),
                 "prompt": user_prompt
-            })
+            }
+            if "impossible_prompts" in action_result.metadata and action_result.metadata["impossible_prompts"][-1] == user_prompt:
+                dict_to_update["impossible_prompt"] = True
+
+            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], dict_to_update)
     
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
         """
@@ -563,9 +593,10 @@ class Tree:
     def _remove_collection_from_data(self, collection_name: str):
         self.tree_data.delete_from_dict("data_queried", collection_name)
         
-        if collection_name in self.decision_data.available_information.retrieved:
-            del self.decision_data.available_information.retrieved[collection_name]
-
+        for object in self.decision_data.available_information.retrieved:
+            if object.metadata["collection_name"] == collection_name:
+                self.decision_data.available_information.retrieved.remove(object)
+        
     def set_collection_names(self, collection_names: list[str], remove_data: bool = False):
         collection_names_to_remove = [name for name in self.collection_names if name not in collection_names]
 
@@ -575,6 +606,8 @@ class Tree:
 
         self.collection_names = collection_names
         self.querier.set_collection_names(collection_names)
+        self.aggregator.set_collection_names(collection_names)
+        self.action_data.set_collection_names(collection_names)
         
         if remove_data:
             for collection_name in collection_names_to_remove:
@@ -740,7 +773,10 @@ class Tree:
 
             self.decision_data.num_trees_completed += 1
 
-            if decision.full_chat_response != "" and task != "summarize":
+            if (
+                self.training_route is None or 
+                (self.training_route is not None and task in self.training_route)
+            ) and decision.full_chat_response != "" and task != "summarize":
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
             yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])

@@ -12,7 +12,6 @@ from elysia.querying.prompt_executors import (
     ObjectSummaryExecutor
 )
 
-
 # Objects
 from elysia.tree.objects import (
     Returns, TreeData, ActionData, DecisionData
@@ -32,18 +31,17 @@ class AgenticQuery:
                  complex_lm: dspy.LM,
                  query_filepath: str = "elysia/training/dspy_models/query/fewshot_k8.json", 
                  collection_names: list[str] = None, 
-                 return_types: dict[str, str] = None,
+                 collection_return_types: dict[str, list[str]] = None,
                  verbosity: int = 0): 
         
         self.verbosity = verbosity
         self.collection_names = collection_names
-        self.return_types = return_types
-
+        self.collection_return_types = collection_return_types
 
         self.base_lm = base_lm
         self.complex_lm = complex_lm
 
-        self.querier = QueryExecutor(collection_names, return_types).activate_assertions(max_backtracks=3)
+        self.querier = QueryExecutor(collection_names).activate_assertions(max_backtracks=3)
         self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
         if len(query_filepath) > 0:
             self.querier.load(query_filepath)
@@ -53,7 +51,7 @@ class AgenticQuery:
 
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names
-        self.querier.available_collections = collection_names
+        self.querier.set_collection_names(collection_names)
 
     def _find_previous_queries(self, available_information: Returns):
         self.previous_queries = []
@@ -92,6 +90,7 @@ class AgenticQuery:
                 previous_queries = self.previous_queries, 
                 data_queried = tree_data.data_queried_string(),
                 collection_information = action_data.collection_information,
+                collection_return_types = action_data.collection_return_types,
                 previous_reasoning = tree_data.previous_reasoning,
                 current_message = current_message
             )
@@ -162,6 +161,8 @@ class AgenticQuery:
         metadata = {
             "previous_queries": [query.code], 
             "collection_name": query.collection_name,
+            "return_type": query.return_type,
+            "output_type": query.output_type,
             "last_code": {
                 "language": "python",
                 "title": "Query",

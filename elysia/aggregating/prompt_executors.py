@@ -31,6 +31,10 @@ class AggregateExecutor(dspy.Module):
    
         return eval(aggregation_code)
 
+    def set_collection_names(self, collection_names: list[str]):
+        self.collection_names = collection_names
+        self.aggregate_prompt = dspy.ChainOfThought(construct_aggregate_prompt(collection_names))
+
     def forward(
         self, 
         user_prompt: str, 
