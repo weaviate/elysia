@@ -1,6 +1,7 @@
 import weaviate
 import pandas as pd
 import json
+import datetime
 import os
 import sys
 import ast
@@ -62,7 +63,6 @@ def soft_create_collection(client, collection_name: str, main_vector_names: str)
         )
 
         return collection
-
 
 def add_conversations_to_weaviate(client, df: pd.DataFrame, collection_name: str, force: bool = False):
 
@@ -177,6 +177,40 @@ def add_ecommerce_to_weaviate(client, df: pd.DataFrame, collection_name: str, fo
         except Exception as e:
             print(f"Error adding ecommerce item {i}: {e}, continuing...")
 
+def add_financial_contracts_to_weaviate(client, df: pd.DataFrame, collection_name: str, force: bool = False):
+
+    if force:
+        collection = force_create_collection(client, collection_name, ["contract_text"])
+    else:
+        collection = soft_create_collection(client, collection_name, ["contract_text"])
+
+    # add data to collection
+    doc_id = 0
+    for i, row in tqdm(df.iterrows(), total=len(df), desc=f"Adding {collection_name} to Weaviate"):
+
+        # try:
+        data_object = row.to_dict()
+
+        doc_id += 1
+        data_object["doc_id"] = doc_id
+
+        # Parse the date string and make it timezone-aware
+        date = datetime.datetime.strptime(data_object["date"], "%Y-%m-%d %H:%M:%S")
+        date = date.replace(tzinfo=datetime.timezone.utc)  # Add UTC timezone
+        data_object["date"] = date
+
+        # weaviate metadata
+        uuid = generate_uuid5(data_object)
+
+        if not collection.data.exists(uuid):
+            collection.data.insert(
+                properties = data_object,
+                uuid = uuid
+            )
+
+        # except Exception as e:
+        #     print(f"Error adding financial contract {i}: {e}, continuing...")
+
 if __name__ == "__main__":
 
     # connect to weaviate cloud
@@ -188,17 +222,21 @@ if __name__ == "__main__":
 
     # read data frames
     # github_issues_df  = pd.read_csv("../verba_github_issues.csv")
-    slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
-    email_chains_df   = pd.read_csv("../verba_email_chains.csv")
-    ecommerce_df      = pd.read_csv("../ecommerce.csv")
+    # slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
+    # email_chains_df   = pd.read_csv("../verba_email_chains.csv")
+    # ecommerce_df      = pd.read_csv("../ecommerce.csv")
+    contracts_df      = pd.read_csv("../financial_contracts.csv")
 
 
-    # add github issues data to weaviate collection
+    # # add github issues data to weaviate collection
     # add_issues_to_weaviate(client, github_issues_df, "example_verba_github_issues", force=True)
 
-    # add ecommerce data to weaviate collection
-    add_ecommerce_to_weaviate(client, ecommerce_df, "ecommerce", force=True)
+    # # add ecommerce data to weaviate collection
+    # add_ecommerce_to_weaviate(client, ecommerce_df, "ecommerce", force=True)
     
     # # add email and slack data to weaviate collections
     # add_conversations_to_weaviate(client, email_chains_df, "example_verba_email_chains", force=True)
     # add_conversations_to_weaviate(client, slack_messages_df, "example_verba_slack_conversations", force=True)
+
+    # add financial contracts data to weaviate collection
+    add_financial_contracts_to_weaviate(client, contracts_df, "financial_contracts", force=True)

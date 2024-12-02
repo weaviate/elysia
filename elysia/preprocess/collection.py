@@ -224,7 +224,7 @@ class CollectionPreprocessor:
 
             # Summarise the collection using LLM
             try:
-                summary = self._summarise_collection(collection, properties, summary_sample_size)
+                summary = self._summarise_collection(collection, properties, min(summary_sample_size, len(collection)))
             except Exception as e:
                 error = str(e)
                 yield self.process_update(progress=0, error=error)
@@ -339,12 +339,15 @@ class CollectionPreprocessor:
             yield self.process_update(progress=1)
 
 
-# if __name__ == "__main__":
-#     import dspy
-#     lm = dspy.LM(model="claude-3-5-haiku-20241022")
-#     dspy.settings.configure(lm=lm)
+if __name__ == "__main__":
+    import dspy
+    lm = dspy.LM(model="claude-3-5-haiku-20241022")
+    dspy.settings.configure(lm=lm)
 
-#     preprocessor = CollectionPreprocessor()
+    preprocessor = CollectionPreprocessor()
+    
+    async for result in preprocessor("financial_contracts", force=True):
+        print(result)
 
 #     async for result in preprocessor("ecommerce", force=True):
 #         print(result)

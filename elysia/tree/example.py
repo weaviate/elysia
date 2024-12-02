@@ -15,7 +15,8 @@ if __name__ == "__main__":
             "example_verba_github_issues", 
             "example_verba_slack_conversations", 
             "example_verba_email_chains", 
-            "ecommerce"
+            "ecommerce",
+            "financial_contracts"
         ],
         verbosity=2, 
         break_down_instructions=False, 
