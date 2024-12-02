@@ -68,7 +68,7 @@ class Objects:
     def to_json(self, objects: list[dict] = None):
         if objects is None:
             objects = self.objects
-            
+
         return {
             "metadata": self.metadata,
             "objects": objects
@@ -77,7 +77,7 @@ class Objects:
     def mapped_to_json(self, mapping: dict):
         return {
             "metadata": self.metadata,
-            "objects": self.to_json(objects=self._map_objects(self.objects, mapping))
+            "objects": self.to_json(objects=self._map_objects(self.objects, mapping))["objects"]
         }
     
     def return_value(self, idx: int):
