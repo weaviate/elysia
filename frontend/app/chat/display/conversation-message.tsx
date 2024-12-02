@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import MarkdownMessageDisplay from "./markdown";
 import { ConversationMessage } from "@/app/types";
-import CollectionDisplay from "./collection";
 
 interface ConversationMessageProps {
   payload: ConversationMessage[];
