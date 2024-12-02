@@ -24,7 +24,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "Summarize the last 10 GitHub Tickets",
+        "Give a broad overview of financial contracts written by Jane Doe",
     )
 
     tree.base_lm.inspect_history(5)

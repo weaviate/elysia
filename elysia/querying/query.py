@@ -20,12 +20,13 @@ from elysia.text.objects import Response
 from elysia.api.objects import (
     Status, Warning, Error, Branch, TreeUpdate
 )
-from elysia.querying.objects import (
-    GenericRetrieval, 
+from elysia.querying.objects import ( 
     MessageRetrieval, 
     ConversationRetrieval, 
     TicketRetrieval, 
-    EcommerceRetrieval
+    EcommerceRetrieval,
+    EpicGenericRetrieval,
+    BoringGenericRetrieval
 )
 
 class AgenticQuery:
@@ -182,6 +183,8 @@ class AgenticQuery:
             yield TicketRetrieval(objects, metadata)
         elif query.return_type == "ecommerce":
             yield EcommerceRetrieval(objects, metadata)
+        elif query.return_type == "epic_generic":
+            yield EpicGenericRetrieval(objects, metadata)
         else:
-            yield GenericRetrieval(objects, metadata)
+            yield BoringGenericRetrieval(objects, metadata)
         
