@@ -290,8 +290,8 @@ class CollectionPreprocessor:
                     yield self.process_update(progress=progress, error=error_message)
                     return
                 
-                progress += min(remaining_progress / num_remaining, 0.99)
-                yield self.process_update(progress=progress)
+                progress += remaining_progress / num_remaining
+                yield self.process_update(progress=min(progress, 0.99))
 
                 out["mappings"][return_type] = mapping
 
