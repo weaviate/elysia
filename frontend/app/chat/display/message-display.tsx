@@ -22,7 +22,7 @@ import WarningDisplay from "./warning";
 import ConversationsDisplay from "./conversations";
 import SummaryDisplay from "./summary";
 import EcommerceDisplay from "./ecommerce";
-import BoringGenericDisplay from "./generic";
+import BoringGenericDisplay from "./boring_generic";
 import CollectionDisplay from "./collection";
 import CodeDisplay from "./code";
 import AggregationDisplay from "./aggregation";
@@ -184,19 +184,25 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                           }
                         />
                       )}
-                      {((message.payload as ResultPayload).type === "generic" ||
+                      {((message.payload as ResultPayload).type ===
+                        "epic_generic" ||
                         (message.payload as ResultPayload).type ===
                           "boring_generic" ||
                         (message.payload as ResultPayload).type ===
                           "mapped") && (
-                        <BoringGenericDisplay
-                          key={`${index}-${message.id}`}
-                          payload={
-                            (message.payload as ResultPayload).objects as {
-                              [key: string]: string;
-                            }[]
-                          }
-                        />
+                        <>
+                          <p className="text-sm text-secondary">
+                            {(message.payload as ResultPayload).type}
+                          </p>
+                          <BoringGenericDisplay
+                            key={`${index}-${message.id}`}
+                            payload={
+                              (message.payload as ResultPayload).objects as {
+                                [key: string]: string;
+                              }[]
+                            }
+                          />
+                        </>
                       )}
                       {(message.payload as ResultPayload).type ===
                         "aggregation" && (

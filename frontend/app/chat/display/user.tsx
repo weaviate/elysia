@@ -119,7 +119,7 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       <div className="w-full">
         <div className="flex flex-grow justify-start items-start chat-animation gap-4">
           {!collapsed ? (
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-6 items-center">
               <p className="text-primary text-3xl text-left flex-grow">
                 {renderTextWithHighlights(text)}
               </p>
