@@ -24,8 +24,7 @@ interface ChatInterfaceProps {
     conversationId: string
   ) => void;
   handleQuery: (query: string, conversationId: string) => void;
-  debug: DebugResponse | null;
-  fetchDebug: () => void;
+  fetchDebug: (conversation_id: string) => Promise<DebugResponse>;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -34,7 +33,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   toggleCollectionEnabled,
   handleQuery,
   routerChangeCollection,
-  debug,
   fetchDebug,
 }) => {
   const [currentQuery, setCurrentQuery] = useState<{
@@ -149,9 +147,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </ReactFlowProvider>
       ) : (
         <DebugView
-          debug={debug}
           fetchDebug={fetchDebug}
           currentConversation={currentConversation}
+          conversations={conversations}
         />
       )}
     </div>

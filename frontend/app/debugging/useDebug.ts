@@ -1,21 +1,15 @@
-import { useEffect, useState } from "react";
 import { getDebug } from "./api";
 import { DebugResponse } from "./types";
 
-export function useDebug(user_id: string, conversation_id: string) {
-  const [debug, setDebug] = useState<DebugResponse | null>(null);
-
-  useEffect(() => {
-    fetchDebug();
-  }, []);
-
-  const fetchDebug = async () => {
+export function useDebug(user_id: string) {
+  const fetchDebug = async (
+    conversation_id: string
+  ): Promise<DebugResponse> => {
     const debug = await getDebug(user_id, conversation_id);
-    setDebug(debug);
+    return debug;
   };
 
   return {
-    debug,
     fetchDebug,
   };
 }

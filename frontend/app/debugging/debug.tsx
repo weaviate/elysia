@@ -6,27 +6,35 @@ import MarkdownMessageDisplay from "../chat/display/markdown";
 import { Conversation } from "../types";
 
 interface DebugViewProps {
-  debug: DebugResponse | null;
-  fetchDebug: () => void;
+  fetchDebug: (conversation_id: string) => Promise<DebugResponse>;
   currentConversation: string;
   conversations: Conversation[];
 }
 
 const DebugView: React.FC<DebugViewProps> = ({
-  debug,
   fetchDebug,
   currentConversation,
   conversations,
 }) => {
+  const [debug, setDebug] = useState<DebugResponse | null>(null);
+
+  const updateDebug = async (conversation_id: string) => {
+    const debug = await fetchDebug(conversation_id);
+    setDebug(debug);
+  };
+
   useEffect(() => {
-    fetchDebug();
+    updateDebug(currentConversation);
   }, [currentConversation, conversations]);
 
   if (!debug) return null;
 
   return (
     <div className="w-full p-8 flex flex-col gap-4 items-center justify-start h-[90vh] overflow-y-auto">
-      <div className="w-[70vw] flex flex-col gap-4">
+      <div className="w-[60vw] flex flex-col gap-4">
+        <p className="text-xs text-secondary">
+          Conversation: {currentConversation}
+        </p>
         {Object.keys(debug).map((key) => (
           <div key={key} className="flex gap-2 flex-col">
             <div className="flex gap-2">
@@ -38,7 +46,7 @@ const DebugView: React.FC<DebugViewProps> = ({
             {debug[key].chat.map((chat: DebugMessage[], chatIndex: number) => (
               <div
                 key={key + "chat" + chatIndex}
-                className="flex flex-col gap-2 p-4"
+                className="flex flex-col gap-6 p-4"
               >
                 <p className="text-secondary text-sm">
                   ({chat.length}) Chat {chatIndex + 1}

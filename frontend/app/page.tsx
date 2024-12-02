@@ -80,7 +80,7 @@ export default function Home() {
     id || ""
   );
 
-  const { debug, fetchDebug } = useDebug(id || "", currentConversation || "");
+  const { fetchDebug } = useDebug(id || "");
 
   useEffect(() => {
     generateIdFromIp().then((id) => {
@@ -124,7 +124,6 @@ export default function Home() {
           toggleCollectionEnabled={toggleCollectionEnabled}
           handleQuery={handleQuery}
           routerChangeCollection={routerChangeCollection}
-          debug={debug}
           fetchDebug={fetchDebug}
         />
       )}
