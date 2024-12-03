@@ -51,14 +51,14 @@ async def main():
 
     await process(query_payload.dict(), fake_websocket())
 
-    # debug_payload = DebugData(
-    #     conversation_id="1",
-    #     user_id="2",
-    #     llm_id="base_lm"
-    # )
-    # debug_response = await debug(debug_payload)
+    debug_payload = DebugData(
+        conversation_id="1",
+        user_id="2",
+        llm_id="base_lm"
+    )
+    debug_response = await debug(debug_payload)
 
-    # history = json.loads(debug_response.body)["chat"]
+    history = json.loads(debug_response.body)["chat"]
     # print(history)
 
 # Run the main function using asyncio.run

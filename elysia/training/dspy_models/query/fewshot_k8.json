@@ -476,7 +476,7 @@
         "collection_name": "ecommerce",
         "return_type": "ecommerce",
         "output_type": "original",
-        "text_return": "I want to find some 90s aesthetic clothing. To best assist you, I will search the knowledge base for relevant information on available clothing options that fit the 90s aesthetic. This will allow me to retrieve specific data related to clothing styles from that era. I'll search ecommerce using semantic search.",
+        "reasoning_update_message": "I want to find some 90s aesthetic clothing. To best assist you, I will search the knowledge base for relevant information on available clothing options that fit the 90s aesthetic. This will allow me to retrieve specific data related to clothing styles from that era. I'll search ecommerce using semantic search.",
         "reasoning": "The user is asking for some 90s aesthetic clothing. None of the categories in the collection match this request, so we should use a semantic search (near_text), to pick up the 90s aesthetic in the description of the clothing. The phrase \"90s aesthetic\" should capture the issue of the user looking for 90s aesthetic clothing. We apply a generic limit of 10, to get a broad picture of the issue. The user is requesting individual items, so we should show them the original return type of the clothing as they are."
       },
       {
@@ -951,7 +951,7 @@
         "collection_name": "example_verba_slack_conversations",
         "return_type": "message",
         "output_type": "original",
-        "text_return": "I am currently gathering information to summarize Sofia's Slack messages from the last two months, as it appears we haven't searched yet for this specific content. This search is essential to collect the relevant messages needed for a comprehensive overview. I'll search example_verba_slack_conversations using fetch_objects search, filtering by message_timestamp.",
+        "reasoning_update_message": "I am currently gathering information to summarize Sofia's Slack messages from the last two months, as it appears we haven't searched yet for this specific content. This search is essential to collect the relevant messages needed for a comprehensive overview. I'll search example_verba_slack_conversations using fetch_objects search, filtering by message_timestamp.",
         "reasoning": "The user is asking for a summary of Sofia's slack messages from the last 2 months. Note that they are not asking for an summary of each message, but a summary of all messages from Sofia. So we should output \"original\" return type. Since the user is not looking for any specific information within the messages, we should use the generic fetch_objects query, with filters to pick out Sofia's messages. We can see in the collection information that there is an author called \"Sofia\", so we can filter for this exactly using the Filter.by_property(\"message_author\").equal(\"Sofia\") filter. We apply a generic limit of 30, to get a broad picture of the issue."
       },
       {
@@ -1426,7 +1426,7 @@
         "collection_name": "example_verba_email_chains",
         "return_type": "message",
         "output_type": "original",
-        "text_return": "I will begin by searching the knowledge base for the most recent emails people are writing about Verba. This will help provide the information needed to address your question effectively. By querying the relevant dataset, I can gather the latest communications related to Verba. I'll search example_verba_email_chains using fetch_objects search, sorting by message_timestamp, filtering by message_timestamp.",
+        "reasoning_update_message": "I will begin by searching the knowledge base for the most recent emails people are writing about Verba. This will help provide the information needed to address your question effectively. By querying the relevant dataset, I can gather the latest communications related to Verba. I'll search example_verba_email_chains using fetch_objects search, sorting by message_timestamp, filtering by message_timestamp.",
         "reasoning": "Since we only need to sort and not perform any searches, we can use fetch_objects. The user is asking for the most recent emails, so we should sort the results by the message_timestamp property in descending order. The user is asking for the most recent emails, without a specified time range. We will use a single filter for this on a generic span of the last 2 months, since the current month is November 2024. Additionally, we apply a generic limit of 30, to get a broad picture of the issue. Also, we will output \"original\" return type, as the user does not seem to be asking for an itemised summary. We will additionally sort the results by the message_timestamp property in descending order, to get the most recent emails first."
       },
       {
@@ -1901,7 +1901,7 @@
         "collection_name": "example_verba_github_issues",
         "return_type": "ticket",
         "output_type": "original",
-        "text_return": "I will search the knowledge base for the most common issues from the Verba GitHub issues collection from 2024. This will help gather the necessary information to address your query effectively. Since your request is quite specific, querying the database is the most appropriate action to take right now. I'll search example_verba_github_issues using fetch_objects search, sorting by issue_created_at, filtering by issue_created_at.",
+        "reasoning_update_message": "I will search the knowledge base for the most common issues from the Verba GitHub issues collection from 2024. This will help gather the necessary information to address your query effectively. Since your request is quite specific, querying the database is the most appropriate action to take right now. I'll search example_verba_github_issues using fetch_objects search, sorting by issue_created_at, filtering by issue_created_at.",
         "reasoning": "We need to use fetch_objects, as no semantic or keyword search is required, as the user is specifying a generic retrieval. We also need to specify a time range between 2024 and 2025, as the user is specifying a time-based retrieval. Since the user is asking for the most common issues, we should sort the results by the issue_created_at property in descending order."
       },
       {
@@ -2376,7 +2376,7 @@
         "collection_name": "example_verba_slack_conversations",
         "return_type": "conversation",
         "output_type": "original",
-        "text_return": "I will search the knowledge base for information regarding the bug where users can't open the settings page in Verba, as it seems to be the best way to gather relevant insights. This search will help me collect current discussions and comments about this specific issue from the community. I'll search example_verba_slack_conversations using hybrid search.",
+        "reasoning_update_message": "I will search the knowledge base for information regarding the bug where users can't open the settings page in Verba, as it seems to be the best way to gather relevant insights. This search will help me collect current discussions and comments about this specific issue from the community. I'll search example_verba_slack_conversations using hybrid search.",
         "reasoning": "The user is asking for a specific issue, so hybrid search, which captures the exact phrase as well as its meaning, is appropriate. The phrase \"can't open settings page\" should capture the issue of the settings page not being accessible. We apply a generic limit of 10, to get a broad picture of the issue. Since the user is asking generically what people (plural) are saying, we should retrieve full conversations, including all messages and message authors, with timestamps and context of other messages in the conversation. Also, we will output \"original\" return type, as the user does not seem to be asking for an itemised summary."
       },
       {
@@ -2851,7 +2851,7 @@
         "collection_name": "ecommerce",
         "return_type": "ecommerce",
         "output_type": "summary",
-        "text_return": "I will search the knowledge base to find a range of different tops available in your e-commerce collection. This will help me provide you with the most accurate and relevant information. Since your query specifically asks for a range of different tops, initiating a search is the most appropriate course of action. I'll search ecommerce using fetch_objects search, filtering by category.",
+        "reasoning_update_message": "I will search the knowledge base to find a range of different tops available in your e-commerce collection. This will help me provide you with the most accurate and relevant information. Since your query specifically asks for a range of different tops, initiating a search is the most appropriate course of action. I'll search ecommerce using fetch_objects search, filtering by category.",
         "reasoning": "The user is asking for a range of the different tops there are in the ecommerce collection, so we should use a generic fetch_objects query. We can see in the collection information that there is a category called \"Tops\", so we can filter for this exactly using the Filter.by_property(\"category\").equal(\"Tops\") filter. We apply an arbitrary limit of 10, to get a broad picture of the issue. Since the user seems to be looking for an overview, and not the properties of the individual items, we should output \"summary\" return type to give a concise overview of the different tops."
       },
       {
@@ -3326,7 +3326,7 @@
         "collection_name": "example_verba_github_issues",
         "return_type": "ticket",
         "output_type": "original",
-        "text_return": "I will summarize the issue of 'PDF being too large' in verba. Since this is the last action to take, it will complete our task. This decision reflects the need to provide a concise summary of the specific issue requested by the user, despite not having prior information available. I'll search example_verba_github_issues using hybrid search.",
+        "reasoning_update_message": "I will summarize the issue of 'PDF being too large' in verba. Since this is the last action to take, it will complete our task. This decision reflects the need to provide a concise summary of the specific issue requested by the user, despite not having prior information available. I'll search example_verba_github_issues using hybrid search.",
         "reasoning": "The user is asking for a specific issue, so hybrid search, which captures the exact phrase as well as its meaning, is appropriate. The phrase \"PDF too large\" should capture the issue of the PDF being too large, hoping to pick up this description in the content of the issues. We apply a generic limit of 10, to get a broad picture of the issue. Later, we will summarise the results, but the user is not asking for an itemised summary or does not seem to be, so we will output \"original\" return type."
       },
       {
@@ -3801,7 +3801,7 @@
         "collection_name": "example_verba_slack_conversations",
         "return_type": "conversation",
         "output_type": "original",
-        "text_return": "I will search the knowledge base to find any recent proposals for new features by Kaladin related to Verba. This will help provide you with the most accurate and up-to-date information regarding his contributions. Given that there hasn't been a prior search on this specific query, querying the knowledge base is essential to retrieve the relevant information. I'll search example_verba_slack_conversations using semantic search, filtering by message_timestamp.",
+        "reasoning_update_message": "I will search the knowledge base to find any recent proposals for new features by Kaladin related to Verba. This will help provide you with the most accurate and up-to-date information regarding his contributions. Given that there hasn't been a prior search on this specific query, querying the knowledge base is essential to retrieve the relevant information. I'll search example_verba_slack_conversations using semantic search, filtering by message_timestamp.",
         "reasoning": "The user is asking for a specific type of message, a \"feature proposal\", so we should search for this phrase. Since this can be quite broad, we will use a semantic search (near_text). The phrase \"feature proposal\" should capture the issue of the user proposing a new feature. We apply a generic limit of 5, to get a broad picture of the issue. We can see in the collection information that there is an author called \"Kaladin\", so we can filter for this exactly using the Filter.by_property(\"message_author\").equal(\"Kaladin\") filter. Also, we will output \"original\" return type, as the user does not seem to be asking for an itemised summary."
       }
     ],

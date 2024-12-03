@@ -112,7 +112,7 @@ class AgenticQuery:
             backend_print(f"[yellow]Query collection name[/yellow]: {query.collection_name}")
             backend_print(f"[yellow]Query return type[/yellow]: {query.return_type}")
 
-        current_message, message_update = update_current_message(current_message, query.text_return)
+        current_message, message_update = update_current_message(current_message, query.reasoning_update_message)
 
         # Yield results to front end
         yield Response([{"text": message_update}], {})
@@ -140,7 +140,7 @@ class AgenticQuery:
 
                 # Run the object summariser
                 summary_list, summariser = self.object_summariser(objects, current_message)
-                current_message, message_update = update_current_message(current_message, summariser.text_return)
+                current_message, message_update = update_current_message(current_message, summariser.reasoning_update_message)
 
                 # Yield results to front end
                 yield Response([{"text": message_update}], {})

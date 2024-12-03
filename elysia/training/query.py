@@ -106,7 +106,7 @@ def create_example(
     )
 
 
-    text_return = f"I'll search {collection_name} using"
+    reasoning_update_message = f"I'll search {collection_name} using"
 
     # get random message features
     if "fetch_objects" in code:
@@ -116,7 +116,7 @@ def create_example(
     elif "near_text" in code:
         query_type = "semantic"
 
-    text_return += f" {query_type} search"
+    reasoning_update_message += f" {query_type} search"
     
     if "sort" in code:
         sort_start = code.index('Sort.by_property("')
@@ -124,7 +124,7 @@ def create_example(
         sort_property = code[sort_start+len("Sort.by_property("):sort_end]
         sort_property = sort_property[sort_property.find('"')+1:sort_property.rfind('"')]
 
-        text_return += f", sorting by {sort_property}"
+        reasoning_update_message += f", sorting by {sort_property}"
 
     if "filters" in code:
         filter_start = code.index('Filter.by_property("')
@@ -132,9 +132,9 @@ def create_example(
         filter_property = code[filter_start+len("Filter.by_property("):filter_end]
         filter_property = filter_property[filter_property.find('"')+1:filter_property.rfind('"')]
 
-        text_return += f", filtering by {filter_property}"
+        reasoning_update_message += f", filtering by {filter_property}"
 
-    text_return += "."
+    reasoning_update_message += "."
 
     # run the tree
     tree.process_sync(user_prompt)
@@ -147,7 +147,7 @@ def create_example(
     data_queried = tree.tree_data.data_queried
     conversation_history = tree.tree_data.conversation_history
 
-    text_return = current_message + " " + text_return
+    reasoning_update_message = current_message + " " + reasoning_update_message
 
     # find previous queries
     previous_queries = find_previous_queries(available_information)
@@ -169,7 +169,7 @@ def create_example(
         collection_name=collection_name,
         return_type=return_type,
         output_type=output_type,
-        text_return=text_return,
+        reasoning_update_message=reasoning_update_message,
         reasoning=reasoning
     ).with_inputs(
         "user_prompt", 

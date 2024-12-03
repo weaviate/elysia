@@ -339,18 +339,8 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             desc="The generated code only. Do not enclose it in quotes or in ```. Just the code only. Do not include any comments.",
             format = str
         )
-        text_return: str = dspy.OutputField(
-            desc="""
-            Begin this field with the text in current_message field, which is your message _so far_ to the user. Avoid repeating yourself (from the current_message field). If this field is empty, this is a new message you are starting.
-            You should write out exactly what it says in current_message, and then afterwards, continue with your new reasoning to communicate anything else to the user.
-            Your additions should be a brief succint version of the reasoning field, that will be communicated to the user. Do not complete the task within this field, this is just a summary of the reasoning for the decision.
-            Communicate this in a friendly and engaging way, as if you are explaining your reasoning to the user in a chat message.
-            Do not ask any questions, and do not ask the user to confirm or approve of your actions.
-            You should only add one extra sentence to the current_message field, and that is it. Do not add any more.
-            If current_message is empty, then this is a new message you are starting, so you should write out only a new message.
-            Use gender neutral language.
-            """.strip(),
-            format = str
+        reasoning_update_message: str = dspy.OutputField(
+            description="Write out current_message in full, then add one sentence to the paragraph which explains your task selection logic. Mark your new sentence with <NEW></NEW>. If current_message is empty, your whole message should be enclosed in <NEW></NEW>. Use gender-neutral language and communicate to the user in a friendly way."
         )
 
     return AggregatePrompt

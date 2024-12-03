@@ -62,7 +62,7 @@ debug_payload = DebugData(
 debug_response = await debug(debug_payload)
 
 history = json.loads(debug_response.body)["base_lm"]["chat"]
-print(history)
+# print(history)
 # test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["ecommerce"].objects
 
 # for obj in test_return_objects:
