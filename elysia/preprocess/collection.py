@@ -347,15 +347,15 @@ class CollectionPreprocessor:
             yield self.process_update(progress=1)
 
 
-if __name__ == "__main__":
-    import dspy
-    lm = dspy.LM(model="claude-3-5-haiku-20241022")
-    dspy.settings.configure(lm=lm)
+# if __name__ == "__main__":
+#     import dspy
+#     lm = dspy.LM(model="claude-3-5-haiku-20241022")
+#     dspy.settings.configure(lm=lm)
 
-    preprocessor = CollectionPreprocessor()
+#     preprocessor = CollectionPreprocessor()
     
-    async for result in preprocessor("financial_contracts", force=True):
-        print(result)
+#     async for result in preprocessor("financial_contracts", force=True):
+#         print(result)
         
     # async for result in preprocessor("weather", force=True):
     #     print(result)
