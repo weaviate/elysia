@@ -62,11 +62,11 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
         let className = "";
         if (activeTypes.has("noun")) {
           className =
-            "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlightshine)] ";
+            "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.background_highlight)] ";
         }
         if (activeTypes.has("entity")) {
           className =
-            "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accentshine)] ";
+            "text-accent font-bold [text-shadow:0_0_10px_theme(colors.background_accent)] ";
         }
 
         segments.push(
@@ -94,11 +94,11 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
 
       if (activeTypes.has("noun")) {
         className =
-          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.highlightshine)] ";
+          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.background_highlight)] ";
       }
       if (activeTypes.has("entity")) {
         className =
-          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.accentshine)] ";
+          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.background_accent)] ";
       }
 
       segments.push(

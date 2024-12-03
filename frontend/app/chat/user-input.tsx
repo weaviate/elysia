@@ -26,7 +26,7 @@ const QueryInput: React.FC<QueryInputProps> = ({
 
   return (
     <div
-      className={`fixed shadow-xl ${
+      className={`fixed ${
         query_length === 0 ? "top-1/2 -translate-y-1/2" : "bottom-8"
       } gap-4 flex items-center justify-center flex-col transition-all duration-300 ${width_control}`}
     >
