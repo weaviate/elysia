@@ -276,6 +276,7 @@ class ActionData(PromptData):
 
     def set_collection_names(self, collection_information: dict, collection_names: list[str]):
         self.collection_information = {collection_name: collection_information[collection_name] for collection_name in collection_names}
+        print(self.collection_information)
 
 class DecisionData(PromptData):
     """
