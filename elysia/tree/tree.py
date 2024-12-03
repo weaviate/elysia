@@ -609,11 +609,14 @@ class Tree:
         self.collection_names = collection_names
         self.querier.set_collection_names(collection_names)
         self.aggregator.set_collection_names(collection_names)
-        self.action_data.set_collection_names(collection_names)
+        self.action_data.set_collection_names(self.collection_information, collection_names)
         
         if remove_data:
             for collection_name in collection_names_to_remove:
                 self._remove_collection_from_data(collection_name)
+        
+        if self.verbosity >= 1:
+            backend_print(f"Update collection names: {self.collection_names}")
 
     def _decide_from_route(self, node_id: str):
         node = self.decision_nodes[node_id]

@@ -11,6 +11,14 @@ class TestCollections(unittest.TestCase):
     conversation_id = "test_conversation"
     collection_name = "ecommerce"
 
+    def _find_object_in_collection(self, tree, collection_name):
+        found = False
+        for object in tree.decision_data.available_information.retrieved:
+            if object.metadata["collection_name"] == collection_name:
+                found = True
+                break
+        return found
+
     def test_remove_collection_basic(self):
 
         # create a new tree
@@ -21,9 +29,14 @@ class TestCollections(unittest.TestCase):
         tree = tree_manager.get_tree(self.user_id, self.conversation_id)
 
         # view available collections
+        original_collections = list(tree.action_data.collection_information.keys())
         action_data_collections = list(tree.action_data.collection_information.keys())
         querier_collections = tree.querier.collection_names
         aggregator_collections = tree.aggregator.collection_names
+
+        # all should start with the same collections
+        self.assertEqual(sorted(original_collections), sorted(querier_collections))
+        self.assertEqual(sorted(original_collections), sorted(aggregator_collections))
 
         # remove the collection
         new_collections = [collection for collection in action_data_collections if collection != self.collection_name]
@@ -44,13 +57,27 @@ class TestCollections(unittest.TestCase):
         self.assertFalse(self.collection_name in querier_collections)
         self.assertFalse(self.collection_name in aggregator_collections)
 
-    def _find_object_in_collection(self, tree, collection_name):
-        found = False
-        for object in tree.decision_data.available_information.retrieved:
-            if object.metadata["collection_name"] == collection_name:
-                found = True
-                break
-        return found
+        # add collection back
+        add_collections_data = SetCollectionsData(
+            conversation_id=self.conversation_id,
+            user_id=self.user_id,
+            collection_names=original_collections,
+            remove_data=False
+        )
+        asyncio.run(set_collections(add_collections_data))
+
+        # view available collections
+        action_data_collections = list(tree.action_data.collection_information.keys())
+        querier_collections = tree.querier.collection_names
+        aggregator_collections = tree.aggregator.collection_names
+
+        self.assertEqual(sorted(original_collections), sorted(action_data_collections))
+        self.assertEqual(sorted(original_collections), sorted(querier_collections))
+        self.assertEqual(sorted(original_collections), sorted(aggregator_collections))
+
+        # also in collection information
+        self.assertEqual(sorted(original_collections), sorted(list(tree.action_data.collection_information.keys())))
+        self.assertEqual(sorted(original_collections), sorted(list(tree.collection_information.keys())))
 
     def test_remove_collection_remove_data(self):
 
