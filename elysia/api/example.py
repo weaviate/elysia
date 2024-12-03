@@ -38,7 +38,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="what was the last conversation by edward?",
+    query="what was the last message by edward?",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"
@@ -61,7 +61,7 @@ debug_payload = DebugData(
 )
 debug_response = await debug(debug_payload)
 
-history = json.loads(debug_response.body)["chat"]
+history = json.loads(debug_response.body)["base_lm"]["chat"]
 print(history)
 # test_return_objects = tree_manager.get_tree(conversation_id="1", user_id="2").returns.retrieved["ecommerce"].objects
 

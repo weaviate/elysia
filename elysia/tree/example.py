@@ -25,11 +25,12 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "What was the average temperature in 2023?",
+        "group all the usernames from the github collection and give an overview",
     )
 
     tree.base_lm.inspect_history(5)
     tree.complex_lm.inspect_history(5)
+
 
     # print(tree.returns.retrieved["example_verba_github_issues"].objects)
     # print(tree.returns.aggregation["example_verba_github_issues"].metadata["last_code"])
