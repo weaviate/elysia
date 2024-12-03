@@ -108,6 +108,8 @@ export type EpicGeneric = {
   id: string;
   author: string;
   timestamp: string;
+  category: string;
+  subcategory: string;
   tags: string[];
 };
 
