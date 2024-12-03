@@ -151,7 +151,11 @@ class TreeReturner:
         return Completed().to_frontend(self.conversation_id, query_id)
     
     def _parse_result(self, result: Objects, query_id: str):
-        mapping = self.mappings[result.metadata["collection_name"]][result.type]
+        if result.type != "aggregation":
+            mapping = self.mappings[result.metadata["collection_name"]][result.type]
+        else:
+            mapping = None
+
         return result.to_frontend(
             self.conversation_id, 
             query_id, 
@@ -240,8 +244,10 @@ class Tree:
         self.collection_names = collection_names
 
         # set up LLMs in dspy
-        self.base_lm = dspy.LM(model="gpt-4o-mini", max_tokens=6000)
-        self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
+        # self.base_lm = dspy.LM(model="gpt-4o-mini", max_tokens=6000)
+        # self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
+        self.base_lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=6000)
+        self.complex_lm = dspy.LM(model="claude-3-5-sonnet-20241022", max_tokens=6000)
         dspy.settings.configure(lm=self.base_lm)
 
         # keep track of the number of trees completed
