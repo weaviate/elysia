@@ -443,20 +443,20 @@ async def debug(data: DebugData):
     base_lm = tree.base_lm
     complex_lm = tree.complex_lm
 
-    history = []
-    for lm in [base_lm, complex_lm]:
+    histories = [[], []]
+    for i, lm in enumerate([base_lm, complex_lm]):
         response = lm.history[0]["response"].choices[0].message.content
-        history.extend([lm_history["messages"] for lm_history in lm.history])
-        history.append({"role":"assistant", "content": response})
+        histories[i].extend([lm_history["messages"] for lm_history in lm.history])
+        histories[i].append({"role":"assistant", "content": response})
         
     out = {
         "base_lm": {
             "model": base_lm.model,
-            "chat": [history["messages"] for history in base_lm.history]
+            "chat": histories[0]
         },
         "complex_lm": {
             "model": complex_lm.model,
-            "chat": [history["messages"] for history in complex_lm.history]
+            "chat": histories[1]
         }
     }
     return JSONResponse(content=out, status_code=200)
