@@ -163,14 +163,15 @@ class ConversationRetrieval(Retrieval):
         }
 
     def _map_objects(self, objects: list[dict], mapping: dict):
+        inverted_mapping = {v: k for k, v in mapping.items()}
         new_objects = []
         for conversation in objects:
             new_conversation = []
             for message in conversation:
-                new_message = {key: "" for key in mapping.values()}
+                new_message = {key: "" for key in mapping.keys()}
                 for key, value in message.items():
-                    if key in mapping.keys():
-                        new_message[mapping[key]] = value
+                    if key in inverted_mapping.keys():
+                        new_message[inverted_mapping[key]] = value
                     elif key == "uuid":
                         new_message["uuid"] = value
                     elif key == "summary":

@@ -108,7 +108,8 @@ collection_names = [
     "example_verba_email_chains", 
     "example_verba_slack_conversations", 
     "ecommerce",
-    "financial_contracts"
+    "financial_contracts",
+    "weather"
 ]
 
 # =============================

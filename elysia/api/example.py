@@ -38,7 +38,7 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 query_payload = QueryData(
-    query="what was the last message by edward?",
+    query="what was the last conversation by edward?",
     query_id="whatduhek",
     user_id="2",
     conversation_id="1"

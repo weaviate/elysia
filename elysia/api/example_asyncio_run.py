@@ -37,7 +37,7 @@ async def main():
     tree = json.loads(initialise_tree_response.body)["tree"]
 
     query_payload = QueryData(
-        query="summarise the last 10 github tickets",
+        query="what was the last conversation by edward?",
         query_id="whatduhek",
         user_id="2",
         conversation_id="1"
