@@ -63,7 +63,7 @@ def remove_whitespace(text: str) -> str:
         
 #     return full_message, message_update
 
-def update_current_message(current_message: str, new_message: str):
+def backup_update_current_message(current_message: str, new_message: str):
     
     if current_message == "":
         return new_message, new_message
@@ -75,6 +75,15 @@ def update_current_message(current_message: str, new_message: str):
 
     return current_message + " " + sentences[-1], sentences[-1]
 
+def update_current_message(current_message: str, new_message: str):
+    # find new sentence
+    if "<NEW>" not in new_message:
+        return backup_update_current_message(current_message, new_message)
+    
+    new_sentence = new_message.split("<NEW>")[1]
+    new_sentence = new_sentence[:new_sentence.find("</NEW>")]
+
+    return current_message + " " + new_sentence, new_sentence
 
 def format_aggregation_property(prop):
 

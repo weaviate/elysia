@@ -146,7 +146,7 @@ def construct_training_decision_prompt(available_tasks_list: list[str] = None) -
             description="""
             The current message you, the assistant, have written to send to the user. 
             This message has not been sent yet, you will add text to it, to be sent to the user later.
-            In essence, the concatenation of this field, current_message, and the text_return field, will be sent to the user.
+            In essence, the concatenation of this field, current_message, and the reasoning_update_message field, will be sent to the user.
             """.strip(),
             format = str
         )

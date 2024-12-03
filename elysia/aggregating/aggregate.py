@@ -84,7 +84,7 @@ class AgenticAggregate:
         if self.verbosity > 0:
             print(Panel.fit(aggregation.code, title="Aggregation code", padding=(1,1), border_style="yellow"))
 
-        current_message, message_update = update_current_message(current_message, aggregation.text_return)
+        current_message, message_update = update_current_message(current_message, aggregation.reasoning_update_message)
 
         # return values
         objects = [

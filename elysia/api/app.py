@@ -441,15 +441,28 @@ async def process_collection_websocket(websocket: WebSocket):
 async def debug(data: DebugData):
     tree = tree_manager.get_tree(data.user_id, data.conversation_id)
     base_lm = tree.base_lm
-    complex_lm = tree.complex_lm
+    complex_lm = tree.complex_lm 
+
+    histories = [None]*2
+    for i, lm in enumerate([base_lm, complex_lm]):
+        histories[i] = [
+            lm_history["messages"] + [
+                {
+                    "role": "assistant",
+                    "content": lm_history["response"].choices[0].message.content
+                }
+            ]
+            for lm_history in lm.history
+        ]
+        
     out = {
         "base_lm": {
             "model": base_lm.model,
-            "chat": [history["messages"] for history in base_lm.history]
+            "chat": histories[0]
         },
         "complex_lm": {
             "model": complex_lm.model,
-            "chat": [history["messages"] for history in complex_lm.history]
+            "chat": histories[1]
         }
     }
     return JSONResponse(content=out, status_code=200)
