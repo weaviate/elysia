@@ -609,7 +609,7 @@ class Tree:
         self.collection_names = collection_names
         self.querier.set_collection_names(collection_names)
         self.aggregator.set_collection_names(collection_names)
-        self.action_data.set_collection_names(collection_names)
+        self.action_data.set_collection_names(self.collection_information, collection_names)
         
         if remove_data:
             for collection_name in collection_names_to_remove:
