@@ -32,6 +32,7 @@ message = {
 ticket = {
     "title": "the title of the ticket. string",
     "subtitle": "the subtitle of the ticket. string",
+    "author": "the author of the ticket. string",
     "content": "the text of the ticket. string",
     "created_at": "the timestamp of the original creation time/date of the ticket in any format. datetime/string/other",
     "updated_at": "the timestamp of the last update time/date of the ticket in any format. datetime/string/other",
@@ -68,7 +69,9 @@ epic_generic = {
     "id": "the id of the information. integer/string/other",
     "author": "the author of the information. string/other",
     "timestamp": "the timestamp of the information in any format. datetime/string/other",
-    "tags": "the tags of the information. list[string/other]"
+    "tags": "the tags of the information. list[string/other]",
+    "category": "some string describing the category of the information, e.g. type of something. string",
+    "subcategory": "some string describing a nested level of category of the data. string"
 }
 
 types_dict = {

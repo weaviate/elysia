@@ -45,17 +45,22 @@ class Retrieval(Objects):
 
         return super().to_json(objects=objects)
     
-class GenericRetrieval(Retrieval):
+class EpicGenericRetrieval(Retrieval):
     def __init__(self, objects: list[dict], metadata: dict):
         super().__init__(objects, metadata)
-        self.type = "generic"
+        self.type = "epic_generic"
+
+class BoringGenericRetrieval(Retrieval):
+    def __init__(self, objects: list[dict], metadata: dict):
+        super().__init__(objects, metadata)
+        self.type = "boring_generic"
 
 class EcommerceRetrieval(Retrieval):
     def __init__(self, objects: list[dict], metadata: dict):
         super().__init__(objects, metadata)
         self.type = "ecommerce"
 
-class TicketRetrieval(GenericRetrieval):
+class TicketRetrieval(Retrieval):
     def __init__(self, objects: list[dict], metadata: dict):
         super().__init__(objects, metadata)
         self.type = "ticket"

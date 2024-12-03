@@ -103,7 +103,13 @@ tree_manager = TreeManager()
 nlp = spacy.load("en_core_web_sm")
 
 # Global collection names (hardcoded for now)
-collection_names = ["example_verba_github_issues", "example_verba_email_chains", "example_verba_slack_conversations", "ecommerce"]
+collection_names = [
+    "example_verba_github_issues", 
+    "example_verba_email_chains", 
+    "example_verba_slack_conversations", 
+    "ecommerce",
+    "financial_contracts"
+]
 
 # =============================
 

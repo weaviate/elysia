@@ -15,7 +15,9 @@ if __name__ == "__main__":
             "example_verba_github_issues", 
             "example_verba_slack_conversations", 
             "example_verba_email_chains", 
-            "ecommerce"
+            "ecommerce",
+            "financial_contracts",
+            "weather"
         ],
         verbosity=2, 
         break_down_instructions=False, 
@@ -23,7 +25,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "Summarize the last 10 GitHub Tickets",
+        "What was the average temperature in 2023?",
     )
 
     tree.base_lm.inspect_history(5)

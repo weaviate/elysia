@@ -39,12 +39,13 @@ class Objects:
         return unique_objects
     
     def _map_objects(self, objects: list[dict], mapping: dict):
+        inverted_mapping = {v: k for k, v in mapping.items()}
         new_objects = []
         for object in objects:
-            new_object = {key: "" for key in mapping.values()}
+            new_object = {key: "" for key in mapping.keys()}
             for key, value in object.items():
-                if key in mapping.keys():
-                    new_object[mapping[key]] = value
+                if key in inverted_mapping.keys():
+                    new_object[inverted_mapping[key]] = value
                 elif key == "uuid":
                     new_object["uuid"] = value
                 elif key == "summary":
@@ -68,7 +69,7 @@ class Objects:
     def to_json(self, objects: list[dict] = None):
         if objects is None:
             objects = self.objects
-            
+
         return {
             "metadata": self.metadata,
             "objects": objects
@@ -77,17 +78,18 @@ class Objects:
     def mapped_to_json(self, mapping: dict):
         return {
             "metadata": self.metadata,
-            "objects": self.to_json(objects=self._map_objects(self.objects, mapping))
+            "objects": self.to_json(objects=self._map_objects(self.objects, mapping))["objects"]
         }
     
     def return_value(self, idx: int):
         return self.objects[idx]
 
     def to_frontend(self, conversation_id: str, query_id: str = None, mapping: dict = None):
-        if mapping is None:
+        if mapping is None or self.type == "aggregation":
             items = self.to_json()
         else:
             items = self.mapped_to_json(mapping)
+            
         return Update.to_frontend_json(
             "result",
             conversation_id,

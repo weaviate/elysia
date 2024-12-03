@@ -152,11 +152,10 @@ class TreeReturner:
     
     def _parse_result(self, result: Objects, query_id: str):
         mapping = self.mappings[result.metadata["collection_name"]][result.type]
-        inverted_mapping = {v: k for k, v in mapping.items()}
         return result.to_frontend(
             self.conversation_id, 
             query_id, 
-            inverted_mapping
+            mapping,
         )
     
     def _parse_text(self, text: Text, query_id: str):
