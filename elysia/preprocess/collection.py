@@ -50,7 +50,7 @@ class ProcessUpdate:
 
 class CollectionPreprocessor:
 
-    def __init__(self, threshold_for_missing_fields: float = 0.4):
+    def __init__(self, threshold_for_missing_fields: float = 0.6):
         self.collection_summariser_executor = CollectionSummariserExecutor()
         self.data_mapping_executor = DataMappingExecutor()
         self.return_type_executor = ReturnTypeExecutor().activate_assertions()
@@ -275,6 +275,7 @@ class CollectionPreprocessor:
             num_remaining = len(return_types)
 
             # Define the mappings
+            mappings = {}
             for return_type in return_types:
                 fields = rt.types_dict[return_type]
 
@@ -290,16 +291,19 @@ class CollectionPreprocessor:
                     yield self.process_update(progress=progress, error=error_message)
                     return
                 
+                # remove any extra fields the model may have added
+                mapping = {k: v for k, v in mapping.items() if k in list(fields.keys())}
+                
                 progress += remaining_progress / num_remaining
                 yield self.process_update(progress=min(progress, 0.99))
 
-                out["mappings"][return_type] = mapping
+                mappings[return_type] = mapping
 
             # Check across all mappings how many missing fields there are
             new_return_types = []
             for return_type in return_types:
-                num_missing = sum([m == "" for m in list(out["mappings"][return_type].values())])
-                if num_missing < self.threshold_for_missing_fields * len(out["mappings"][return_type].keys()):
+                num_missing = sum([m == "" for m in list(mappings[return_type].values())])
+                if num_missing/len(mappings[return_type].keys()) < self.threshold_for_missing_fields:
                     new_return_types.append(return_type)
             
             # check for no return types
@@ -307,6 +311,9 @@ class CollectionPreprocessor:
 
                 if "epic_generic" in return_types:
                     new_return_types = ["boring_generic"]
+                    out["mappings"]["boring_generic"] = {
+                        p: p for p in properties.keys()
+                    }
                 else:
                     new_return_types = ["epic_generic"]
 
@@ -324,9 +331,10 @@ class CollectionPreprocessor:
                         new_return_types = ["boring_generic"] # always the backup
                     else:
                         out["mappings"]["epic_generic"] = mapping
+
             else:
                 out["mappings"] = {
-                    return_type: out["mappings"][return_type] for return_type in new_return_types
+                    return_type: mappings[return_type] for return_type in new_return_types
                 }
                 
             # Save to a collection
@@ -348,6 +356,18 @@ if __name__ == "__main__":
     
     async for result in preprocessor("financial_contracts", force=True):
         print(result)
+        
+    # async for result in preprocessor("weather", force=True):
+    #     print(result)
+
+    # async def preprocess(collection_name: str, force: bool = False):
+    #     async for result in preprocessor(collection_name, force=force):
+    #         print(result)
+
+    # import asyncio
+    # asyncio.run(preprocess("financial_contracts", force=True))
+
+
 
 #     async for result in preprocessor("ecommerce", force=True):
 #         print(result)

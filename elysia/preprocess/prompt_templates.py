@@ -109,6 +109,8 @@ class DataMappingPrompt(dspy.Signature):
         But you can leave out certain output_field's if they are not needed.
         In summary, you should ALWAYS include all input fields as keys of the dictionary, but you can leave out certain output_field's if they are not needed.
         This should be formatted as a Python dictionary and nothing else.
+        Do not create any new fields, only map existing fields.
+        The keys in your output dictionary should be the input_field_names and no others.
         """.strip(), 
         format = str
     )

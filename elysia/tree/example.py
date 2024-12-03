@@ -16,7 +16,8 @@ if __name__ == "__main__":
             "example_verba_slack_conversations", 
             "example_verba_email_chains", 
             "ecommerce",
-            "financial_contracts"
+            "financial_contracts",
+            "weather"
         ],
         verbosity=2, 
         break_down_instructions=False, 
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "Give a broad overview of financial contracts written by Jane Doe",
+        "What was the average temperature in 2023?",
     )
 
     tree.base_lm.inspect_history(5)

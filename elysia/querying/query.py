@@ -101,7 +101,7 @@ class AgenticQuery:
             )
 
         if query is None: # either an error or the query is impossible
-            yield GenericRetrieval([], {"collection_name": "", "impossible_prompts": [tree_data.user_prompt]})
+            yield BoringGenericRetrieval([], {"collection_name": "", "impossible_prompts": [tree_data.user_prompt]})
             if error_message != "": # an error in the prompt executor
                 yield Error(error_message)
             return
