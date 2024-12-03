@@ -442,6 +442,13 @@ async def debug(data: DebugData):
     tree = tree_manager.get_tree(data.user_id, data.conversation_id)
     base_lm = tree.base_lm
     complex_lm = tree.complex_lm
+
+    history = []
+    for lm in [base_lm, complex_lm]:
+        response = lm.history[0]["response"].choices[0].message.content
+        history.extend([lm_history["messages"] for lm_history in lm.history])
+        history.append({"role":"assistant", "content": response})
+        
     out = {
         "base_lm": {
             "model": base_lm.model,
