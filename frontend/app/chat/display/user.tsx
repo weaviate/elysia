@@ -123,13 +123,13 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
               <p className="text-primary text-3xl text-left flex-grow">
                 {renderTextWithHighlights(text)}
               </p>
-              <button
+              <div
                 onClick={handleCopy}
-                className="text-secondary hover:text-primary transition-all duration-300"
+                className="text-secondary cursor-pointer hover:text-primary transition-all duration-300"
                 title="Copy to clipboard"
               >
                 <FaCopy size={12} />
-              </button>
+              </div>
             </div>
           ) : (
             <p className="text-secondary hover:text-primary text-lg transition-all duration-300 text-left">
