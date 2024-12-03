@@ -78,12 +78,13 @@ class MessageRetrieval(Retrieval):
         self.type = "message"
 
     def _map_objects(self, objects: list[dict], mapping: dict):
+        inverted_mapping = {v: k for k, v in mapping.items()}
         new_objects = []
         for object in objects:
-            new_object = {key: "" for key in mapping.values()}
+            new_object = {key: "" for key in mapping.keys()}
             for key, value in object.items():
-                if key in mapping.keys():
-                    new_object[mapping[key]] = value
+                if key in inverted_mapping.keys():
+                    new_object[inverted_mapping[key]] = value
                 elif key == "uuid":
                     new_object["uuid"] = value
                 elif key == "summary":
