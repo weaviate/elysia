@@ -2,7 +2,7 @@ import datetime
 import json
 
 from rich import print
-from weaviate.classes.query import Filter, Sort
+from weaviate.classes.query import Filter, Sort, QueryReference
 
 from elysia.util.parsing import format_datetime
 from elysia.tree.objects import Objects
@@ -183,7 +183,72 @@ class ConversationRetrieval(Retrieval):
             new_objects.append(new_conversation)
         return new_objects
     
-# class MappedRetrieval(Retrieval):
-#     def __init__(self, objects: list[dict], metadata: dict):
-#         super().__init__(objects, metadata)
-#         self.type = "mapped"
+class DocumentRetrieval(Retrieval):
+    def __init__(self, objects: list[dict], metadata: dict, chunked_response=None):
+        
+        if chunked_response is not None:
+            full_objects = self._get_related_documents(metadata["collection_name"], chunked_response)
+            if len(full_objects) > 0:
+                objects = full_objects
+        
+        metadata["chunked"] = chunked_response is not None and len(full_objects) > 0
+
+        super().__init__(objects, metadata)
+        self.type = "document"
+
+    def _get_related_documents(self, collection_name: str, response):
+
+        if client.collections.exists(f"ELYSIA_CHUNKED_{collection_name}__"):
+
+            chunked_collection = client.collections.get(f"ELYSIA_CHUNKED_{collection_name}__")
+
+            chunked_response = chunked_collection.query.fetch_objects_by_ids(
+                [object.uuid for object in response.objects],
+                return_references=QueryReference(
+                    link_on="fullDocument"
+                )
+            )
+
+            full_docs = {}
+            for object in chunked_response.objects:
+
+                # retrieve the references
+                references = object.references["fullDocument"].objects
+
+                for full_document in references:
+
+                    if full_document.uuid.hex not in full_docs:
+                        full_docs[full_document.uuid.hex] = {}
+
+                    full_docs[full_document.uuid.hex] = full_document.properties
+
+                    if (
+                        "chunk_spans" in full_docs[full_document.uuid.hex] and 
+                        isinstance(full_docs[full_document.uuid.hex]["chunk_spans"], list) and
+                        len(full_docs[full_document.uuid.hex]["chunk_spans"]) > 0
+                    ):
+                        full_docs[full_document.uuid.hex]["chunk_spans"].append(object.properties["chunk_spans"])
+                    else:
+                        full_docs[full_document.uuid.hex]["chunk_spans"] = [object.properties["chunk_spans"]]
+                
+            objects = list(full_docs.values())
+            return objects
+        else:
+            return []
+        
+    def _map_objects(self, objects: list[dict], mapping: dict):
+        inverted_mapping = {v: k for k, v in mapping.items()}
+        new_objects = []
+        for object in objects:
+            new_object = {key: "" for key in mapping.keys()}
+            for key, value in object.items():
+                if key in inverted_mapping.keys():
+                    new_object[inverted_mapping[key]] = value
+                elif key == "uuid":
+                    new_object["uuid"] = value
+                elif key == "summary":
+                    new_object["summary"] = value
+            
+            new_object["chunk_spans"] = object["chunk_spans"]
+            new_objects.append(new_object)
+        return new_objects

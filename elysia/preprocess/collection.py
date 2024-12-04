@@ -7,6 +7,7 @@
 
 import random
 import spacy # for tokenisation
+import dspy
 
 # Weaviate
 import weaviate
@@ -50,12 +51,13 @@ class ProcessUpdate:
 
 class CollectionPreprocessor:
 
-    def __init__(self, threshold_for_missing_fields: float = 0.6):
+    def __init__(self, threshold_for_missing_fields: float = 0.6, lm: str = "claude-3-5-sonnet-20241022"):
         self.collection_summariser_executor = CollectionSummariserExecutor()
         self.data_mapping_executor = DataMappingExecutor()
         self.return_type_executor = ReturnTypeExecutor().activate_assertions()
         self.nlp = spacy.load("en_core_web_sm")
         self.threshold_for_missing_fields = threshold_for_missing_fields
+        self.lm = dspy.LM(model=lm)
 
     def _summarise_collection(self, collection, properties: dict, summary_sample_size: int = 200):
 
@@ -67,7 +69,8 @@ class CollectionPreprocessor:
                 subset_objects.append(item.properties)
 
         # Summarise the collection
-        summary = self.collection_summariser_executor.forward(data=subset_objects, data_fields=list(properties.keys()))
+        with dspy.context(lm=self.lm):
+            summary = self.collection_summariser_executor.forward(data=subset_objects, data_fields=list(properties.keys()))
         return summary
     
     def _evaluate_field_statistics(
@@ -174,12 +177,13 @@ class CollectionPreprocessor:
 
     def _evaluate_return_types(self, collection_summary: str, data_fields: dict, example_objects: list[dict]):
 
-        return_types = self.return_type_executor(
-            collection_summary = collection_summary,
-            data_fields = data_fields,
-            example_objects = example_objects,
-            possible_return_types = rt.specific_return_types
-        )
+        with dspy.context(lm=self.lm):
+            return_types = self.return_type_executor(
+                collection_summary = collection_summary,
+                data_fields = data_fields,
+                example_objects = example_objects,
+                possible_return_types = rt.specific_return_types
+            )
 
         if return_types == []:
             return_types = ["epic_generic"]
@@ -188,13 +192,14 @@ class CollectionPreprocessor:
     
     def _define_mappings(self, input_fields: list, output_fields: list, properties: dict, collection_information: dict, example_objects: list[dict]):
 
-        mapping, mapper, error_message = self.data_mapping_executor(
-            input_data_fields = input_fields, 
-            output_data_fields = output_fields,
-            input_data_types = properties,
-            collection_information = collection_information,
-            example_objects = example_objects
-        )
+        with dspy.context(lm=self.lm):
+            mapping, mapper, error_message = self.data_mapping_executor(
+                input_data_fields = input_fields, 
+                output_data_fields = output_fields,
+                input_data_types = properties,
+                collection_information = collection_information,
+                example_objects = example_objects
+            )
 
         return mapping, error_message
     

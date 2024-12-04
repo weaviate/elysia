@@ -37,6 +37,11 @@ from elysia.globals.return_types import all_return_types
 # training
 from elysia.training.prompt_executors import TrainingDecisionExecutor
 
+# dspy requires a 'base' LM but this should not be used
+import dspy
+fallback_lm = dspy.LM("claude-3-5-haiku-20241022")
+dspy.settings.configure(lm=fallback_lm)
+
 class RecursionLimitException(Exception):
     pass
 
@@ -47,13 +52,17 @@ class DecisionNode:
             instruction: str, 
             options: list[dict[str, str]], 
             root: bool = False, 
-            dspy_model: str = None
+            dspy_model: str = None,
+            base_lm: dspy.LM = None,
+            complex_lm: dspy.LM = None
         ):
         
         self.id = id
         self.instruction = instruction
         self.options = options
         self.root = root
+        self.base_lm = base_lm
+        self.complex_lm = complex_lm
 
         # Define the decision executor
         self.decision_executor = DecisionExecutor(list(options.keys())).activate_assertions(max_backtracks=4) 
@@ -95,19 +104,20 @@ class DecisionNode:
         ):
         
         # run LLM
-        output, self.completed = self.decision_executor(
-            user_prompt=tree_data.user_prompt,
-            instruction=decision_data.instruction,
-            conversation_history=tree_data.conversation_history,
-            collection_information=action_data.collection_information,
-            previous_reasoning=tree_data.previous_reasoning,
-            tree_count=decision_data.tree_count_string(),
-            data_queried=tree_data.data_queried_string(),
-            current_message=tree_data.current_message,
-            available_tasks=decision_data.available_tasks,
-            available_information=decision_data.available_information.to_json(),
-            future_information=decision_data.future_information
-        )
+        with dspy.context(lm=self.base_lm):
+            output, self.completed = self.decision_executor(
+                user_prompt=tree_data.user_prompt,
+                instruction=decision_data.instruction,
+                conversation_history=tree_data.conversation_history,
+                collection_information=action_data.collection_information,
+                previous_reasoning=tree_data.previous_reasoning,
+                tree_count=decision_data.tree_count_string(),
+                data_queried=tree_data.data_queried_string(),
+                current_message=tree_data.current_message,
+                available_tasks=decision_data.available_tasks,
+                available_information=decision_data.available_information.to_json(),
+                future_information=decision_data.future_information
+            )
 
         # if training, the task is given input
         if training:
@@ -258,7 +268,7 @@ class Tree:
         # self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
         self.base_lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=6000)
         self.complex_lm = dspy.LM(model="claude-3-5-sonnet-20241022", max_tokens=6000)
-        dspy.settings.configure(lm=self.base_lm)
+        # dspy.settings.configure(lm=self.base_lm)
 
         # keep track of the number of trees completed
         self.num_trees_completed = 0
@@ -651,7 +661,9 @@ class Tree:
             instruction, 
             options, 
             root, 
-            dspy_model = self.dspy_model
+            dspy_model = self.dspy_model,
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm
         )
         self.decision_nodes[id] = decision_node
         return decision_node

@@ -7,6 +7,7 @@ os.chdir("../..")
 
 from rich import print
 from elysia.tree.tree import Tree
+from elysia.tree.tree import fallback_lm
 
 if __name__ == "__main__":
 

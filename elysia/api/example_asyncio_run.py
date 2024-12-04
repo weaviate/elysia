@@ -9,6 +9,12 @@ from rich import print
 sys.path.append(os.getcwd())
 os.chdir("../..")
 
+class fake_websocket:
+    async def send_json(self, data: dict):
+        print(data) 
+        if data["type"] == "tree_update":
+            print(f"connection from {data['payload']['node']} to {data['payload']['decision']}")
+            
 async def main():
     # get collections
     get_collections_payload = GetCollectionsData(
@@ -36,29 +42,32 @@ async def main():
 
     tree = json.loads(initialise_tree_response.body)["tree"]
 
-    query_payload = QueryData(
-        query="what was the last conversation by edward?",
-        query_id="whatduhek",
+    process_collection_payload = ProcessCollectionData(
         user_id="2",
-        conversation_id="1"
+        collection_name="financial_contracts",
+        force=True
     )
+    collection_process_response = await process_collection(process_collection_payload.model_dump(), fake_websocket())
 
-    class fake_websocket:
-        async def send_json(self, data: dict):
-            print(data) 
-            if data["type"] == "tree_update":
-                print(f"connection from {data['payload']['node']} to {data['payload']['decision']}")
 
-    await process(query_payload.dict(), fake_websocket())
+    # query_payload = QueryData(
+    #     query="what was the last conversation by edward?",
+    #     query_id="whatduhek",
+    #     user_id="2",
+    #     conversation_id="1"
+    # )
 
-    debug_payload = DebugData(
-        conversation_id="1",
-        user_id="2",
-        llm_id="base_lm"
-    )
-    debug_response = await debug(debug_payload)
 
-    history = json.loads(debug_response.body)["chat"]
+    # await process(query_payload.dict(), fake_websocket())
+
+    # debug_payload = DebugData(
+    #     conversation_id="1",
+    #     user_id="2",
+    #     llm_id="base_lm"
+    # )
+    # debug_response = await debug(debug_payload)
+
+    # history = json.loads(debug_response.body)["chat"]
     # print(history)
 
 # Run the main function using asyncio.run

@@ -312,7 +312,6 @@ async def collections():
 
     return JSONResponse(content={"collections": metadata, "error": ""}, status_code=200)
 
-
 @app.post("/api/get_collection")
 async def get_collection(data: GetCollectionData):
 
@@ -433,10 +432,22 @@ async def object_relevance(data: ObjectRelevanceData):
     )
 
 async def process_collection(data: ProcessCollectionData, websocket: WebSocket):
+    if "lm" in data:
+        lm = data["lm"]
+    else:
+        lm = "claude-3-5-sonnet-20241022"
+        
     try:
-        preprocessor = CollectionPreprocessor()
+        preprocessor = CollectionPreprocessor(lm=lm)
         async for result in preprocessor(data["collection_name"], force=data["force"]):
-            yield websocket.send_json(result)
+            try:
+                await websocket.send_json(result)
+            except WebSocketDisconnect:
+                logger.info("Client disconnected during processing process_collection")
+                break
+            # Add a small delay between messages to prevent overwhelming
+            await asyncio.sleep(0.001)
+        
             
     except Exception as e:
         logger.error(f"Error in process_collection_websocket: {str(e)}")
