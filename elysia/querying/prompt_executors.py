@@ -361,7 +361,7 @@ class QueryExecutor(dspy.Module):
             prediction.code
         )
 
-        if needs_chunking:
+        if needs_chunking and prediction.return_type == "document":
             print(f"Chunking {prediction.collection_name}")
             # TODO: add error catching here
             objects = self._execute_large_code(prediction.code, prediction.collection_name)

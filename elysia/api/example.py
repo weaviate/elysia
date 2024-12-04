@@ -45,12 +45,12 @@ initialise_tree_response = await initialise_tree(initialise_tree_payload)
 tree = json.loads(initialise_tree_response.body)["tree"]
 
 ## process collection
-process_collection_payload = ProcessCollectionData(
-    user_id="2",
-    collection_name="financial_contracts",
-    force=True
-)
-collection_process_response = await process_collection(process_collection_payload.model_dump(), fake_websocket())
+# process_collection_payload = ProcessCollectionData(
+#     user_id="2",
+#     collection_name="financial_contracts",
+#     force=True
+# )
+# collection_process_response = await process_collection(process_collection_payload.model_dump(), fake_websocket())
 
 ## get collection metadata
 collection_metadata_payload = CollectionMetadataData(
@@ -58,7 +58,7 @@ collection_metadata_payload = CollectionMetadataData(
     conversation_id="1"
 )
 collection_metadata_response = await collection_metadata(collection_metadata_payload)
-print(collection_metadata_response.body)
+print(json.loads(collection_metadata_response.body)["metadata"])
 # query_payload = QueryData(
 #     query="what was the last message by edward?",
 #     query_id="whatduhek",
