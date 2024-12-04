@@ -1,7 +1,7 @@
 import dspy
 
 # Prompt Templates
-from elysia.api.prompt_templates import TitleCreatorPrompt, ObjectRelevancePrompt
+from elysia.api.services.prompt_templates import TitleCreatorPrompt, ObjectRelevancePrompt
 
 class TitleCreatorExecutor(dspy.Module):
     def __init__(self):
