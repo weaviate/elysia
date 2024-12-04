@@ -1,7 +1,6 @@
 "use client";
 
 import { EpicGeneric } from "@/app/types";
-import MarkdownMessageDisplay from "./markdown";
 import EpicGenericContent from "./epic_generic_content";
 
 interface EpicGenericDisplayProps {

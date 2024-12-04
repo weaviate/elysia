@@ -9,8 +9,6 @@ import {
   SummaryPayload,
   ResultPayload,
   TextPayload,
-  Ecommerce,
-  AggregationCollection,
   AggregationPayload,
   EpicGeneric,
 } from "../../types";
@@ -47,8 +45,8 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   const [collapsed, setCollapsed] = useState<boolean>(_collapsed);
 
   const mergeMessages = (messages: Message[]) => {
-    let newMessages: Message[] = [];
-    let skip_indices: number[] = [];
+    const newMessages: Message[] = [];
+    const skip_indices: number[] = [];
 
     messages.forEach((message, index) => {
       if (skip_indices.includes(index)) {
@@ -58,10 +56,10 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         (message.payload as ResponsePayload).type === "response" &&
         !(index + 1 == messages.length)
       ) {
-        let content: TextPayload[] = [
+        const content: TextPayload[] = [
           (message.payload as ResponsePayload).objects[0] as TextPayload,
         ];
-        let next_message_id: string = message.id;
+        const next_message_id: string = message.id;
 
         for (let i = index + 1; i < messages.length; i++) {
           if (

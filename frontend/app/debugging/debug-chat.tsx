@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { DebugMessage, DebugResponse } from "./types";
-import MarkdownMessageDisplay from "../chat/display/markdown";
-import { Conversation } from "../types";
+import React, { useState } from "react";
+import { DebugMessage } from "./types";
 import DebugMessageDisplay from "./debug-message";
 
 interface DebugChatProps {

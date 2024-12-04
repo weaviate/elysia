@@ -32,9 +32,9 @@ const QueryInput: React.FC<QueryInputProps> = ({
       } gap-4 flex items-center justify-center flex-col transition-all duration-300 ${width_control}`}
     >
       <p
-        className={`text-2xl ${
+        className={`text-xl ${
           query_length === 0 ? "opacity-100" : "opacity-0"
-        } transition-all duration-300 ease-in-out font-bold text-white`}
+        } transition-all duration-300 ease-in-out font-bold font-merriweather text-white`}
       >
         Ask anything!
       </p>
@@ -150,7 +150,7 @@ const QueryInput: React.FC<QueryInputProps> = ({
             className="btn w-full bg-background_alt text-primary text-sm"
           >
             <PiPantsFill size={16} />
-            <p>I'm looking for green pants</p>
+            <p>{`I'm looking for green pants`}</p>
           </button>
           <button
             onClick={() => {
@@ -159,7 +159,7 @@ const QueryInput: React.FC<QueryInputProps> = ({
             className="btn w-full bg-background_alt text-primary text-sm"
           >
             <GiFishMonster size={16} />
-            <p>I'm into Shrekcore, show me products!</p>
+            <p>{`I'm into Shrekcore, show me products!`}</p>
           </button>
         </div>
       )}

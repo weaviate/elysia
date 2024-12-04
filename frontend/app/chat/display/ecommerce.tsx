@@ -49,7 +49,7 @@ const EcommerceDisplay: React.FC<EcommerceDisplayProps> = ({ payload }) => {
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-wrap h-[5rem] overflow-y-auto">
+              <p className="text-sm text-wrap h-[5rem] overflow-y-auto">
                 {product.description}
               </p>
               <div className="w-full flex justify-end">

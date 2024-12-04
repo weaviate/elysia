@@ -36,7 +36,7 @@
 
 /* Ensure the overall dark mode aesthetics for the scrollbars */
 body {
-  background-color: #121212; /* Optional: ensure the rest of the page is dark-themed */
+  background-color: #301b29; /* Optional: ensure the rest of the page is dark-themed */
   color: #ffffff; /* Optional: set text color for dark mode */
 }
 
@@ -73,7 +73,7 @@ body {
 }
 
 .shine {
-  background: linear-gradient(90deg, #4e4e4e 35%, #fff 50%, #4e4e4e 65%);
+  background: linear-gradient(90deg, #6e4c63 35%, #fff 50%, #6e4c63 65%);
   background-size: 200% 200%;
   background-clip: text;
   -webkit-background-clip: text;
@@ -93,7 +93,7 @@ body {
 @keyframes pulsing {
   0% {
     scale: 0.5;
-    color: #4e4e4e;
+    color: #6e4c63;
   }
   50% {
     scale: 1;
@@ -101,7 +101,7 @@ body {
   }
   100% {
     scale: 0.5;
-    color: #4e4e4e;
+    color: #6e4c63;
   }
 }
 

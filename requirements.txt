@@ -1,7 +1,5 @@
 pandas
 dspy
-accelerate
-sentence-transformers
 weaviate-client
 rich
 psutil

@@ -12,7 +12,6 @@ import { useSocket } from "./chat/useSocket";
 import { useCollections } from "./explorer/useCollections";
 import DataExplorer from "./explorer/data-explorer";
 import { useRouting } from "./navigation/useRouting";
-import { Message } from "./types";
 import { useDebug } from "./debugging/useDebug";
 
 export default function Home() {
@@ -77,8 +76,7 @@ export default function Home() {
     addMessageToConversation,
     setConversationStatus,
     setAllConversationStatuses,
-    updateTree,
-    id || ""
+    updateTree
   );
 
   const { fetchDebug } = useDebug(id || "");
