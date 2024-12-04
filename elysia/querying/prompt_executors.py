@@ -248,6 +248,8 @@ class QueryExecutor(dspy.Module):
             return mappings[return_type]["description"]
         elif return_type == "epic_generic":
             return mappings[return_type]["content"]
+        elif return_type == "document":
+            return mappings[return_type]["content"]
         else:
             return ""
     
@@ -360,6 +362,7 @@ class QueryExecutor(dspy.Module):
         )
 
         if needs_chunking:
+            print(f"Chunking {prediction.collection_name}")
             # TODO: add error catching here
             objects = self._execute_large_code(prediction.code, prediction.collection_name)
             

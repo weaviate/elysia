@@ -29,7 +29,8 @@ from elysia.querying.objects import (
     TicketRetrieval, 
     EcommerceRetrieval,
     EpicGenericRetrieval,
-    BoringGenericRetrieval
+    BoringGenericRetrieval,
+    DocumentRetrieval
 )
 
 class AgenticQuery:
@@ -199,6 +200,8 @@ class AgenticQuery:
             yield TicketRetrieval(objects, metadata)
         elif query.return_type == "ecommerce":
             yield EcommerceRetrieval(objects, metadata)
+        elif query.return_type == "document":
+            yield DocumentRetrieval(objects, metadata, chunked_response=response)
         elif query.return_type == "epic_generic":
             yield EpicGenericRetrieval(objects, metadata)
         else:

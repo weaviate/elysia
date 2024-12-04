@@ -2,7 +2,8 @@ specific_return_types={
     "conversation": "retrieve full conversations, including all messages and message authors, with timestamps and context of other messages in the conversation.",
     "message": "retrieve individual messages, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
     "ticket": "retrieve individual tickets, including all fields of the ticket.",
-    "ecommerce": "retrieve individual products, including all fields of the product."
+    "ecommerce": "retrieve individual products, including all fields of the product.",
+    "document": "retrieve individual documents, including all fields of the document."
 }
 
 all_return_types={
@@ -10,6 +11,7 @@ all_return_types={
     "message": "retrieve individual messages, only including the author of each individual message and timestamp, without surrounding context of other messages by different people.",
     "ticket": "retrieve individual tickets, including all fields of the ticket.",
     "ecommerce": "retrieve individual products, including all fields of the product.",
+    "document": "retrieve individual documents, including all fields of the document.",
     "generic": "retrieve any other type of information that does not fit into the other categories."
 }
 
@@ -61,6 +63,14 @@ ecommerce = {
     "sizes": "the size(s) of the product. list[string/other] / string"
 }
 
+document = {
+	"title": "the title of the document. string",
+	"author": "the author or username or creator of the document. string",
+	"date": "any date or time format. datetime/string/other",
+	"content": "the textual content of the document. string/other",
+	"category": "some string describing the category of the document, e.g. type of something. string"
+}
+
 epic_generic = {
     "title": "the title of the information. string",
     "subtitle": "the subtitle of the information. string",
@@ -79,5 +89,6 @@ types_dict = {
     "message": message,
     "ticket": ticket,
     "ecommerce": ecommerce,
-    "epic_generic": epic_generic
+    "epic_generic": epic_generic,
+    "document": document
 }

@@ -45,8 +45,10 @@ class ObjectRelevanceData(BaseModel):
     objects: list[dict]
 
 class ProcessCollectionData(BaseModel):
+    user_id: str
     collection_name: str
     force: bool
+    lm: Optional[str] = "claude-3-5-haiku-20241022"
 
 class DebugData(BaseModel):
     conversation_id: str
