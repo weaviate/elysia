@@ -1,27 +1,40 @@
 "use client";
 
-import { EpicGeneric } from "@/app/types";
 import MarkdownMessageDisplay from "./markdown";
 import { useState } from "react";
 
 interface EpicGenericContentProps {
-  text: string;
+  _text: string;
 }
 
-const EpicGenericContent: React.FC<EpicGenericContentProps> = ({ text }) => {
-  const [collapsed, setCollapsed] = useState(text.length > 500);
+const EpicGenericContent: React.FC<EpicGenericContentProps> = ({ _text }) => {
+  const max_length = 500;
+  const text = _text ? _text : "";
+  const [collapsed, setCollapsed] = useState(text && text.length > max_length);
 
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center">
-      <MarkdownMessageDisplay text={collapsed ? text.slice(0, 500) : text} />
-      {collapsed ? (
-        <button className="btn" onClick={() => setCollapsed((prev) => !prev)}>
-          <p className="text-xs text-secondary">Show more</p>
-        </button>
-      ) : (
-        <button className="btn" onClick={() => setCollapsed((prev) => !prev)}>
-          <p className="text-xs text-secondary">Show less</p>
-        </button>
+      <MarkdownMessageDisplay
+        text={collapsed ? text.slice(0, max_length) : text}
+      />
+      {text.length > max_length && (
+        <>
+          {collapsed ? (
+            <button
+              className="btn"
+              onClick={() => setCollapsed((prev) => !prev)}
+            >
+              <p className="text-xs text-secondary">Show more</p>
+            </button>
+          ) : (
+            <button
+              className="btn"
+              onClick={() => setCollapsed((prev) => !prev)}
+            >
+              <p className="text-xs text-secondary">Show less</p>
+            </button>
+          )}
+        </>
       )}
     </div>
   );
