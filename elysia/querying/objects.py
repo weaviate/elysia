@@ -248,7 +248,10 @@ class DocumentRetrieval(Retrieval):
                     new_object["uuid"] = value
                 elif key == "summary":
                     new_object["summary"] = value
-            
-            new_object["chunk_spans"] = object["chunk_spans"]
+            if "chunk_spans" in object.keys():
+                new_object["chunk_spans"] = object["chunk_spans"]
+            else:
+                new_object["chunk_spans"] = []
+                
             new_objects.append(new_object)
         return new_objects
