@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onDelete={null}
               />
             ) : (
-              <button className="btn bg-foreground flex items-center justify-start gap-2">
+              <button className="btn bg-background_alt flex items-center justify-start gap-2">
                 <FaCircle className="text-secondary text-xs pulsing" />
                 <p className="text-xs font-medium truncate max-w-[10vw] shine">
                   Creating new conversation...
