@@ -87,10 +87,10 @@ class AgenticQuery:
             "name": "Query Executor",
             "description": "Write code and query the collection to retrieve objects."
         })
-        Branch({
-            "name": "Document Chunker",
-            "description": "Chunk retrieved objects into manageable sizes for vector search."
-        })
+        # Branch({
+        #     "name": "Document Chunker",
+        #     "description": "Chunk retrieved objects into manageable sizes for vector search."
+        # })
         yield Status(f"Writing query")
 
         is_query_possible = True

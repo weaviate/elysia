@@ -363,24 +363,25 @@ class QueryExecutor(dspy.Module):
             # TODO: add error catching here
             objects = self._execute_large_code(prediction.code, prediction.collection_name)
             
-            yield TreeUpdate(
-                from_node="query_executor",
-                to_node="document_chunker",
-                reasoning=f"Chunking {len(objects.objects)} objects from {prediction.collection_name}"
-            )
+            # yield TreeUpdate(
+            #     from_node="query_executor",
+            #     to_node="document_chunker",
+            #     reasoning=f"Chunking {len(objects.objects)} objects from {prediction.collection_name}"
+            # )
+            yield Status(f"Chunking {len(objects.objects)} objects from {prediction.collection_name}")
 
             collection_chunker = CollectionChunker(prediction.collection_name)
             collection_chunker(objects, content_field); # this will insert the chunked objects into the chunked collection
             collection_to_query = self._get_chunked_collection_name(prediction.collection_name) # once objects are chunked, we query the chunked collection
-            yield Status(f"Querying chunked collection {collection_to_query}")
+            yield Status(f"Querying chunked {prediction.collection_name}")
         else:
             collection_to_query = prediction.collection_name
-            yield TreeUpdate(
-                from_node="query_executor", 
-                to_node="document_chunker", 
-                reasoning="This step was skipped because it was determined that the text was not long enough to be chunked, or is not the right data format."
-            )
-            yield Status(f"Querying collection {collection_to_query}")
+            # yield TreeUpdate(
+            #     from_node="query_executor", 
+            #     to_node="document_chunker", 
+            #     reasoning="This step was skipped because it was determined that the text was not long enough to be chunked, or is not the right data format."
+            # )
+            yield Status(f"Querying collection {prediction.collection_name}")
 
         # catch any errors in query execution for dspy assert
         try:

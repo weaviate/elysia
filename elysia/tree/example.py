@@ -27,7 +27,7 @@ if __name__ == "__main__":
     outputs = tree.process_sync(
         "what financial documents are there about payments to Google?",
         training_route = "search/query/text_response",
-        training_mimick_model = True
+        training_mimick_model = False
     )
 
     tree.base_lm.inspect_history(5)

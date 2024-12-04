@@ -163,26 +163,22 @@ class CollectionChunker:
                 vectorizer_config=Configure.Vectorizer.text2vec_openai()
             )
     
-    def generate_uuids(self, chunks: list[str], spans: list[tuple[int, int]], properties):
+    def generate_uuids(self, chunks: list[str], spans: list[tuple[int, int]], properties, content_field: str):
         chunked_uuids = []
-        for i, (chunk, span) in tqdm(
-            enumerate(zip(chunks, spans)), 
-            total=len(chunks), 
-            desc="Generating UUIDs"
-        ):
+        for i, (chunk, span) in enumerate(zip(chunks, spans)):
             data_object = {
-                "chunk_text": chunk,
+                content_field: chunk,
                 "chunk_spans": span,
                 **properties
             }
             chunked_uuids.append(generate_uuid5(data_object))
         return chunked_uuids
 
-    def insert_chunks(self, chunked_collection, chunks, spans, chunked_uuids, properties):
+    def insert_chunks(self, chunked_collection, chunks, spans, chunked_uuids, properties, content_field: str):
         with chunked_collection.batch.dynamic() as batch:
             for i, (chunk, span) in enumerate(zip(chunks, spans)):
                 data_object = {
-                    "chunk_text": chunk,
+                    content_field: chunk,
                     "chunk_spans": span,
                     **properties[i]
                 }
@@ -211,7 +207,7 @@ class CollectionChunker:
                         to=chunked_uuid
                     )
 
-    def insert_references_to_original_collection(self, collection, chunked_uuids, original_uuids, **properties):
+    def insert_references_to_original_collection(self, collection, chunked_uuids, original_uuids):
         with collection.batch.dynamic() as batch:
             for chunked_uuid, original_uuid in zip(chunked_uuids, original_uuids):
                 batch.add_reference(
@@ -277,7 +273,7 @@ class CollectionChunker:
                     name: object.properties[name]
                     for name in object.properties.keys() if name != content_field
                 }
-                chunk_uuids_i = self.generate_uuids(chunks, spans, other_properties)
+                chunk_uuids_i = self.generate_uuids(chunks, spans, other_properties, content_field)
 
                 # a single dict of properties for all chunks corresponding to the same original object
                 all_properties.extend([other_properties] * len(chunks)) 
@@ -291,6 +287,6 @@ class CollectionChunker:
                 all_uuids[unchunked_uuids[i]] = chunk_uuids_i
 
             # insert into weaviate
-            self.insert_chunks(chunked_collection, all_chunks, all_spans, chunk_uuids, all_properties)
+            self.insert_chunks(chunked_collection, all_chunks, all_spans, chunk_uuids, all_properties, content_field)
             self.insert_references(chunked_collection, self.collection, all_uuids)
                 
