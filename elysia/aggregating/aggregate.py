@@ -69,7 +69,7 @@ class AgenticAggregate:
                 user_prompt=tree_data.user_prompt, 
                 conversation_history=tree_data.conversation_history,
                 data_queried=tree_data.data_queried_string(), 
-                collection_information=action_data.collection_information, 
+                collection_information = action_data.collection_information,
                 previous_reasoning=tree_data.previous_reasoning,
                 previous_aggregations=self.previous_aggregations
             )

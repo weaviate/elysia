@@ -2,6 +2,9 @@ import dspy
 from rich import print
 from rich.panel import Panel
 
+from dspy import Prediction
+from weaviate.collections.classes.internal import QueryReturn
+
 # Util
 from elysia.util.logging import backend_print
 from elysia.util.parsing import update_current_message
@@ -65,7 +68,7 @@ class AgenticQuery:
                 metadata = available_information.retrieved[collection_name].metadata
                 if "previous_queries" in metadata:
                     self.previous_queries.append({"collection_name": collection_name, "previous_queries": metadata["previous_queries"]})  
-        
+
     async def __call__(
             self,
             tree_data: TreeData,
@@ -84,12 +87,17 @@ class AgenticQuery:
             "name": "Query Executor",
             "description": "Write code and query the collection to retrieve objects."
         })
+        Branch({
+            "name": "Document Chunker",
+            "description": "Chunk retrieved objects into manageable sizes for vector search."
+        })
         yield Status(f"Writing query")
 
+        is_query_possible = True
+        query = None
         with dspy.context(lm = self.complex_lm):
 
-            # Run the query executor (write and execute the query)
-            response, query, error_message = self.querier(
+            async for result in self.querier(
                 user_prompt = tree_data.user_prompt, 
                 conversation_history = tree_data.conversation_history,
                 previous_queries = self.previous_queries, 
@@ -98,12 +106,20 @@ class AgenticQuery:
                 collection_return_types = action_data.collection_return_types,
                 previous_reasoning = tree_data.previous_reasoning,
                 current_message = current_message
-            )
+            ):
+                if isinstance(result, QueryReturn):
+                    response = result
+                elif isinstance(result, bool):
+                    is_query_possible = result
+                elif isinstance(result, Prediction):
+                    query = result
+                elif isinstance(result, Error) or isinstance(result, Warning) or isinstance(result, Status):
+                    yield result
+                else:
+                    yield result
 
-        if query is None: # either an error or the query is impossible
+        if not is_query_possible: # either an error or the query is impossible
             yield BoringGenericRetrieval([], {"collection_name": "", "impossible_prompts": [tree_data.user_prompt]})
-            if error_message != "": # an error in the prompt executor
-                yield Error(error_message)
             return
         
         if self.verbosity > 0:

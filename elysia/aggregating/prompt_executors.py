@@ -51,7 +51,11 @@ class AggregateExecutor(dspy.Module):
             conversation_history=conversation_history,
             previous_reasoning=previous_reasoning,
             data_queried=data_queried,
-            collection_information=collection_information,
+            collection_information={
+                collection_name: {
+                        k: v for k, v in collection_information.items() if k != "mappings"
+                } for collection_name, collection_information in collection_information.items()
+            },
             previous_aggregations=previous_aggregations
         )
 

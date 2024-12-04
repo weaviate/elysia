@@ -64,7 +64,7 @@ class TreeManager:
             self.trees[user_id] = {}
         
         if conversation_id not in self.trees[user_id]:
-            self.trees[user_id][conversation_id] = Tree(verbosity=1, conversation_id=conversation_id, collection_names=collection_names)
+            self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id, collection_names=collection_names)
         
         return self.trees[user_id][conversation_id].initialise_error_message
 
@@ -236,8 +236,17 @@ async def process(data: QueryData, websocket: WebSocket):
     tree.soft_reset()
     
     try:
+
+        if "route" in data:
+            route = data["route"]
+        else:
+            route = None
     
-        async for yielded_result in tree.process(data["query"], query_id=data["query_id"]):
+        async for yielded_result in tree.process(
+            data["query"], 
+            query_id=data["query_id"],
+            route=route
+        ):
             try:
                 await websocket.send_json(yielded_result)
             except WebSocketDisconnect:

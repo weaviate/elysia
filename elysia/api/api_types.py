@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class QueryData(BaseModel):
@@ -7,7 +7,8 @@ class QueryData(BaseModel):
     conversation_id: str
     query_id: str
     query: str
-
+    route: Optional[str] = None
+    
 class GetCollectionsData(BaseModel):
     user_id: str
 

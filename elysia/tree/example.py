@@ -25,7 +25,9 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "group all the usernames from the github collection and give an overview",
+        "what financial documents are there about payments to Google?",
+        training_route = "search/query/text_response",
+        training_mimick_model = True
     )
 
     tree.base_lm.inspect_history(5)
