@@ -241,11 +241,17 @@ async def process(data: QueryData, websocket: WebSocket):
             route = data["route"]
         else:
             route = None
+        
+        if "mimick" in data:
+            mimick = data["mimick"]
+        else:
+            mimick = False
     
         async for yielded_result in tree.process(
             data["query"], 
             query_id=data["query_id"],
-            route=route
+            training_route=route,
+            training_mimick_model=mimick
         ):
             try:
                 await websocket.send_json(yielded_result)

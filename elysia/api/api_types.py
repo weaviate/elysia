@@ -8,6 +8,7 @@ class QueryData(BaseModel):
     query_id: str
     query: str
     route: Optional[str] = None
+    mimick: Optional[bool] = False
     
 class GetCollectionsData(BaseModel):
     user_id: str
