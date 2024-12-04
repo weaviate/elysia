@@ -25,7 +25,7 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
   };
 
   const openLink = () => {
-    window.open(ticket.issue_url, "_blank");
+    window.open(ticket.url, "_blank");
   };
 
   const toggleSummary = () => {
@@ -43,9 +43,9 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
             <div className="flex justify-between items-center gap-2 w-full">
               <div className="flex items-center gap-1">
                 <p className="text-primary text-base font-bold">
-                  {ticket.issue_title}
+                  {ticket.title}
                 </p>
-                {ticket.issue_url && (
+                {ticket.url && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -57,31 +57,30 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
                   </button>
                 )}
                 <div className="flex items-center gap-2">
-                  {ticket.issue_state === "open" && (
+                  {ticket.status === "open" && (
                     <div className="p-2 bg-background_accent rounded-lg">
                       <p className="text-xs font-bold text-white">Open</p>
                     </div>
                   )}
-                  {ticket.issue_state === "closed" && (
+                  {ticket.status === "closed" && (
                     <div className="p-2 bg-background_error rounded-lg">
                       <p className="text-xs font-bold text-white">Closed</p>
                     </div>
                   )}
-                  {ticket.issue_state !== "open" &&
-                    ticket.issue_state !== "closed" && (
-                      <div className="p-2 bg-background_secondary rounded-lg">
-                        <p className="text-xs font-bold text-white">
-                          {ticket.issue_state}
-                        </p>
-                      </div>
-                    )}
+                  {ticket.status !== "open" && ticket.status !== "closed" && (
+                    <div className="p-2 bg-background_secondary rounded-lg">
+                      <p className="text-xs font-bold text-white">
+                        {ticket.status}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
-                  {ticket.issue_labels.length > 0 &&
-                    ticket.issue_labels.map((label, idx) => (
+                  {ticket.tags.length > 0 &&
+                    ticket.tags.map((label, idx) => (
                       <div
                         key={`${idx}-${label}`}
                         className="p-2 bg-background_secondary rounded-lg"
@@ -95,8 +94,8 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
 
             <div className="flex items-center gap-2">
               <p className="text-xs font-light text-secondary">
-                <span className="font-bold">{ticket.issue_author}</span> opened
-                this on {formatDate(ticket.issue_created_at)}
+                <span className="font-bold">{ticket.author}</span> opened this
+                on {formatDate(ticket.created_at)}
               </p>
               {ticket.summary && (
                 <button
@@ -121,7 +120,7 @@ const TicketMessageDisplay: React.FC<TicketMessageDisplayProps> = ({
         {((!ticketCollapsed && !ticket.summary) ||
           (!showSummary && ticket.summary)) && (
           <div className="text-primary overflow-scroll text-sm gap-5 mt-2 flex max-h-[50vh] flex-col text-wrap">
-            <MarkdownMessageDisplay text={ticket.issue_content} />
+            <MarkdownMessageDisplay text={ticket.content} />
           </div>
         )}
         {showSummary && ticket.summary && (

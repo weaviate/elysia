@@ -42,9 +42,7 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
     }
 
     // Get unique authors
-    const uniqueAuthors = Array.from(
-      new Set(payload.map((msg) => msg.message_author))
-    );
+    const uniqueAuthors = Array.from(new Set(payload.map((msg) => msg.author)));
 
     // Create color and position assignments
     const colorMap: Record<string, string> = {};
@@ -66,33 +64,31 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
           <div
             key={`${idx}-${message.conversation_id}`}
             className={`flex w-full ${
-              authorPositions[message.message_author] % 2 === 0
+              authorPositions[message.author] % 2 === 0
                 ? "justify-start items-start"
                 : "justify-end items-end"
             }`}
           >
             <div className="flex flex-col w-full max-w-[35vw] shadow-lg gap-3 bg-background_alt p-4 rounded-lg chat-animation text-primary">
               <p
-                className={`${
-                  authorColors[message.message_author]
-                } text-xs font-bold ${
-                  authorPositions[message.message_author] % 2 === 0
+                className={`${authorColors[message.author]} text-xs font-bold ${
+                  authorPositions[message.author] % 2 === 0
                     ? "text-left"
                     : "text-right w-full"
                 }`}
               >
-                {message.message_author}
+                {message.author}
               </p>
-              <MarkdownMessageDisplay text={message.message_content} />
+              <MarkdownMessageDisplay text={message.content} />
               <div
                 className={`flex w-full gap-2 ${
-                  authorPositions[message.message_author] % 2 === 0
+                  authorPositions[message.author] % 2 === 0
                     ? "justify-end items-end"
                     : "justify-start items-start"
                 }`}
               >
                 <p className="text-secondary text-xs">
-                  {formatDate(message.message_timestamp)}
+                  {formatDate(message.timestamp)}
                 </p>
               </div>
             </div>

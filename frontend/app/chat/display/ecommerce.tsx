@@ -23,7 +23,7 @@ const EcommerceDisplay: React.FC<EcommerceDisplayProps> = ({ payload }) => {
                 {product.subcategory}
               </p>
               <img
-                src={product.image_url}
+                src={product.image}
                 alt={product.name}
                 className="rounded-lg"
               />

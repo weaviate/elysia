@@ -36,7 +36,7 @@ export type ResultPayload = {
     | "message"
     | "conversation"
     | "ecommerce"
-    | "generic"
+    | "epic_generic"
     | "boring_generic"
     | "aggregation"
     | "mapped";
@@ -98,20 +98,38 @@ export type ObjectRelevancyPayload = {
   error: string;
 };
 
+export type EpicGeneric = {
+  uuid: string;
+  summary?: string;
+  title: string;
+  subtitle: string;
+  content: string;
+  url: string;
+  id: string;
+  author: string;
+  timestamp: string;
+  category: string;
+  subcategory: string;
+  tags: string[];
+};
+
 export type Ecommerce = {
   subcategory: string;
   description: string;
-  reviews: string[];
+  reviews: string[] | number;
   collection: string;
   tags: string[];
+  sizes: string[];
   product_id: string;
-  image_url: string;
+  image: string;
+  url: string;
   rating: number;
   price: number;
   category: string;
   colors: string[];
   brand: string;
   name: string;
+  id: string;
   uuid: string;
   summary?: string;
 };
@@ -119,26 +137,28 @@ export type Ecommerce = {
 export type Ticket = {
   uuid: string;
   summary?: string;
-  issue_id: string;
-  issue_updated_at: string;
-  issue_title: string;
-  issue_content: string;
-  issue_created_at: string;
-  issue_author: string;
-  issue_url: string;
-  issue_labels: string[];
-  issue_state: string;
-  issue_comments: number;
+  updated_at: string;
+  title: string;
+  subtitle: string;
+  content: string;
+  created_at: string;
+  author: string;
+  url: string;
+  status: string;
+  id: string;
+  tags: string[];
+  comments: number | string[];
 };
 
 export type ConversationMessage = {
   uuid: string;
+  summary?: string;
   relevant: boolean;
   conversation_id: number;
-  message_index: number;
-  message_author: string;
-  message_content: string;
-  message_timestamp: string;
+  message_id: string;
+  author: string;
+  content: string;
+  timestamp: string;
 };
 
 export type TreeUpdatePayload = {
