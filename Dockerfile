@@ -25,7 +25,9 @@ COPY requirements.txt ./
 COPY .env* ./
 
 # Install backend dependencies
-RUN pip install --no-cache-dir '.'
+RUN pip install --no-cache-dir --prefer-binary '.'
+
+RUN pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0.tar.gz#egg=en_core_web_sm"
 
 # Install frontend dependencies and build
 RUN cd frontend && \

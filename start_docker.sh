@@ -3,7 +3,7 @@ set -e
 
 # Start the FastAPI backend on localhost (not exposed publicly)
 echo "Starting FastAPI backend..."
-python elysia/api/cli.py start --port 8000 --host 0.0.0.0
+python elysia/api/cli.py start --port 8000 --host 0.0.0.0 &
 
 # Start the Next.js frontend on the public interface
 echo "Starting Next.js frontend..."
