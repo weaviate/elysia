@@ -1,5 +1,6 @@
 "use client";
 
+import host from "./host";
 export const getWebsocketHost = () => {
-  return "ws://localhost:8000/ws/query";
+  return `ws://${host}/ws/query`;
 };
