@@ -8,6 +8,7 @@ import { FaGithub } from "react-icons/fa";
 import { IoChatbubble } from "react-icons/io5";
 import { PiPantsFill } from "react-icons/pi";
 import { GiFishMonster } from "react-icons/gi";
+import { FaCloud } from "react-icons/fa";
 
 interface QueryInputProps {
   handleSendQuery: (query: string) => void;
@@ -135,12 +136,12 @@ const QueryInput: React.FC<QueryInputProps> = ({
           </button>
           <button
             onClick={() => {
-              handleSendQuery("To whom did Edward last message?");
+              handleSendQuery("What was the weather last month?");
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
-            <IoChatbubble size={16} />
-            <p>To whom did Edward last message?</p>
+            <FaCloud size={16} />
+            <p>What was the weather last month?</p>
           </button>
           <button
             onClick={() => {
@@ -153,14 +154,12 @@ const QueryInput: React.FC<QueryInputProps> = ({
           </button>
           <button
             onClick={() => {
-              handleSendQuery(
-                "I'm into Shrekcore, what are the best products?"
-              );
+              handleSendQuery("I'm into Shrekcore, show me products!");
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
             <GiFishMonster size={16} />
-            <p>I'm into Shrekcore, what are the best products?</p>
+            <p>I'm into Shrekcore, show me products!</p>
           </button>
         </div>
       )}

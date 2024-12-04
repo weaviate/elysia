@@ -70,6 +70,7 @@ export default function Home() {
     addMessageToConversation,
     changeBaseToQuery,
     addQueryToConversation,
+    creatingNewConversation,
   } = useConversations(id || "");
 
   const { socketOnline, sendQuery } = useSocket(
@@ -116,6 +117,7 @@ export default function Home() {
         addConversation={addConversation}
         removeConversation={removeConversation}
         selectConversation={selectConversation}
+        creatingNewConversation={creatingNewConversation}
       />
       {mode === "home" && currentConversation && (
         <ChatInterface

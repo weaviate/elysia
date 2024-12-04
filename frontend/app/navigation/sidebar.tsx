@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { AiFillHome } from "react-icons/ai";
-import { FaDatabase, FaExpandAlt } from "react-icons/fa";
+import { FaCircle, FaDatabase, FaExpandAlt } from "react-icons/fa";
 import { LuRefreshCw } from "react-icons/lu";
 import { IoMdAddCircle } from "react-icons/io";
 import { IoChatbubble } from "react-icons/io5";
@@ -25,6 +25,7 @@ interface SidebarProps {
   socketOnline: boolean;
   routerToLogin: () => void;
   collections: Collection[];
+  creatingNewConversation: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   fetchCollections,
   selectCollection,
   selectedCollection,
+  creatingNewConversation,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -102,13 +104,22 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="border-t border-secondary"></div>
         {mode === "home" && (
           <div className="flex flex-col gap-6">
-            <SidebarButton
-              icon={<IoMdAddCircle />}
-              label="New Conversation"
-              onClick={addConversation}
-              isCollapsed={collapsed}
-              onDelete={null}
-            />
+            {!creatingNewConversation ? (
+              <SidebarButton
+                icon={<IoMdAddCircle />}
+                label="New Conversation"
+                onClick={addConversation}
+                isCollapsed={collapsed}
+                onDelete={null}
+              />
+            ) : (
+              <button className="btn bg-foreground flex items-center justify-start gap-2">
+                <FaCircle className="text-secondary text-xs pulsing" />
+                <p className="text-xs font-medium truncate max-w-[10vw] shine">
+                  Creating new conversation...
+                </p>
+              </button>
+            )}
             <div className="flex flex-col gap-2">
               {conversations?.map((c) => (
                 <SidebarButton

@@ -12,6 +12,7 @@ import {
   Ecommerce,
   AggregationCollection,
   AggregationPayload,
+  EpicGeneric,
 } from "../../types";
 
 import UserMessageDisplay from "./user";
@@ -26,6 +27,7 @@ import BoringGenericDisplay from "./boring_generic";
 import CollectionDisplay from "./collection";
 import CodeDisplay from "./code";
 import AggregationDisplay from "./aggregation";
+import EpicGenericDisplay from "./epic_generic";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -185,9 +187,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         />
                       )}
                       {((message.payload as ResultPayload).type ===
-                        "epic_generic" ||
-                        (message.payload as ResultPayload).type ===
-                          "boring_generic" ||
+                        "boring_generic" ||
                         (message.payload as ResultPayload).type ===
                           "mapped") && (
                         <>
@@ -203,6 +203,15 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                             }
                           />
                         </>
+                      )}
+                      {(message.payload as ResultPayload).type && (
+                        <EpicGenericDisplay
+                          key={`${index}-${message.id}`}
+                          payload={
+                            (message.payload as ResultPayload)
+                              .objects as EpicGeneric[]
+                          }
+                        />
                       )}
                       {(message.payload as ResultPayload).type ===
                         "aggregation" && (

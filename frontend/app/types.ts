@@ -50,7 +50,8 @@ export type ResultPayload = {
     | ConversationMessage[][] // A list of lists of ConversationMessages
     | Ecommerce[]
     | { [key: string]: string }[]
-    | AggregationPayload[];
+    | AggregationPayload[]
+    | EpicGeneric[];
 };
 
 export type AggregationPayload = {

@@ -24,9 +24,11 @@ export function useConversations(id: string) {
     null
   );
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [creatingNewConversation, setCreatingNewConversation] = useState(false);
 
   const addConversation = () => {
     const conversation_id = uuidv4();
+    setCreatingNewConversation(true);
     getDecisionTree(id, conversation_id).then((data) => {
       getCollections().then((collections) => {
         setCollections(collections);
@@ -42,6 +44,7 @@ export function useConversations(id: string) {
         };
         setConversations([...(conversations || []), newConversation]);
         setCurrentConversation(newConversation.id);
+        setCreatingNewConversation(false);
       });
     });
   };
@@ -346,5 +349,6 @@ export function useConversations(id: string) {
     addTreeToConversation,
     changeBaseToQuery,
     addQueryToConversation,
+    creatingNewConversation,
   };
 }

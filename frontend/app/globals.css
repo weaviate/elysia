@@ -10,7 +10,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.35); /* Light color for visibility against dark backgrounds */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.35
+  ); /* Light color for visibility against dark backgrounds */
   border-radius: 4px;
 }
 
@@ -67,9 +72,8 @@ body {
   animation: dropAndBounce 0.6s ease-in-out forwards;
 }
 
-
 .shine {
-  background: linear-gradient(90deg, #4E4E4E 35%, #fff 50%, #4E4E4E 65%);
+  background: linear-gradient(90deg, #4e4e4e 35%, #fff 50%, #4e4e4e 65%);
   background-size: 200% 200%;
   background-clip: text;
   -webkit-background-clip: text;
@@ -89,7 +93,7 @@ body {
 @keyframes pulsing {
   0% {
     scale: 0.5;
-    color: #464C5F;
+    color: #4e4e4e;
   }
   50% {
     scale: 1;
@@ -97,7 +101,7 @@ body {
   }
   100% {
     scale: 0.5;
-    color: #464C5F;
+    color: #4e4e4e;
   }
 }
 
