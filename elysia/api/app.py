@@ -41,7 +41,8 @@ from elysia.api.api_types import (
     ObjectRelevanceData,
     InitialiseTreeData,
     ProcessCollectionData,
-    DebugData
+    DebugData,
+    CollectionMetadataData
 )
 
 # Globals
@@ -436,7 +437,7 @@ async def process_collection(data: ProcessCollectionData, websocket: WebSocket):
         lm = data["lm"]
     else:
         lm = "claude-3-5-sonnet-20241022"
-        
+
     try:
         preprocessor = CollectionPreprocessor(lm=lm)
         async for result in preprocessor(data["collection_name"], force=data["force"]):
@@ -492,3 +493,12 @@ async def debug(data: DebugData):
         }
     }
     return JSONResponse(content=out, status_code=200)
+
+@app.post("/api/collection_metadata")
+async def collection_metadata(data: CollectionMetadataData):
+    error_message = ""
+    try:
+        tree = tree_manager.get_tree(data.user_id, data.conversation_id)
+    except Exception as error_message:
+        pass
+    return JSONResponse(content={"metadata": tree.collection_information, "error": error_message}, status_code=200)

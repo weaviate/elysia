@@ -52,6 +52,13 @@ process_collection_payload = ProcessCollectionData(
 )
 collection_process_response = await process_collection(process_collection_payload.model_dump(), fake_websocket())
 
+## get collection metadata
+collection_metadata_payload = CollectionMetadataData(
+    user_id="2",
+    conversation_id="1"
+)
+collection_metadata_response = await collection_metadata(collection_metadata_payload)
+print(collection_metadata_response.body)
 # query_payload = QueryData(
 #     query="what was the last message by edward?",
 #     query_id="whatduhek",

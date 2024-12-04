@@ -53,3 +53,7 @@ class ProcessCollectionData(BaseModel):
 class DebugData(BaseModel):
     conversation_id: str
     user_id: str
+
+class CollectionMetadataData(BaseModel):
+    user_id: str
+    conversation_id: str
