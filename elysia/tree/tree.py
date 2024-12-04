@@ -47,26 +47,31 @@ class DecisionNode:
             instruction: str, 
             options: list[dict[str, str]], 
             root: bool = False, 
-            dspy_model: str = None,
-            training: bool = False
+            dspy_model: str = None
         ):
         
         self.id = id
         self.instruction = instruction
         self.options = options
         self.root = root
-        self.training = training
 
         # Define the decision executor
-        # If training, the task is given and we are only interested in the metadata, otherwise business as usual
-        if training:
-            self.decision_executor = TrainingDecisionExecutor(list(options.keys()))
-        else:
-            self.decision_executor = DecisionExecutor(list(options.keys())).activate_assertions(max_backtracks=4) 
+        self.decision_executor = DecisionExecutor(list(options.keys())).activate_assertions(max_backtracks=4) 
 
         # Load the model if it exists
         if dspy_model is not None:
             self.decision_executor.load(os.path.join("elysia", "training", "dspy_models", "decision", dspy_model + ".json"))
+
+    def decide_with_training(
+            self, 
+            tree_data: TreeData, 
+            decision_data: DecisionData, 
+            action_data: ActionData,
+            task: str = ""
+        ):
+        # If training, the task is given and we are only interested in the metadata, otherwise business as usual
+        self.decision_executor = TrainingDecisionExecutor(list(self.options.keys()))
+        return self.decide(tree_data, decision_data, action_data, training=True, task=task)
 
     def _options_to_json(self):
         out = {}
@@ -80,7 +85,14 @@ class DecisionNode:
             out[node] = self.options[node]["future"]
         return out
 
-    def decide(self, tree_data: TreeData, decision_data: DecisionData, action_data: ActionData, **kwargs):
+    def decide(
+            self, 
+            tree_data: TreeData, 
+            decision_data: DecisionData, 
+            action_data: ActionData, 
+            training: bool = False,
+            **kwargs
+        ):
         
         # run LLM
         output, self.completed = self.decision_executor(
@@ -98,7 +110,7 @@ class DecisionNode:
         )
 
         # if training, the task is given input
-        if self.training:
+        if training:
             self.decision = kwargs.get("task", "")
         else:
             self.decision = output.task
@@ -231,8 +243,6 @@ class Tree:
             collection_names: list[str] = [],
             verbosity: int = 1, 
             break_down_instructions: bool = False,
-            training_route: str = None,
-            training_decision_output: bool = False,
             dspy_model: str = None
         ):
         
@@ -278,16 +288,6 @@ class Tree:
         self.query_id_to_prompt = {}
         self.prompt_to_query_id = {}
 
-        # for training purposes, we may want to run the tree until a certain node
-        # training route is e.g. "search/query/text_response"
-        if training_route is not None:
-            self.training_route = training_route.split("/")
-        else:
-            self.training_route = None
-
-        # whether to output model reasoning for the decisions even if there is a route
-        self.training_decision_output = training_decision_output
-
         # Parse the instructions if required (use an LLM to break the prompt into a manageable number of instructions)
         if self.break_down_instructions:
             self.input_executor = InputExecutor()
@@ -295,11 +295,7 @@ class Tree:
         # Define the inputs to prompts
         self.tree_data = TreeData()
         self.action_data = ActionData(
-            collection_information={
-                collection_name: {
-                    k: v for k, v in collection_information.items() if k != "mappings"
-                } for collection_name, collection_information in self.collection_information.items()
-            },
+            collection_information=self.collection_information,
             collection_return_types=self.collection_return_types
         )
         self.decision_data = DecisionData(
@@ -624,18 +620,18 @@ class Tree:
         if self.verbosity >= 1:
             backend_print(f"Update collection names: {self.collection_names}")
 
-    def _decide_from_route(self, node_id: str):
+    def _decide_from_route(self, training_route: list[str], node_id: str):
         node = self.decision_nodes[node_id]
         possible_nodes = node.options.keys()
 
-        next_route = self.training_route[0]
+        next_route = training_route[0]
         if next_route not in possible_nodes:
             raise Exception(f"Next node in training route ({next_route}) not in possible nodes ({possible_nodes})")
         
-        self.training_route = self.training_route[1:]
-        completed = len(self.training_route) == 0
+        training_route = training_route[1:]
+        completed = len(training_route) == 0
         
-        return next_route, node.options[next_route]["action"], completed
+        return next_route, node.options[next_route]["action"], completed, training_route
         
     def hard_reset(self):
         self = Tree(verbosity=self.verbosity)
@@ -655,17 +651,29 @@ class Tree:
             instruction, 
             options, 
             root, 
-            dspy_model = self.dspy_model, 
-            training = self.training_decision_output and self.training_route is not None
+            dspy_model = self.dspy_model
         )
         self.decision_nodes[id] = decision_node
         return decision_node
 
-    async def process(self, user_prompt: str, query_id: str = "1", recursion_counter: int = 0, first_run: bool = True, **kwargs):
+    async def process(
+            self, 
+            user_prompt: str, 
+            query_id: str = "1", 
+            recursion_counter: int = 0, 
+            first_run: bool = True, 
+            training_route: str = None,
+            training_mimick_model: bool = False,
+            **kwargs
+        ):
 
         self.tree_data.update_dict("previous_reasoning", f"tree_{self.num_trees_completed+1}", {})
 
         if first_run:
+
+            self.num_trees_completed = 0
+
+            training_route = training_route.split("/") if training_route is not None else None
 
             self.tree_data.set_property("user_prompt", user_prompt)
 
@@ -686,20 +694,16 @@ class Tree:
         while True:
 
             # If training, decide from the training route
-            if self.training_route is not None:
-                task, action_fn, completed = self._decide_from_route(current_decision_node.id)
+            if training_route is not None:
+
+                task, action_fn, completed, training_route = self._decide_from_route(training_route, current_decision_node.id)
 
                 # But if we need to output info from the decisions, we need to run the decision anyway
-                if self.training_decision_output:
+                if training_mimick_model:
                     training_completed = completed
-                    training_kwargs = {"task": task}
-                else:
-                    training_kwargs = {}
-            else:
-                training_kwargs = {}
-            
-            # Under normal circumstances, decide from the decision node
-            if self.training_decision_output or self.training_route is None:
+
+            # Under normal circumstances (training route is None) or mimicking model output, decide from the decision node
+            if training_mimick_model or training_route is None:
                 
                 # update decision data with current node options
                 self.decision_data.set_property("available_tasks", current_decision_node._options_to_json())
@@ -707,15 +711,22 @@ class Tree:
                 self.decision_data.set_property("instruction", current_decision_node.instruction)
 
                 # run the decision agent
-                decision, action_fn, model_completed = current_decision_node(
-                    tree_data=self.tree_data,
-                    decision_data=self.decision_data,
-                    action_data=self.action_data,
-                    **training_kwargs
-                )
+                if training_mimick_model:
+                    decision, action_fn, model_completed = current_decision_node.decide_with_training(
+                        tree_data=self.tree_data,
+                        decision_data=self.decision_data,
+                        action_data=self.action_data,
+                        task=task
+                    )
+                else:
+                    decision, action_fn, model_completed = current_decision_node(
+                        tree_data=self.tree_data,
+                        decision_data=self.decision_data,
+                        action_data=self.action_data
+                    )
 
                 # extract task
-                if self.training_route is None:
+                if training_route is None:
                     task = decision.task
 
                 # additional end criteria, task picked is "text_response"
@@ -729,7 +740,7 @@ class Tree:
                     model_completed = True
 
                 # set current variables (if not in training mode)
-                if self.training_route is None:
+                if training_route is None:
                     task = task
                     completed = model_completed
                 
@@ -785,9 +796,9 @@ class Tree:
             self.decision_data.num_trees_completed += 1
 
             if (
-                self.training_route is None or 
-                (self.training_route is not None and task in self.training_route)
+                training_route is None or training_mimick_model
             ) and decision.full_chat_response != "" and task != "summarize":
+                self._update_conversation_history("assistant", decision.full_chat_response, append_to_previous=True)
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
             yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])
@@ -802,7 +813,7 @@ class Tree:
 
             # recursive call to restart the tree since the goal was not completed
             self.decision_data.num_trees_completed += 1
-            async for result in self.process(user_prompt, query_id, recursion_counter + 1, first_run=False, **kwargs):
+            async for result in self.process(user_prompt, query_id, recursion_counter + 1, first_run=False, training_route=training_route, training_mimick_model=training_mimick_model, **kwargs):
                 yield result
 
     def process_sync(self, user_prompt: str, query_id: str = "1", recursion_counter: int = 0, first_run: bool = True, **kwargs):

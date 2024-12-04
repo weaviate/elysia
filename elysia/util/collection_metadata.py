@@ -1,4 +1,6 @@
 import datetime
+from weaviate.classes.config import DataType
+
 from elysia.globals.weaviate_client import client
 from elysia.util.parsing import format_datetime
 
@@ -8,6 +10,23 @@ def get_all_collection_names():
 def get_collection_data_types(collection_name: str):
     properties = client.collections.get(collection_name).config.get().properties
     return {property.name: property.data_type[:] for property in properties}
+
+def get_collection_weaviate_data_types(collection_name: str):
+    data_types = get_collection_data_types(collection_name)
+    data_mapping = {
+        "text": DataType.TEXT,
+        "int": DataType.INT,
+        "number": DataType.NUMBER,
+        "bool": DataType.BOOL,
+        "date": DataType.DATE,
+        "text[]": DataType.TEXT_ARRAY,
+        "int[]": DataType.INT_ARRAY,
+        "number[]": DataType.NUMBER_ARRAY,
+        "bool[]": DataType.BOOL_ARRAY,
+        "date[]": DataType.DATE_ARRAY
+    }
+    return {k: data_mapping[v] for k, v in data_types.items()}
+
 
 def get_collection_data(collection_name: str, lower_bound: int = 0, upper_bound: int = -1, convert_datetime: bool = True):
     collection = client.collections.get(collection_name)
