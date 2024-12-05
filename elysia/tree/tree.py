@@ -781,6 +781,11 @@ class Tree:
                     query_id = self.prompt_to_query_id[user_prompt],
                     reset = False
                 )
+
+                yield self.returner._parse_status(
+                    Status(f"Decided to perform '{task}'"), 
+                    query_id = self.prompt_to_query_id[user_prompt]
+                )
                 
                 # update the previous reasoning
                 self.tree_data.update_dict("previous_reasoning", f"tree_{recursion_counter+1}", {current_decision_node.id: decision.reasoning})

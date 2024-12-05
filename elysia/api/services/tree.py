@@ -1,4 +1,5 @@
 from elysia.tree.tree import Tree
+from copy import deepcopy
 
 class TreeManager:
     """
@@ -12,13 +13,19 @@ class TreeManager:
         self.trees = {}
         self.collection_names = collection_names
 
+        self.base_tree = Tree(
+            verbosity=2,
+            collection_names=self.collection_names
+        )
+
     def add_tree(self, user_id: str, conversation_id: str):
         
         if user_id not in self.trees:
             self.trees[user_id] = {}
         
         if conversation_id not in self.trees[user_id]:
-            self.trees[user_id][conversation_id] = Tree(verbosity=2, conversation_id=conversation_id, collection_names=self.collection_names)
+            self.trees[user_id][conversation_id] = deepcopy(self.base_tree)
+            self.trees[user_id][conversation_id].conversation_id = conversation_id
         
         return self.trees[user_id][conversation_id].initialise_error_message
 

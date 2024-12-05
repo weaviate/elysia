@@ -123,6 +123,8 @@ def construct_query_prompt(collection_names: list[str] = None) -> dspy.Signature
         If the object property is a text, or text-like data type such as object ID, use Like to filter on partial text matches.
         This can be on `bm25` also.
 
+        If using `hybrid`, `bm25` or `near_text` (i.e. any of the _searches_), you MUST include text as part of the `query=` argument, it cannot be an empty string.
+
         # Sorting results
         You can also sort the results using the `sort` parameter, but only when using `fetch_objects`.
         So you CANNOT use it with `near_text` or `hybrid`.
@@ -135,6 +137,8 @@ def construct_query_prompt(collection_names: list[str] = None) -> dspy.Signature
             limit=3
         )
         ```
+
+        You can only use sorting once. Do not combine multiple sorts.
 
         # Next level queries
         If the user has already queried and received results, and is either asking a follow up question or you are performing a follow up query,
