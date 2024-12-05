@@ -1,6 +1,7 @@
 import spacy
 
 from weaviate.classes.config import Property, DataType, ReferenceProperty, Configure
+
 from weaviate.exceptions import WeaviateInvalidInputError
 from weaviate.util import generate_uuid5
 
@@ -162,7 +163,13 @@ class CollectionChunker:
                         target_collection=self.collection_name
                     )
                 ],
-                vectorizer_config=Configure.Vectorizer.text2vec_openai()
+                vectorizer_config=Configure.Vectorizer.text2vec_openai(
+                    model_name="text-embedding-3-large",
+                    dimensions=256
+                ),
+                vector_index_config=Configure.VectorIndex.hnsw(
+                    quantizer=Configure.VectorIndex.Quantizer.sq() # scalar quantization
+                ),
             )
     
     def generate_uuids(self, chunks: list[str], spans: list[tuple[int, int]], properties, content_field: str):

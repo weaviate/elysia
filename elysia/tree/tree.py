@@ -685,7 +685,7 @@ class Tree:
 
             self.num_trees_completed = 0
 
-            if training_route == "":
+            if training_route == "" or training_route is None:
                 training_route = None
             else:
                 training_route = training_route.split("/")

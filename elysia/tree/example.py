@@ -26,8 +26,8 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "summarise the 'pdf upload' issue in verba",
-        training_route="search/query/text_response",
+        "what trade deals were made in 2023",
+        # training_route="search/query/text_response",
     )
 
     outputs = tree.process_sync(
