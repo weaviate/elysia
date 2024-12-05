@@ -2,16 +2,18 @@
 
 import React, { useState } from "react";
 import { FaCircle, FaQuestionCircle } from "react-icons/fa";
-import { IoArrowUpCircleSharp } from "react-icons/io5";
+import { IoArrowUpCircleSharp, IoClose } from "react-icons/io5";
 import { IoDocumentText } from "react-icons/io5";
 import { FaGithub } from "react-icons/fa";
 import { IoChatbubble } from "react-icons/io5";
 import { PiPantsFill } from "react-icons/pi";
-import { GiFishMonster } from "react-icons/gi";
 import { FaCloud } from "react-icons/fa";
+import { FaFileContract } from "react-icons/fa";
+import { RiFlowChart } from "react-icons/ri";
+import { FaTrash } from "react-icons/fa";
 
 interface QueryInputProps {
-  handleSendQuery: (query: string) => void;
+  handleSendQuery: (query: string, route?: string) => void;
   query_length: number;
   currentStatus: string;
 }
@@ -24,6 +26,9 @@ const QueryInput: React.FC<QueryInputProps> = ({
   const width_control = query_length == 0 ? "w-[40vw]" : "w-[60vw]";
 
   const [query, setQuery] = useState("");
+
+  const [route, setRoute] = useState<string>("");
+  const [showRoute, setShowRoute] = useState<boolean>(false);
 
   return (
     <div
@@ -42,6 +47,28 @@ const QueryInput: React.FC<QueryInputProps> = ({
         <div className="w-full flex justify-start items-center gap-2">
           <FaCircle className="text-secondary text-sm pulsing" />
           <p className="text-sm shine">{currentStatus}</p>
+        </div>
+      )}
+      {showRoute && (
+        <div className="w-full flex gap-2 bg-background_alt rounded-xl p-2 fade-in">
+          <input
+            className="w-full p-2 bg-transparent outline-none text-xs resize-none"
+            value={route}
+            placeholder="Enter a route: e.g. search/query/text_response"
+            onChange={(e) => setRoute(e.target.value)}
+          />
+          <button
+            className="btn-round text-secondary rounded-full"
+            onClick={() => setRoute("")}
+          >
+            <FaTrash size={12} />
+          </button>
+          <button
+            className="btn-round text-secondary rounded-full"
+            onClick={() => setShowRoute(false)}
+          >
+            <IoClose size={12} />
+          </button>
         </div>
       )}
       <div
@@ -71,27 +98,41 @@ const QueryInput: React.FC<QueryInputProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
-                handleSendQuery(query);
+                handleSendQuery(query, route);
                 setQuery("");
               }
             }}
           />
-          <button
-            className="btn-round text-secondary rounded-full"
-            onClick={() => {
-              handleSendQuery(query);
-              setQuery("");
-            }}
-          >
-            <IoArrowUpCircleSharp size={16} />
-          </button>
+          <div className="flex gap-1">
+            <button
+              className={`btn-round ${
+                showRoute && !route
+                  ? "text-primary"
+                  : route
+                  ? "text-accent"
+                  : "text-secondary"
+              } rounded-full`}
+              onClick={() => setShowRoute(!showRoute)}
+            >
+              <RiFlowChart size={16} />
+            </button>
+            <button
+              className="btn-round text-secondary rounded-full"
+              onClick={() => {
+                handleSendQuery(query, route);
+                setQuery("");
+              }}
+            >
+              <IoArrowUpCircleSharp size={16} />
+            </button>
+          </div>
         </div>
       </div>
       {query_length == 0 && (
         <div className="grid grid-cols-2 w-full gap-3">
           <button
             onClick={() => {
-              handleSendQuery("What is Elysia?");
+              handleSendQuery("What is Elysia?", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
@@ -100,7 +141,7 @@ const QueryInput: React.FC<QueryInputProps> = ({
           </button>
           <button
             onClick={() => {
-              handleSendQuery("What is Verba?");
+              handleSendQuery("What is Verba?", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
@@ -109,25 +150,28 @@ const QueryInput: React.FC<QueryInputProps> = ({
           </button>
           <button
             onClick={() => {
-              handleSendQuery("Summarize the last 10 GitHub Tickets");
-            }}
-            className="btn w-full bg-background_alt text-primary text-sm"
-          >
-            <IoDocumentText size={16} />
-            <p>Summarize the last 10 GitHub Tickets</p>
-          </button>
-          <button
-            onClick={() => {
-              handleSendQuery("Return all GitHub Tickets");
+              handleSendQuery("Summarize the last 10 GitHub Tickets", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
             <FaGithub size={16} />
-            <p>Return all GitHub Tickets</p>
+            <p>Summarize the last 10 GitHub Tickets</p>
           </button>
           <button
             onClick={() => {
-              handleSendQuery("What was Edward's last conversation?");
+              handleSendQuery(
+                "Aggregate all usernames that wrote issues",
+                route
+              );
+            }}
+            className="btn w-full bg-background_alt text-primary text-sm"
+          >
+            <IoDocumentText size={16} />
+            <p>Aggregate all usernames that wrote issues</p>
+          </button>
+          <button
+            onClick={() => {
+              handleSendQuery("What was Edward's last conversation?", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
@@ -136,16 +180,16 @@ const QueryInput: React.FC<QueryInputProps> = ({
           </button>
           <button
             onClick={() => {
-              handleSendQuery("What was the weather last month?");
+              handleSendQuery("When was the highest wind speed?", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
             <FaCloud size={16} />
-            <p>What was the weather last month?</p>
+            <p>When was the highest wind speed?</p>
           </button>
           <button
             onClick={() => {
-              handleSendQuery("I'm looking for green pants");
+              handleSendQuery("I'm looking for green pants", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
@@ -154,12 +198,12 @@ const QueryInput: React.FC<QueryInputProps> = ({
           </button>
           <button
             onClick={() => {
-              handleSendQuery("I'm into Shrekcore, show me products!");
+              handleSendQuery("How many Sale Agreements are there?", route);
             }}
             className="btn w-full bg-background_alt text-primary text-sm"
           >
-            <GiFishMonster size={16} />
-            <p>{`I'm into Shrekcore, show me products!`}</p>
+            <FaFileContract size={16} />
+            <p>{`How many Sale Agreements are there?`}</p>
           </button>
         </div>
       )}
