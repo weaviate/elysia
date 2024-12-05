@@ -71,7 +71,7 @@ const ConversationMessageDisplay: React.FC<ConversationMessageProps> = ({
           >
             <div className="flex flex-col w-full max-w-[35vw] shadow-lg gap-3 bg-background_alt p-4 rounded-lg chat-animation text-primary">
               <p
-                className={`${authorColors[message.author]} text-xs font-bold ${
+                className={`${authorColors[message.author]} text-sm font-bold ${
                   authorPositions[message.author] % 2 === 0
                     ? "text-left"
                     : "text-right w-full"

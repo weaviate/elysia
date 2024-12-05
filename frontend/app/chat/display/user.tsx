@@ -61,12 +61,10 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
         const segmentText = text.slice(lastIndex, event.index);
         let className = "";
         if (activeTypes.has("noun")) {
-          className =
-            "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.background_highlight)] ";
+          className = "font-bold text-highlight ";
         }
         if (activeTypes.has("entity")) {
-          className =
-            "text-accent font-bold [text-shadow:0_0_10px_theme(colors.background_accent)] ";
+          className = "text-accent font-bold  ";
         }
 
         segments.push(
@@ -93,12 +91,10 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       let className = "";
 
       if (activeTypes.has("noun")) {
-        className =
-          "font-bold text-highlight [text-shadow:0_0_10px_theme(colors.background_highlight)] ";
+        className = "font-bold text-highlight ";
       }
       if (activeTypes.has("entity")) {
-        className =
-          "text-accent font-bold [text-shadow:0_0_10px_theme(colors.background_accent)] ";
+        className = "text-accent font-bold ";
       }
 
       segments.push(
@@ -117,10 +113,10 @@ const UserMessageDisplay: React.FC<UserMessageDisplayProps> = ({
       onClick={onClick}
     >
       <div className="w-full">
-        <div className="flex flex-grow justify-start items-start chat-animation gap-4">
+        <div className="flex font-merriweather flex-grow justify-start items-start chat-animation gap-4">
           {!collapsed ? (
             <div className="flex gap-6 items-center">
-              <p className="text-primary text-3xl text-left flex-grow">
+              <p className="text-primary text-2xl text-left flex-grow">
                 {renderTextWithHighlights(text)}
               </p>
               <div

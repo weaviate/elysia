@@ -2,6 +2,7 @@ import { Handle, Position } from "@xyflow/react";
 import { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DecisionNode({ data }: { data: any }) {
   const [opened, setOpened] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -67,7 +68,7 @@ function DecisionNode({ data }: { data: any }) {
           } hover:bg-foreground w-[300px] h-[100px] cursor-pointer truncate text-wrap p-8 flex items-center justify-center rounded-lg transition-all duration-300`}
         >
           <Handle type="target" position={Position.Top} />
-          <p className="font-bold text-xl">{data.text}</p>
+          <p className="font-bold text-lg">{data.text}</p>
           <Handle type="source" position={Position.Bottom} id="a" />
         </div>
       </div>

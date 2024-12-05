@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { DebugMessage, DebugResponse } from "./types";
-import MarkdownMessageDisplay from "../chat/display/markdown";
 import { Conversation } from "../types";
 import DebugChat from "./debug-chat";
 

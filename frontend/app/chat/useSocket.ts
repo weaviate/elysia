@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Message, TextPayload } from "../types";
 import { getWebsocketHost } from "../api";
-import { retrieveObjectRelevancy } from "./api";
 
 export function useSocket(
   addMessageToConversation: (
@@ -11,8 +10,7 @@ export function useSocket(
   ) => void,
   setConversationStatus: (status: string, conversationId: string) => void,
   setAllConversationStatuses: (status: string) => void,
-  updateTree: (message: Message) => void,
-  user_id: string
+  updateTree: (message: Message) => void
 ) {
   const [socketOnline, setSocketOnline] = useState(false);
   const [socket, setSocket] = useState<WebSocket>();

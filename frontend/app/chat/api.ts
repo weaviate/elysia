@@ -10,8 +10,10 @@ import {
   TitleResponse,
 } from "../types";
 
+import host from "../host";
+
 export async function handleNamedEntityRecognition(text: string) {
-  const res = await fetch(`http://localhost:8000/api/ner`, {
+  const res = await fetch(`http://${host}/api/ner`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -23,7 +25,7 @@ export async function handleNamedEntityRecognition(text: string) {
 }
 
 export async function handleConversationTitleGeneration(text: string) {
-  const res = await fetch(`http://localhost:8000/api/title`, {
+  const res = await fetch(`http://${host}/api/title`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -43,7 +45,7 @@ export async function setCollectionEnabled(
   conversation_id: string,
   user_id: string
 ) {
-  const res = await fetch(`http://localhost:8000/api/set_collections`, {
+  const res = await fetch(`http://${host}/api/set_collections`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -65,7 +67,7 @@ export async function getDecisionTree(
   user_id: string,
   conversation_id: string
 ) {
-  const res = await fetch(`http://localhost:8000/api/initialise_tree`, {
+  const res = await fetch(`http://${host}/api/initialise_tree`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -97,7 +99,7 @@ export async function retrieveObjectRelevancy(
   query_id: string,
   objects: Message[]
 ) {
-  const res = await fetch(`http://localhost:8000/api/object_relevance`, {
+  const res = await fetch(`http://${host}/api/object_relevance`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
