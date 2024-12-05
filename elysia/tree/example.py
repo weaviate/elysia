@@ -26,9 +26,9 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "what financial documents are there about payments to Google?",
+        "summarise the 'pdf upload' issue in verba",
         training_route = "search/query/text_response",
-        training_mimick_model = False
+        training_mimick_model = True
     )
 
     tree.base_lm.inspect_history(5)

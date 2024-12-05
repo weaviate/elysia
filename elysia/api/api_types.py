@@ -57,3 +57,7 @@ class DebugData(BaseModel):
 class CollectionMetadataData(BaseModel):
     user_id: str
     conversation_id: str
+
+class CollectionsData(BaseModel):
+    user_id: str
+    conversation_id: str
