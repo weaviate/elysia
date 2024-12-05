@@ -11,6 +11,7 @@ import {
   TextPayload,
   AggregationPayload,
   EpicGeneric,
+  DocumentPayload,
 } from "../../types";
 
 import UserMessageDisplay from "./user";
@@ -26,6 +27,7 @@ import CollectionDisplay from "./collection";
 import CodeDisplay from "./code";
 import AggregationDisplay from "./aggregation";
 import EpicGenericDisplay from "./epic_generic";
+import DocumentDisplay from "./document";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -222,6 +224,16 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                           aggregation={
                             (message.payload as ResultPayload)
                               .objects as AggregationPayload[]
+                          }
+                        />
+                      )}
+                      {(message.payload as ResultPayload).type ===
+                        "document" && (
+                        <DocumentDisplay
+                          key={`${index}-${message.id}-document`}
+                          payload={
+                            (message.payload as ResultPayload)
+                              .objects as DocumentPayload[]
                           }
                         />
                       )}

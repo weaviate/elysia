@@ -82,9 +82,9 @@ export function useSocket(
     query: string,
     conversation_id: string,
     query_id: string,
-    route?: string
+    route?: string,
+    mimick?: boolean
   ) => {
-    const mimick = route ? true : false;
     setConversationStatus("Thinking...", conversation_id);
     socket?.send(
       JSON.stringify({

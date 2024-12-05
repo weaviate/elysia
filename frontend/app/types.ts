@@ -39,7 +39,8 @@ export type ResultPayload = {
     | "epic_generic"
     | "boring_generic"
     | "aggregation"
-    | "mapped";
+    | "mapped"
+    | "document";
   /* eslint-disable @typescript-eslint/no-explicit-any */
   metadata: any;
   code: CodePayload;
@@ -51,7 +52,8 @@ export type ResultPayload = {
     | Ecommerce[]
     | { [key: string]: string }[]
     | AggregationPayload[]
-    | EpicGeneric[];
+    | EpicGeneric[]
+    | DocumentPayload[];
 };
 
 export type AggregationPayload = {
@@ -72,6 +74,17 @@ export type AggregationValue = {
   value: string | number;
   field: string | null;
   aggregation: "count" | "sum" | "avg" | "minimum" | "maximum" | "mean";
+};
+
+export type DocumentPayload = {
+  uuid: string;
+  summary?: string;
+  title: string;
+  author: string;
+  date: string;
+  content: string;
+  category: string;
+  chunk_spans: [number, number][];
 };
 
 export type TextPayload = {
