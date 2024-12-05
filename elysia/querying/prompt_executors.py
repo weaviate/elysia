@@ -361,8 +361,11 @@ class QueryExecutor(dspy.Module):
             prediction.code
         )
 
-        if needs_chunking:
+        if needs_chunking:# and prediction.return_type == "document":
             print(f"Chunking {prediction.collection_name}")
+            collection_chunker = CollectionChunker(prediction.collection_name)
+            collection_chunker.create_chunked_reference(content_field)
+
             # TODO: add error catching here
             objects = self._execute_large_code(prediction.code, prediction.collection_name)
             
@@ -373,7 +376,6 @@ class QueryExecutor(dspy.Module):
             # )
             yield Status(f"Chunking {len(objects.objects)} objects from {prediction.collection_name}")
 
-            collection_chunker = CollectionChunker(prediction.collection_name)
             collection_chunker(objects, content_field); # this will insert the chunked objects into the chunked collection
             collection_to_query = self._get_chunked_collection_name(prediction.collection_name) # once objects are chunked, we query the chunked collection
             yield Status(f"Querying chunked {prediction.collection_name}")

@@ -113,7 +113,9 @@ class CollectionChunker:
         self.collection = client.collections.get(collection_name)
         self.chunker = Chunker("sentences", num_sentences=5)
 
-    def create_chunked_reference(self):
+    def create_chunked_reference(self, content_field: str):
+        if not self.chunked_collection_exists():
+            self.get_chunked_collection(content_field);
         try:
             self.collection.config.add_reference(
                 ReferenceProperty(
@@ -235,7 +237,7 @@ class CollectionChunker:
     def __call__(self, objects, content_field: str):
 
         # always create the chunked reference, if it already exists, it will be skipped
-        self.create_chunked_reference()
+        # self.create_chunked_reference(content_field)
 
         # get all UUIDs of current objects
         all_uuids = [object.uuid for object in objects.objects]
