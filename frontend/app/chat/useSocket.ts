@@ -81,10 +81,21 @@ export function useSocket(
     user_id: string,
     query: string,
     conversation_id: string,
-    query_id: string
+    query_id: string,
+    route?: string,
+    mimick?: boolean
   ) => {
     setConversationStatus("Thinking...", conversation_id);
-    socket?.send(JSON.stringify({ user_id, query, conversation_id, query_id }));
+    socket?.send(
+      JSON.stringify({
+        user_id,
+        query,
+        conversation_id,
+        query_id,
+        route,
+        mimick,
+      })
+    );
   };
 
   return { socketOnline, sendQuery };

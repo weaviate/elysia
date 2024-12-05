@@ -23,7 +23,12 @@ interface ChatInterfaceProps {
     collection_id: string,
     conversationId: string
   ) => void;
-  handleQuery: (query: string, conversationId: string) => void;
+  handleQuery: (
+    query: string,
+    conversationId: string,
+    route?: string,
+    mimick?: boolean
+  ) => void;
   fetchDebug: (conversation_id: string) => Promise<DebugResponse>;
 }
 
@@ -68,8 +73,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }, 100);
   }, [currentQuery, currentStatus]);
 
-  const handleSendQuery = (query: string) => {
-    handleQuery(query, currentConversation);
+  const handleSendQuery = (query: string, route?: string, mimick?: boolean) => {
+    handleQuery(query, currentConversation, route, mimick);
   };
 
   return (

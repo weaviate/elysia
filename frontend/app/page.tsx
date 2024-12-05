@@ -88,11 +88,16 @@ export default function Home() {
     });
   }, []);
 
-  const handleQuery = (query: string, conversationId: string) => {
+  const handleQuery = (
+    query: string,
+    conversationId: string,
+    route?: string,
+    mimick?: boolean
+  ) => {
     if (query.trim() === "") return;
     const trimmedQuery = query.trim();
     const query_id = uuidv4();
-    sendQuery(id || "", trimmedQuery, conversationId, query_id);
+    sendQuery(id || "", trimmedQuery, conversationId, query_id, route, mimick);
     changeBaseToQuery(conversationId, trimmedQuery);
     setConversationTitle(trimmedQuery, conversationId);
     addTreeToConversation(conversationId);
