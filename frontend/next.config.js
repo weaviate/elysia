@@ -1,4 +1,3 @@
-
 const nextConfig = {
   webpack: (config, { isServer }) => {
     // Add a rule to handle .glsl files

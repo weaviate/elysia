@@ -3,9 +3,11 @@
 import React from "react";
 
 interface DataTableProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: { [key: string]: any }[] | null;
   header: string[];
   loading: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setSelectedCell: (cell: { [key: string]: any }) => void;
 }
 

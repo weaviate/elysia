@@ -9,9 +9,8 @@ import {
   SummaryPayload,
   ResultPayload,
   TextPayload,
-  Ecommerce,
-  AggregationCollection,
   AggregationPayload,
+  EpicGeneric,
 } from "../../types";
 
 import UserMessageDisplay from "./user";
@@ -26,6 +25,7 @@ import BoringGenericDisplay from "./boring_generic";
 import CollectionDisplay from "./collection";
 import CodeDisplay from "./code";
 import AggregationDisplay from "./aggregation";
+import EpicGenericDisplay from "./epic_generic";
 
 interface MessageDisplayProps {
   messages: Message[];
@@ -45,8 +45,8 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   const [collapsed, setCollapsed] = useState<boolean>(_collapsed);
 
   const mergeMessages = (messages: Message[]) => {
-    let newMessages: Message[] = [];
-    let skip_indices: number[] = [];
+    const newMessages: Message[] = [];
+    const skip_indices: number[] = [];
 
     messages.forEach((message, index) => {
       if (skip_indices.includes(index)) {
@@ -56,10 +56,10 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         (message.payload as ResponsePayload).type === "response" &&
         !(index + 1 == messages.length)
       ) {
-        let content: TextPayload[] = [
+        const content: TextPayload[] = [
           (message.payload as ResponsePayload).objects[0] as TextPayload,
         ];
-        let next_message_id: string = message.id;
+        const next_message_id: string = message.id;
 
         for (let i = index + 1; i < messages.length; i++) {
           if (
@@ -110,11 +110,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         {displayMessages
           .filter((m) => m.type === "User")
           .map((message, index) => (
-            <div key={index + "message"} className="w-full flex">
+            <div key={`${index}-${message.id}-message`} className="w-full flex">
               {message.type === "User" && (
                 <UserMessageDisplay
                   onClick={() => setCollapsed((prev) => !prev)}
-                  key={`${index}-${message.id}`}
+                  key={`${index}-${message.id}-user`}
                   payload={
                     (message.payload as ResultPayload).objects as string[]
                   }
@@ -128,7 +128,10 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             {displayMessages
               .filter((m) => m.type !== "User")
               .map((message, index) => (
-                <div key={index + "message"} className="w-full flex">
+                <div
+                  key={`${index}-${message.id}-message`}
+                  className="w-full flex"
+                >
                   {message.type === "result" && (
                     <div className="w-full flex flex-col justify-start items-start gap-3">
                       <div className="flex flex-col gap-3 w-full">
@@ -155,14 +158,14 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       </div>
                       {(message.payload as ResultPayload).type === "ticket" && (
                         <TicketsDisplay
-                          key={`${index}-${message.id}`}
+                          key={`${index}-${message.id}-tickets`}
                           message={message}
                         />
                       )}
                       {(message.payload as ResultPayload).type ===
                         "ecommerce" && (
                         <EcommerceDisplay
-                          key={`${index}-${message.id}`}
+                          key={`${index}-${message.id}-ecommerce`}
                           payload={message.payload as ResultPayload}
                         />
                       )}
@@ -171,7 +174,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         (message.payload as ResultPayload).type ===
                           "message") && (
                         <ConversationsDisplay
-                          key={`${index}-${message.id}`}
+                          key={`${index}-${message.id}-conversations`}
                           payload={
                             (message.payload as ResultPayload).type ===
                             "conversation"
@@ -185,9 +188,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         />
                       )}
                       {((message.payload as ResultPayload).type ===
-                        "epic_generic" ||
-                        (message.payload as ResultPayload).type ===
-                          "boring_generic" ||
+                        "boring_generic" ||
                         (message.payload as ResultPayload).type ===
                           "mapped") && (
                         <>
@@ -195,7 +196,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                             {(message.payload as ResultPayload).type}
                           </p>
                           <BoringGenericDisplay
-                            key={`${index}-${message.id}`}
+                            key={`${index}-${message.id}-boring_generic`}
                             payload={
                               (message.payload as ResultPayload).objects as {
                                 [key: string]: string;
@@ -205,9 +206,19 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                         </>
                       )}
                       {(message.payload as ResultPayload).type ===
+                        "epic_generic" && (
+                        <EpicGenericDisplay
+                          key={`${index}-${message.id}-epic_generic`}
+                          payload={
+                            (message.payload as ResultPayload)
+                              .objects as EpicGeneric[]
+                          }
+                        />
+                      )}
+                      {(message.payload as ResultPayload).type ===
                         "aggregation" && (
                         <AggregationDisplay
-                          key={`${index}-${message.id}`}
+                          key={`${index}-${message.id}-aggregation`}
                           aggregation={
                             (message.payload as ResultPayload)
                               .objects as AggregationPayload[]
@@ -221,7 +232,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       {(message.payload as ResponsePayload).type ===
                         "response" && (
                         <TextDisplay
-                          key={`${index}-${message.id}`}
+                          key={`${index}-${message.id}-response`}
                           payload={
                             (message.payload as ResponsePayload)
                               .objects as TextPayload[]
@@ -231,7 +242,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       {(message.payload as ResponsePayload).type ===
                         "summary" && (
                         <SummaryDisplay
-                          key={`${index}-${message.id}`}
+                          key={`${index}-${message.id}-summary`}
                           payload={
                             (message.payload as ResponsePayload)
                               .objects as SummaryPayload[]
@@ -242,13 +253,13 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                   )}
                   {message.type === "error" && (
                     <ErrorMessageDisplay
-                      key={`${index}-${message.id}`}
+                      key={`${index}-${message.id}-error`}
                       error={(message.payload as TextPayload).text}
                     />
                   )}
                   {message.type === "warning" && (
                     <WarningDisplay
-                      key={`${index}-${message.id}`}
+                      key={`${index}-${message.id}-warning`}
                       warning={(message.payload as TextPayload).text}
                     />
                   )}

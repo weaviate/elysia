@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
-import { Mulish, Oxygen } from "next/font/google";
+import { Outfit, Merriweather } from "next/font/google";
 
-const mulish = Mulish({
+const merriweather = Merriweather({
   subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+  variable: "--font-merriweather",
+  weight: ["300", "400", "700", "900"],
 });
 
-const playfair = Oxygen({
+const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["300", "400", "700"],
+  display: "swap",
+  variable: "--font-outfit",
+  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -25,7 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`bg-background ${playfair.className} antialiased flex`}>
+      <body
+        className={`bg-background ${outfit.variable} ${merriweather.variable} font-outfit antialiased flex`}
+      >
         <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
       </body>
     </html>
