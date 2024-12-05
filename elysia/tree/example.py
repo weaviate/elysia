@@ -27,14 +27,17 @@ if __name__ == "__main__":
 
     outputs = tree.process_sync(
         "summarise the 'pdf upload' issue in verba",
-        training_route = "search/query/text_response",
-        training_mimick_model = True
+    )
+
+    outputs = tree.process_sync(
+        "can you restrict the search to just open tickets?",
     )
 
     tree.base_lm.inspect_history(5)
     tree.complex_lm.inspect_history(5)
 
-
+    print(tree.tree_data.data_queried_string())
+    
     # print(tree.returns.retrieved["example_verba_github_issues"].objects)
     # print(tree.returns.aggregation["example_verba_github_issues"].metadata["last_code"])
     

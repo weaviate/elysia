@@ -93,7 +93,9 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             Record of collection queries and results:
             - Which collections were searched
             - Number of items retrieved per collection
-            - Note: 0 items means query executed but found nothing
+            Use this to determine whether future searches for this prompt are necessary.
+            If the search has been performed multiple times, it is unlikely performing the same search again will retrieve any more information.
+            However, if the prompt is for a nested task, you may need to perform the search multiple times to retrieve all relevant information.
             """.strip()
         )
         
@@ -145,7 +147,17 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         )
 
         all_actions_completed: bool = dspy.OutputField(
-            description="True if either (1) we have all information needed to fully answer the query, or (2) the query is impossible to answer with available tasks. False if more tasks could help answer the query."
+            description="""
+            - True: Choose this if (1) all necessary information to answer the query is available, or (2) the query cannot be answered with the available tasks.
+            - False: Choose this if additional tasks might help answer the query.
+
+            Be pragmatic:
+
+            - Pick True when retrieved information relates to the prompt, even if you cannot answer the query directly.
+            - Do not assess the usefulness of the information, only its relevance to the prompt.
+
+            If nested tasks are needed (e.g., multiple queries/multiple collections), pick False until all relevant information is retrieved. Then switch to True.
+            """.strip()
         )
         
         reasoning_update_message: str = dspy.OutputField(

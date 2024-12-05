@@ -229,7 +229,7 @@ class TreeData(PromptData):
             user_prompt: str = "",
             previous_reasoning: dict = {},
             conversation_history: list[dict] = [],
-            data_queried: dict = {},
+            data_queried: dict[str, dict] = {},
             current_message: str = ""
         ):
         self.user_prompt = user_prompt
@@ -238,28 +238,47 @@ class TreeData(PromptData):
         self.data_queried = data_queried
         self.current_message = current_message
 
-        self.data_queried.update({"Elysia": {"prompt": "What is Elysia?", "count": 1, "type": "self_info"}})
+        self.data_queried["Elysia"] = {}
+        self.data_queried["Elysia"]["What is Elysia?"] = [{ "count": 1, "type": "self_info"}]
 
     def soft_reset(self):
         self.previous_reasoning = {}
-        self.data_queried = {}
+        # self.data_queried = {}
         self.current_message = ""
+
+    def update_data_queried(self, collection_name: str, prompt: str, data: dict):
+        
+        if collection_name not in self.data_queried:
+            self.data_queried[collection_name] = {}
+
+        if prompt not in self.data_queried[collection_name]:
+            self.data_queried[collection_name][prompt] = []
+
+        self.data_queried[collection_name][prompt].append(data)
 
     def data_queried_string(self):
         out = ""
+        counter = 0
         for i, collection_name in enumerate(self.data_queried):
-            if self.data_queried[collection_name]["type"] == "self_info":
-                out += f" - [Search {i+1}] Retrieved all information about Elysia, the agentic RAG agent\n"
-            elif self.data_queried[collection_name]["type"] == "retrieval":
-                if "impossible_prompt" in self.data_queried[collection_name]:
-                    out += f" - [Search {i+1}] Attempted to query '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}', but it was judged impossible to complete for this prompt/collection combination\n"
-                else:
-                    out += f" - [Search {i+1}] Queried '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}', retrieved {self.data_queried[collection_name]['count']} objects, returned with type '{self.data_queried[collection_name]['return_type']}' and outputted '{'itemised summaries' if self.data_queried[collection_name]['output_type'] == 'summary' else 'original objects'}'\n"
-            elif self.data_queried[collection_name]["type"] == "aggregation":
-                if "impossible_prompt" in self.data_queried[collection_name]:
-                    out += f" - [Search {i+1}] Attempted to aggregate '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}', but it was judged impossible to complete for this prompt/collection combination\n"
-                else:
-                    out += f" - [Search {i+1}] Aggregated '{collection_name}' with prompt '{self.data_queried[collection_name]['prompt']}'\n"
+            for j, prompt in enumerate(self.data_queried[collection_name]):
+
+                for data in self.data_queried[collection_name][prompt]:
+                    counter += 1
+
+                    if data["type"] == "self_info":
+                        out += f" - [Search {counter}] Retrieved all information about Elysia, the agentic RAG agent\n"
+
+                    if data["type"] == "retrieval":
+                        if "impossible_prompt" in data:
+                            out += f" - [Search {counter}] Attempted to query '{collection_name}' with prompt '{prompt}', but it was judged impossible to complete for this prompt/collection combination\n"
+                        else:
+                            out += f" - [Search {counter}] Queried '{collection_name}' with prompt '{prompt}' {f'(for the {j+1}th time)' if j > 0 else ''}, retrieved {data['count']} objects, returned with type '{data['return_type']}' and outputted '{'itemised summaries' if data['output_type'] == 'summary' else 'original objects'}'\n"
+
+                    if data["type"] == "aggregation":
+                        if "impossible_prompt" in data:
+                            out += f" - [Search {counter}] Attempted to aggregate '{collection_name}' with prompt '{prompt}', but it was judged impossible to complete for this prompt/collection combination\n"
+                        else:
+                            out += f" - [Search {counter}] Aggregated '{collection_name}' with prompt '{prompt}' {f'(for the {j+1}th time)' if j > 0 else ''}\n"
         return out
 
 class ActionData(PromptData):
@@ -287,7 +306,7 @@ class DecisionData(PromptData):
             available_information: list[dict] = [],
             available_tasks: list[dict] = [],
             num_trees_completed: int = 0,
-            recursion_limit: int = 5,
+            recursion_limit: int = 3,
             future_information: list[dict] = []
         ):
         self.instruction = instruction
@@ -299,6 +318,8 @@ class DecisionData(PromptData):
 
     def tree_count_string(self):
         out = f"{self.num_trees_completed+1}/{self.recursion_limit}"
-        if self.num_trees_completed > self.recursion_limit:
-            out += " (recursion limit reached, write your full chat response accordingly)"
+        if self.num_trees_completed == self.recursion_limit - 1:
+            out += " (this is the last decision you can make before being cut off)"
+        if self.num_trees_completed >= self.recursion_limit:
+            out += " (recursion limit reached, write your full chat response accordingly - the decision process has been cut short, and it is likely the user's question has not been fully answered and you either haven't been able to do it or it was impossible)"
         return out
