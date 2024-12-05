@@ -363,8 +363,50 @@ class QueryExecutor(dspy.Module):
 
         if needs_chunking and prediction.return_type == "document":
             print(f"Chunking {prediction.collection_name}")
-            # TODO: add error catching here
-            objects = self._execute_large_code(prediction.code, prediction.collection_name)
+            
+            try:
+                objects = self._execute_large_code(prediction.code, prediction.collection_name)
+            
+            except SafetyException as e:
+                try:
+                    dspy.Assert(False, 
+                                f"Safety exception: {e} for query code:\n{prediction.code}. The code was deemed unsafe.", 
+                                target_module=self._execute_code
+                                )
+                
+                except SafetyException as e:
+                    backend_print(f"[bold red]Safety error while executing code: {e}[/bold red]")
+                    yield QueryReturn(objects=[])
+                    yield Error(f"Safety error while executing code: {e}")
+                
+                except Exception as e:
+                    backend_print(f"[bold red]Error while executing code: {e}[/bold red]")
+                    yield QueryReturn(objects=[])
+                    yield Error(f"Error while executing code: {e}")        
+            except Exception as e:
+
+                try:
+                    dspy.Assert(False, 
+                                f"""
+                                Error executing query code:
+                                {prediction.code}
+                                The ERROR message was: {e}
+                                Ensure that the query code is valid python output.
+                                Or you should set is_query_possible to False if you want to stop the query from being executed.
+                                """
+                                , 
+                                target_module=self.query_prompt
+                                )
+                except SafetyException as e:
+                    backend_print(f"[bold red]Safety error while executing code: {e}[/bold red]")
+                    yield QueryReturn(objects=[])
+                    yield Error(f"Safety error while executing code: {e}")
+                
+                except Exception as e:
+                    backend_print(f"[bold red]Error while executing code: {e}[/bold red]")
+                    yield QueryReturn(objects=[])
+                    yield Error(f"Error while executing code: {e}")
+
             
             # yield TreeUpdate(
             #     from_node="query_executor",
