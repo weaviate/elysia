@@ -674,7 +674,7 @@ class Tree:
             query_id: str = "1", 
             recursion_counter: int = 0, 
             first_run: bool = True, 
-            training_route: str = None,
+            training_route: str = "",
             training_mimick_model: bool = False,
             **kwargs
         ):
@@ -685,7 +685,10 @@ class Tree:
 
             self.num_trees_completed = 0
 
-            training_route = training_route.split("/") if training_route is not None else None
+            if training_route == "":
+                training_route = None
+            else:
+                training_route = training_route.split("/")
 
             self.tree_data.set_property("user_prompt", user_prompt)
 
@@ -812,6 +815,9 @@ class Tree:
             ) and decision.full_chat_response != "" and task != "summarize":
                 self._update_conversation_history("assistant", decision.full_chat_response, append_to_previous=True)
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
+
+                if self.verbosity > 1:
+                    print(Panel.fit(decision.full_chat_response, title="Full chat response", padding=(1,1), border_style="cyan"))
 
             yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])
 

@@ -262,8 +262,16 @@ class TreeData(PromptData):
         for i, collection_name in enumerate(self.data_queried):
             for j, prompt in enumerate(self.data_queried[collection_name]):
 
-                for data in self.data_queried[collection_name][prompt]:
+                for k, data in enumerate(self.data_queried[collection_name][prompt]):
                     counter += 1
+                    if k+1 == 1:
+                        numth = "st"
+                    elif k+1 == 2:
+                        numth = "nd"
+                    elif k+1 == 3:
+                        numth = "rd"
+                    else:
+                        numth = "th"
 
                     if data["type"] == "self_info":
                         out += f" - [Search {counter}] Retrieved all information about Elysia, the agentic RAG agent\n"
@@ -272,13 +280,13 @@ class TreeData(PromptData):
                         if "impossible_prompt" in data:
                             out += f" - [Search {counter}] Attempted to query '{collection_name}' with prompt '{prompt}', but it was judged impossible to complete for this prompt/collection combination\n"
                         else:
-                            out += f" - [Search {counter}] Queried '{collection_name}' with prompt '{prompt}' {f'(for the {j+1}th time)' if j > 0 else ''}, retrieved {data['count']} objects, returned with type '{data['return_type']}' and outputted '{'itemised summaries' if data['output_type'] == 'summary' else 'original objects'}'\n"
+                            out += f" - [Search {counter}] Queried '{collection_name}' with prompt '{prompt}' {f'(for the {k+1}{numth} time)' if j > 0 else ''}, retrieved {data['count']} objects, returned with type '{data['return_type']}' and outputted '{'itemised summaries' if data['output_type'] == 'summary' else 'original objects'}'\n"
 
                     if data["type"] == "aggregation":
                         if "impossible_prompt" in data:
                             out += f" - [Search {counter}] Attempted to aggregate '{collection_name}' with prompt '{prompt}', but it was judged impossible to complete for this prompt/collection combination\n"
                         else:
-                            out += f" - [Search {counter}] Aggregated '{collection_name}' with prompt '{prompt}' {f'(for the {j+1}th time)' if j > 0 else ''}\n"
+                            out += f" - [Search {counter}] Aggregated '{collection_name}' with prompt '{prompt}' {f'(for the {k+1}{numth} time)' if j > 0 else ''}\n"
         return out
 
 class ActionData(PromptData):
