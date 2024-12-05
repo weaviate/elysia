@@ -272,7 +272,7 @@ class Tree:
 
         # keep track of the number of trees completed
         self.num_trees_completed = 0
-        self.max_recursions = 5
+        self.max_recursions = 3
 
         # Initialise some tree variables
         self.decision_nodes = {}
@@ -565,7 +565,7 @@ class Tree:
             if "impossible_prompts" in action_result.metadata and action_result.metadata["impossible_prompts"][-1] == user_prompt:
                 dict_to_update["impossible_prompt"] = True
 
-            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], dict_to_update)
+            self.tree_data.update_data_queried(action_result.metadata["collection_name"], user_prompt, dict_to_update)
 
         if isinstance(action_result, Aggregation):
             self.decision_data.available_information.add_aggregation(objects=action_result)
@@ -577,7 +577,7 @@ class Tree:
             if "impossible_prompts" in action_result.metadata and action_result.metadata["impossible_prompts"][-1] == user_prompt:
                 dict_to_update["impossible_prompt"] = True
 
-            self.tree_data.update_dict("data_queried", action_result.metadata["collection_name"], dict_to_update)
+            self.tree_data.update_data_queried(action_result.metadata["collection_name"], user_prompt, dict_to_update)
     
     async def _evaluate_action(self, action_fn: Callable, user_prompt: str, completed: bool, **kwargs):
         """
@@ -674,7 +674,7 @@ class Tree:
             query_id: str = "1", 
             recursion_counter: int = 0, 
             first_run: bool = True, 
-            training_route: str = None,
+            training_route: str = "",
             training_mimick_model: bool = False,
             **kwargs
         ):
@@ -685,7 +685,10 @@ class Tree:
 
             self.num_trees_completed = 0
 
-            training_route = training_route.split("/") if training_route is not None else None
+            if training_route == "":
+                training_route = None
+            else:
+                training_route = training_route.split("/")
 
             self.tree_data.set_property("user_prompt", user_prompt)
 
@@ -748,7 +751,7 @@ class Tree:
                 # additional end criteria, recursion limit reached
                 if recursion_counter > self.decision_data.recursion_limit:
                     backend_print(f"Warning: [bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
-                    yield self.returner._parse_warning("Recursion limit reached! Forcing text response.", query_id = self.prompt_to_query_id[user_prompt])
+                    yield self.returner._parse_warning(Warning("Recursion limit reached! Forcing text response."), query_id = self.prompt_to_query_id[user_prompt])
                     model_completed = True
 
                 # set current variables (if not in training mode)
@@ -797,7 +800,7 @@ class Tree:
                     yield result
 
             # check if the current node is the end of the tree
-            if current_decision_node.options[task]["next"] is None or training_completed:
+            if current_decision_node.options[task]["next"] is None or training_completed or completed:
                 break
             else:
                 current_decision_node = self.decision_nodes[current_decision_node.options[task]["next"]]
@@ -813,6 +816,9 @@ class Tree:
                 self._update_conversation_history("assistant", decision.full_chat_response, append_to_previous=True)
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
+                if self.verbosity > 1:
+                    print(Panel.fit(decision.full_chat_response, title="Full chat response", padding=(1,1), border_style="cyan"))
+
             yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])
 
             if self.verbosity >= 1:
@@ -821,10 +827,10 @@ class Tree:
         # end of the tree for this iteration
         else:
             if self.verbosity > 1:
-                backend_print("Model did [bold red]not[/bold red] yet complete overall goal! Restarting tree...")
+                backend_print(f"Model did [bold red]not[/bold red] yet complete overall goal! Restarting tree (Recursion: {recursion_counter+1}/{self.decision_data.recursion_limit})...")
 
             # recursive call to restart the tree since the goal was not completed
-            self.decision_data.num_trees_completed += 1
+            self.decision_data.num_trees_completed = recursion_counter
             async for result in self.process(user_prompt, query_id, recursion_counter + 1, first_run=False, training_route=training_route, training_mimick_model=training_mimick_model, **kwargs):
                 yield result
 

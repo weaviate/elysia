@@ -209,7 +209,7 @@ def construct_query_prompt(collection_names: list[str] = None) -> dspy.Signature
         Filters are optional, and if not specified in the user prompt, you should not use them.
 
         You have access to a function called `format_datetime(dt)` which formats a datetime object to the ISO format without the timezone offset. 
-        Use this function to format the datetime objects in the filters. Do not use the `datetime` module, just use `format_datetime`.
+        Use this function to format the datetime objects in the filters. If using this, you should use python's `datetime.datetime` function, not `datetime` on its own.
 
         Assume you have access to the object `collection` which is a Weaviate collection.  
         """
