@@ -22,33 +22,48 @@ async def help_websocket(websocket: WebSocket, ws_route: callable):
         while True:
             try:
 
+                start_time = time.time()
                 # Wait for a message from the client
                 logger.info(f"Memory usage before receiving: {psutil.Process().memory_info().rss / 1024 / 1024}MB")
-                data = await websocket.receive_json()
-                logger.info(f"Memory usage after receiving: {psutil.Process().memory_info().rss / 1024 / 1024}MB")
-                
-                # Check if the message is a disconnect request
-                if data.get("type") == "disconnect":
-                    logger.info("Received disconnect request")
-                    break  # Exit the loop instead of closing the websocket here
-
-                logger.info(f"Received message: {data}")
-
-                # == main code ==
-                # Add timing information
-                start_time = time.time()
                 try:
-                    async with asyncio.timeout(60):  # adjust timeout as needed
-                        await ws_route(data, websocket)
-                except asyncio.TimeoutError:
-                    logger.warning("Processing timeout - sending heartbeat")
-                    await websocket.send_json({"type": "heartbeat"})
+                    data = None
+                    last_communication = time.time()
                     
+                    # Custom timeout handler
+                    while True:
+                        if time.time() - last_communication > 60:
+                            logger.warning("No communication for 60 seconds - sending heartbeat")
+                            await websocket.send_json({"type": "heartbeat"})
+                            last_communication = time.time()
+                            
+                        try:
+                            # Use a short timeout for receive_json to allow checking the timer
+                            data = await asyncio.wait_for(websocket.receive_json(), timeout=1.0)
+                            last_communication = time.time()
+                            
+                            # Process the received data
+                            await ws_route(data, websocket)
+                            last_communication = time.time()  # Update timer after processing
+                            
+                            # Check if it's a disconnect request
+                            if data.get("type") == "disconnect":
+                                logger.info("Received disconnect request")
+                                return
+                                
+                        except asyncio.TimeoutError:
+                            # This is just the short receive timeout, not an error condition
+                            continue
+                            
+                except Exception as e:
+                    await websocket.send_json(
+                        Error(
+                            text=str(e)
+                        ).to_frontend("", "")
+                    )
+                    logger.error(f"Error in websocket communication: {str(e)}")
+                
+                logger.info(f"Memory usage after receiving: {psutil.Process().memory_info().rss / 1024 / 1024}MB")
                 logger.info(f"Processing time: {time.time() - start_time}s")
-
-                if time.time() % 60 < 1:  # Log every minute
-                    current_memory = memory_process.memory_info().rss
-                    logger.info(f"Memory usage: {(current_memory - initial_memory) / 1024 / 1024}MB")
                 
 
             except WebSocketDisconnect:
