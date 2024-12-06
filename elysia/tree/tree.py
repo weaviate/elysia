@@ -642,7 +642,11 @@ class Tree:
         completed = len(training_route) == 0
         
         return next_route, node.options[next_route]["action"], completed, training_route
-        
+    
+    def set_conversation_id(self, conversation_id: str):
+        self.conversation_id = conversation_id
+        self.returner.conversation_id = conversation_id
+
     def hard_reset(self):
         self = Tree(verbosity=self.verbosity)
 

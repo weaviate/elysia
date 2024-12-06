@@ -25,7 +25,7 @@ class TreeManager:
         
         if conversation_id not in self.trees[user_id]:
             self.trees[user_id][conversation_id] = deepcopy(self.base_tree)
-            self.trees[user_id][conversation_id].conversation_id = conversation_id
+            self.trees[user_id][conversation_id].set_conversation_id(conversation_id)
         
         return self.trees[user_id][conversation_id].initialise_error_message
 
