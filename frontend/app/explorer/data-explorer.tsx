@@ -53,12 +53,14 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
 
   return (
     <div
-      className="flex w-[80vw] flex-col p-4 h-screen items-start justify-start outline-none"
+      className="flex w-[80vw] flex-col p-8 h-screen items-start justify-start outline-none"
       onKeyDown={(e) => e.key === "Escape" && setSelectedCell(null)}
       tabIndex={0}
     >
       <div className="flex flex-col gap-1 items-start justify-start w-full">
-        <p className="text-primary text-xl font-bold">{collectionName}</p>
+        <p className="text-primary text-xl font-merriweather font-bold">
+          {collectionName}
+        </p>
         <div className="flex items-center justify-start gap-1">
           <p className="text-secondary text-xs font-light">
             {collection.total} items
@@ -94,7 +96,7 @@ const DataExplorer: React.FC<DataExplorerProps> = ({
                 key={key}
               >
                 <p className="text-secondary text-xs font-light">{key}</p>
-                <div className="text-sm text-primary whitespace-pre-wrap">
+                <div className="text-base text-primary whitespace-pre-wrap">
                   <ReactMarkdown>{String(selectedCell[key])}</ReactMarkdown>
                 </div>
               </div>

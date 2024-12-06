@@ -43,6 +43,9 @@ export function useRouting(
     if (mode === "home") {
       params.delete("collection_id");
       params.delete("page");
+    } else if (mode === "data-explorer") {
+      params.delete("collection_id");
+      params.delete("page");
     }
     router.push(`/?${params.toString()}`);
   };

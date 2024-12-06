@@ -13,6 +13,7 @@ import { useCollections } from "./explorer/useCollections";
 import DataExplorer from "./explorer/data-explorer";
 import { useRouting } from "./navigation/useRouting";
 import { useDebug } from "./debugging/useDebug";
+import Dashboard from "./explorer/dashboard";
 
 export default function Home() {
   const [mode, setMode] = useState<"home" | "data-explorer">("home");
@@ -132,7 +133,7 @@ export default function Home() {
           fetchDebug={fetchDebug}
         />
       )}
-      {mode === "data-explorer" && (
+      {mode === "data-explorer" && selectedCollection && (
         <DataExplorer
           collectionData={collectionData}
           collectionLoading={loadingCollection}
@@ -149,6 +150,7 @@ export default function Home() {
           pageSize={pageSize}
         />
       )}
+      {mode === "data-explorer" && !selectedCollection && <Dashboard />}
     </div>
   );
 }
