@@ -13,10 +13,13 @@ from elysia.tree.objects import TreeData, DecisionData, ActionData
 # Globals
 from elysia.globals.reference import create_reference
 
+# dspy
+from elysia.dspy.environment_of_thought import EnvironmentOfThought
+
 class DecisionExecutor(dspy.Module):
 
     def __init__(self, available_tasks: list[dict] = None):
-        self.router = dspy.ChainOfThought(construct_decision_prompt(available_tasks))
+        self.router = EnvironmentOfThought(construct_decision_prompt(available_tasks))
     
     def forward(self, 
                 user_prompt: str,
@@ -53,7 +56,7 @@ class DecisionExecutor(dspy.Module):
 class InputExecutor(dspy.Module):
 
     def __init__(self):
-        self.input_model = dspy.ChainOfThought(InputPrompt)
+        self.input_model = EnvironmentOfThought(InputPrompt)
 
     def forward(self, task: str) -> list[str]:
         return self.input_model(task=task).subtasks
