@@ -109,18 +109,23 @@ const QueryInput: React.FC<QueryInputProps> = ({
                 ? "Ask a follow up question..."
                 : "Elysia will search through your data..."
             }
-            className={`w-full p-2 bg-transparent outline-none text-xs resize-none ${
+            className={`w-full p-2 bg-transparent outline-none text-sm resize-none leading-tight ${
               query_length === 0
                 ? "h-[20vh] rounded-xl"
-                : "h-[3vh] rounded-full"
+                : "h-[3vh] rounded-full flex items-center"
             }`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
                 handleSendQuery(query, route, mimick);
                 setQuery("");
               }
+            }}
+            style={{
+              overflow: "hidden",
+              paddingTop: query_length === 0 ? "8px" : "2px",
             }}
           />
           <div className="flex gap-1">
