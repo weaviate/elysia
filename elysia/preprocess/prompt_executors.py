@@ -1,5 +1,9 @@
 import dspy
 
+# dspy
+from elysia.dspy.environment_of_thought import EnvironmentOfThought
+
+# Prompt Templates
 from elysia.preprocess.prompt_templates import (
     CollectionSummariserPrompt, 
     DataMappingPrompt,
@@ -10,7 +14,7 @@ class CollectionSummariserExecutor(dspy.Module):
     
     def __init__(self):
         super().__init__()
-        self.collection_summariser_prompt = dspy.ChainOfThought(CollectionSummariserPrompt)
+        self.collection_summariser_prompt = EnvironmentOfThought(CollectionSummariserPrompt)
 
     def forward(self, data: list[dict], data_fields: list[str]) -> dict:
         prediction = self.collection_summariser_prompt.forward(data=data, data_fields=data_fields)
@@ -26,7 +30,7 @@ class ReturnTypeExecutor(dspy.Module):
 
     def __init__(self):
         super().__init__()
-        self.return_type_prompt = dspy.ChainOfThought(ReturnTypePrompt)
+        self.return_type_prompt = EnvironmentOfThought(ReturnTypePrompt)
 
     def forward(self, collection_summary: str, data_fields: dict, example_objects: list[dict], possible_return_types: list[str]):
         prediction = self.return_type_prompt(
@@ -56,7 +60,7 @@ class DataMappingExecutor(dspy.Module):
 
     def __init__(self):
         super().__init__()
-        self.data_mapping_prompt = dspy.ChainOfThought(DataMappingPrompt)
+        self.data_mapping_prompt = EnvironmentOfThought(DataMappingPrompt)
     
     def forward(
         self, 

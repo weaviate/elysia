@@ -1,6 +1,7 @@
 import dspy
 import datetime
 import re
+import time
 from typing import Any, Generator
 
 # Weaviate functions for code execution
@@ -21,6 +22,9 @@ from elysia.querying.prompt_templates import (
     ObjectSummaryPrompt 
 )
 
+# dspy
+from elysia.dspy.environment_of_thought import EnvironmentOfThought
+
 # Objects
 from elysia.api.objects import Warning, Error, Status, TreeUpdate
 
@@ -36,7 +40,7 @@ class QueryExecutor(dspy.Module):
 
     def __init__(self, collection_names: list[str] = None):
         super().__init__()
-        self.query_prompt = dspy.ChainOfThought(construct_query_prompt(collection_names))
+        self.query_prompt = EnvironmentOfThought(construct_query_prompt(collection_names))
         self.collection_names = collection_names
 
     def _evaluate_code_safety(self, query_code: str) -> tuple[bool, str]:
@@ -286,7 +290,7 @@ class QueryExecutor(dspy.Module):
     
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names
-        self.query_prompt = dspy.ChainOfThought(construct_query_prompt(collection_names))
+        self.query_prompt = EnvironmentOfThought(construct_query_prompt(collection_names))
 
     async def forward(
         self, 
@@ -302,6 +306,7 @@ class QueryExecutor(dspy.Module):
         
         # run query code generation
         try:
+            t = time.time()
             prediction = self.query_prompt(
                 user_prompt=user_prompt, 
                 reference=create_reference(),
@@ -317,6 +322,7 @@ class QueryExecutor(dspy.Module):
                 collection_return_types=collection_return_types,
                 data_queried=data_queried
             )
+            print(f"Time taken for query creator prompt: {time.time() - t:.2f} seconds")
         except Exception as e:
             backend_print(f"Error in query creator prompt: {e}")
             # Return empty values when there's an error

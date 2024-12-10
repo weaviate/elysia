@@ -164,7 +164,7 @@ class CollectionChunker:
                     )
                 ],
                 vectorizer_config=Configure.Vectorizer.text2vec_openai(
-                    model_name="text-embedding-3-large",
+                    model="text-embedding-3-large",
                     dimensions=256
                 ),
                 vector_index_config=Configure.VectorIndex.hnsw(

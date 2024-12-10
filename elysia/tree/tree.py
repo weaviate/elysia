@@ -2,6 +2,7 @@ import json
 import os
 import ast
 import inspect
+import time
 import dspy
 from typing import Callable, List, Any, Dict
 from rich import print
@@ -39,7 +40,12 @@ from elysia.training.prompt_executors import TrainingDecisionExecutor
 
 # dspy requires a 'base' LM but this should not be used
 import dspy
-fallback_lm = dspy.LM("claude-3-5-haiku-20241022")
+# from dspy import LM
+from elysia.dspy.cached_lm import CachingLM as LM
+
+from elysia.dspy.cached_claude import CachingClaude
+
+fallback_lm = LM("claude-3-5-haiku-20241022")
 dspy.settings.configure(lm=fallback_lm)
 
 class RecursionLimitException(Exception):
@@ -53,8 +59,8 @@ class DecisionNode:
             options: list[dict[str, str]], 
             root: bool = False, 
             dspy_model: str = None,
-            base_lm: dspy.LM = None,
-            complex_lm: dspy.LM = None
+            base_lm: LM = None,
+            complex_lm: LM = None
         ):
         
         self.id = id
@@ -100,20 +106,20 @@ class DecisionNode:
             decision_data: DecisionData, 
             action_data: ActionData, 
             training: bool = False,
+            model: str = "base",
             **kwargs
         ):
         
-        # run LLM
-        with dspy.context(lm=self.base_lm):
+        with dspy.context(lm=self.base_lm if model == "base" else self.complex_lm):
             output, self.completed = self.decision_executor(
                 user_prompt=tree_data.user_prompt,
-                instruction=decision_data.instruction,
                 conversation_history=tree_data.conversation_history,
-                collection_information=action_data.collection_information,
                 previous_reasoning=tree_data.previous_reasoning,
-                tree_count=decision_data.tree_count_string(),
-                data_queried=tree_data.data_queried_string(),
                 current_message=tree_data.current_message,
+                data_queried=tree_data.data_queried_string(),
+                instruction=decision_data.instruction,
+                collection_information=action_data.collection_information,
+                tree_count=decision_data.tree_count_string(),
                 available_tasks=decision_data.available_tasks,
                 available_information=decision_data.available_information.to_json(),
                 future_information=decision_data.future_information
@@ -264,15 +270,17 @@ class Tree:
         self.collection_names = collection_names
 
         # set up LLMs in dspy
-        # self.base_lm = dspy.LM(model="gpt-4o-mini", max_tokens=6000)
-        # self.complex_lm = dspy.LM(model="gpt-4o", max_tokens=6000)
-        self.base_lm = dspy.LM(model="claude-3-5-haiku-20241022", max_tokens=6000)
-        self.complex_lm = dspy.LM(model="claude-3-5-sonnet-20241022", max_tokens=6000)
+        # self.base_lm = LM(model="gpt-4o-mini", max_tokens=6000)
+        # self.complex_lm = LM(model="gpt-4o", max_tokens=6000)
+        self.base_lm = LM(model="claude-3-5-haiku-20241022", max_tokens=6000)
+        self.complex_lm = LM(model="claude-3-5-sonnet-20241022", max_tokens=6000)
+        # self.base_lm = LM(model="bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0", max_tokens=6000)
+        # self.complex_lm = LM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0", max_tokens=6000)
         # dspy.settings.configure(lm=self.base_lm)
 
         # keep track of the number of trees completed
         self.num_trees_completed = 0
-        self.max_recursions = 3
+        self.max_recursions = 5
 
         # Initialise some tree variables
         self.decision_nodes = {}
@@ -353,18 +361,21 @@ class Tree:
                     "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(all_return_types.values()),
                     "action": None,
                     "next": "search",
+                    "status": "Searching..."
                 },
                 "summarize": {
                     "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
                     "future": "",
                     "action": Summarizer(),
-                    "next": None    # next=None represents the end of the tree
+                    "next": None,
+                    "status": "Summarising..."
                 },
                 "text_response": {
                     "description": "End the conversation. This should be used when the user has finished their query, or you have nothing more to do.",
                     "future": "",
                     "action": None,
-                    "next": None
+                    "next": None,
+                    "status": "Writing response..."
                 }
             },
             root = True
@@ -383,12 +394,14 @@ class Tree:
                     "future": "You will be given information about the collection, such as the fields and types of the data. Then, query with semantic search, keyword search, or a combination of both.",
                     "action": self.querier,
                     "next": None,
+                    "status": "Querying..."
                 },
                 "aggregate": {
                     "description": "Perform functions such as counting, averaging, summing, etc. on the data, grouping by some property and returning metrics/statistics about different categories. Or providing a high level overview of the dataset.",
                     "future": "You will be given information about the collection, such as the fields and types of the data. Then, aggregate over different categories of the collection, with operations: top_occurences, count, sum, average, min, max, median, mode, group_by.",
                     "action": self.aggregator,
-                    "next": None    # next=None represents the end of the tree
+                    "next": None,     # next=None represents the end of the tree
+                    "status": "Aggregating..."
                 }
             },
             root = False
@@ -467,7 +480,7 @@ class Tree:
     
     def _update_conversation_history(self, role: str, message: str, append_to_previous: bool = False):
         if message != "":
-            if append_to_previous:
+            if append_to_previous and self.tree_data.conversation_history[-1]["role"] == role:
                 self.tree_data.conversation_history[-1]["content"] += message
             else:
                 self.tree_data.update_list("conversation_history", {
@@ -731,19 +744,41 @@ class Tree:
 
                 # run the decision agent
                 if training_mimick_model:
+                    t = time.time()
                     decision, action_fn, model_completed = current_decision_node.decide_with_training(
                         tree_data=self.tree_data,
                         decision_data=self.decision_data,
                         action_data=self.action_data,
                         task=task
                     )
+                    print(f"Time taken for decision: {time.time() - t:.2f} seconds")
                 else:
+                    t = time.time()
                     decision, action_fn, model_completed = current_decision_node(
                         tree_data=self.tree_data,
                         decision_data=self.decision_data,
-                        action_data=self.action_data
+                        action_data=self.action_data,
+                        model = "base"
                     )
+                    print(f"Time taken for decision (base): {time.time() - t:.2f} seconds")
 
+                    if decision.confidence_score < 0.5:
+                        yield self.returner._parse_status(
+                            Status(f"Deferring to larger model..."), 
+                            query_id = self.prompt_to_query_id[user_prompt]
+                        )
+
+                        if self.verbosity > 1:
+                            backend_print(f"Confidence: {decision.confidence_score:.2f}. Deferring to larger model...")
+
+                        t = time.time()
+                        decision, action_fn, model_completed = current_decision_node(
+                            tree_data=self.tree_data,
+                            decision_data=self.decision_data,
+                            action_data=self.action_data,
+                            model = "complex"
+                        )
+                        print(f"Time taken for decision (complex): {time.time() - t:.2f} seconds")
                 # extract task
                 if training_route is None:
                     task = decision.task
@@ -755,7 +790,10 @@ class Tree:
                 # additional end criteria, recursion limit reached
                 if recursion_counter > self.decision_data.recursion_limit:
                     backend_print(f"Warning: [bold red]Recursion limit reached! ({recursion_counter})[/bold red]")
-                    yield self.returner._parse_warning(Warning("Recursion limit reached! Forcing text response."), query_id = self.prompt_to_query_id[user_prompt])
+                    yield self.returner._parse_warning(
+                        Warning("Recursion limit reached! Forcing text response."), 
+                        query_id = self.prompt_to_query_id[user_prompt]
+                    )
                     model_completed = True
 
                 # set current variables (if not in training mode)
@@ -772,7 +810,12 @@ class Tree:
                     yield self.returner._parse_text(Response([{"text": message_update}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
                     if self.verbosity > 1:
-                        print(Panel.fit(message_update, title="Reasoning update", padding=(1,1), border_style="cyan"))
+                        print(Panel.fit(
+                            message_update, 
+                            title="Reasoning update", 
+                            padding=(1, 1), 
+                            border_style="cyan"
+                        ))
 
                 # update the tree update
                 yield self.returner._parse_tree_update(
@@ -787,7 +830,7 @@ class Tree:
                 )
 
                 yield self.returner._parse_status(
-                    Status(f"Decided to perform '{task}'"), 
+                    Status(current_decision_node.options[task]["status"]), 
                     query_id = self.prompt_to_query_id[user_prompt]
                 )
                 
@@ -821,12 +864,19 @@ class Tree:
 
             if (
                 training_route is None or training_mimick_model
-            ) and decision.full_chat_response != "" and task != "summarize":
+            ) and (
+                decision.full_chat_response != "" and task == "text_response"
+            ):
                 self._update_conversation_history("assistant", decision.full_chat_response, append_to_previous=True)
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
 
                 if self.verbosity > 1:
-                    print(Panel.fit(decision.full_chat_response, title="Full chat response", padding=(1,1), border_style="cyan"))
+                    print(Panel.fit(
+                        decision.full_chat_response, 
+                        title="Full chat response", 
+                        padding=(1, 1), 
+                        border_style="cyan"
+                    ))
 
             yield self.returner._parse_completed(query_id = self.prompt_to_query_id[user_prompt])
 
