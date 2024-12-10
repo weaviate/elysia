@@ -48,7 +48,8 @@ export function useCollections() {
   };
 
   const fetchCollectionData = async () => {
-    if (!selectedCollection) return;
+    if (!selectedCollection || selectedCollection === "elysia_dashboard")
+      return;
     setLoadingCollection(true);
     const collectionData = await getCollection(
       selectedCollection,

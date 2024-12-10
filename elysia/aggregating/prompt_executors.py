@@ -4,6 +4,9 @@ import dspy
 from elysia.globals.weaviate_client import client
 from elysia.globals.reference import create_reference
 
+# dspy
+from elysia.dspy.environment_of_thought import EnvironmentOfThought
+
 # Util
 from elysia.util.logging import backend_print
 
@@ -17,7 +20,7 @@ from weaviate.classes.aggregate import GroupByAggregate
 class AggregateExecutor(dspy.Module):
 
     def __init__(self, collection_names: list[str]):
-        self.aggregate_prompt = dspy.ChainOfThought(construct_aggregate_prompt(collection_names))
+        self.aggregate_prompt = EnvironmentOfThought(construct_aggregate_prompt(collection_names))
         self.collection_names = collection_names
 
     def _execute_code(self, aggregation_code: str, collection_name: str) -> dict:
@@ -33,7 +36,7 @@ class AggregateExecutor(dspy.Module):
 
     def set_collection_names(self, collection_names: list[str]):
         self.collection_names = collection_names
-        self.aggregate_prompt = dspy.ChainOfThought(construct_aggregate_prompt(collection_names))
+        self.aggregate_prompt = EnvironmentOfThought(construct_aggregate_prompt(collection_names))
 
     def forward(
         self, 

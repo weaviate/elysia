@@ -224,6 +224,25 @@ class TreeData(PromptData):
     This includes things like conversation history, actions, decisions, etc.
     These data are given to ALL agents, so every agent is aware of the stage of the decision processes.
     """
+    descriptions = {
+        "user_prompt": "The user's original question.",
+        "previous_reasoning": """Your previous decision logic across multiple attempts:
+            {
+                "tree_1": {"decision_1": str, "decision_2": str},
+                "tree_2": {"decision_1": str, "decision_2": str}
+            }
+            Use to build on past decisions and avoid repeating failed approaches.
+            Each tree represents a complete attempt at answering the query.""".strip(),
+        "conversation_history": """Previous messages between user and assistant in chronological order:
+            [{"role": "user"|"assistant", "content": str}]
+            Use this to maintain conversation context and avoid repetition.""".strip(),
+        "data_queried": """Record of collection queries and results:
+            - Which collections were searched
+            - Number of items retrieved per collection
+            Use this to determine whether future searches for this prompt are necessary.
+            If the search has been performed multiple times, it is unlikely performing the same search again will retrieve any more information.""".strip(),
+        "current_message": "Partial response being built for the user."
+    }
     def __init__(
             self,
             user_prompt: str = "",
@@ -288,6 +307,21 @@ class TreeData(PromptData):
                         else:
                             out += f" - [Search {counter}] Aggregated '{collection_name}' with prompt '{prompt}' {f'(for the {k+1}{numth} time)' if j > 0 else ''}\n"
         return out
+
+    def to_json(self):
+        out = {}
+        for key in self.__dict__:
+            out[key] = {}
+            if key != "data_queried":
+                out[key]["value"] = self.__dict__[key]
+                out[key]["description"] = self.descriptions[key]
+
+            else:
+                out[key]["value"] = self.data_queried_string()
+                out[key]["description"] = self.descriptions["data_queried"]
+
+        return out
+
 
 class ActionData(PromptData):
     """

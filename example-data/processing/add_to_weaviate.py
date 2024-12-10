@@ -221,8 +221,8 @@ if __name__ == "__main__":
     # slack_messages_df = pd.read_csv("../verba_slack_conversations.csv")
     # email_chains_df   = pd.read_csv("../verba_email_chains.csv")
     # ecommerce_df      = pd.read_csv("../ecommerce.csv")
-    # contracts_df      = pd.read_csv("../financial_contracts.csv")
-    weather_df        = pd.read_csv("../weather_data.csv")
+    contracts_df      = pd.read_csv("../financial_contracts.csv")
+    # weather_df        = pd.read_csv("../weather_data.csv")
 
 
     # # add github issues data to weaviate collection
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     # add_conversations_to_weaviate(client, slack_messages_df, "example_verba_slack_conversations", force=True)
 
     # add financial contracts data to weaviate collection
-    # add_financial_contracts_to_weaviate(client, contracts_df, "financial_contracts", force=True)
+    add_financial_contracts_to_weaviate(client, contracts_df, "financial_contracts", force=True)
 
     # add weather data to weaviate collection
-    add_weather_to_weaviate(client, weather_df, "weather", force=True)
+    # add_weather_to_weaviate(client, weather_df, "weather", force=True)

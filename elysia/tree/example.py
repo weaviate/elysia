@@ -26,28 +26,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "what was kaladin's most recent message?",
-        training_route="search/query/text_response",
-    )
-
-    print(tree.tree_data.data_queried_string())
-    tree = Tree(
-        collection_names=[
-            "example_verba_github_issues", 
-            "example_verba_slack_conversations", 
-            "example_verba_email_chains", 
-            "ecommerce",
-            "financial_contracts",
-            "weather"
-        ],
-        verbosity=2, 
-        break_down_instructions=False, 
-        dspy_model=None
-    )
-
-    outputs = tree.process_sync(
-        "what was kaladin's most recent message?",
-        training_route="text_response",
+        "show me some green pants",
     )
 
     tree.base_lm.inspect_history(5)

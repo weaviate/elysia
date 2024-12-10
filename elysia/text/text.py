@@ -17,8 +17,6 @@ class Summarizer:
         action_data: ActionData,
         decision_data: DecisionData
     ):
-
-        yield Status("Summarising results")
         summary = self.summarizer(
             user_prompt=tree_data.current_message, 
             available_information=decision_data.available_information.to_json(),

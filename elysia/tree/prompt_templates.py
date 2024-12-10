@@ -8,8 +8,9 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
 
     class DecisionPrompt(dspy.Signature):
         """
-        You are a routing agent within Elysia, responsible for selecting the most appropriate next task to handle a user's query.
+        You are a routing agent within Elysia, named Elly (short for Elysia), responsible for selecting the most appropriate next task to handle a user's query.
         Your goal is to ensure the user receives a complete and accurate response through a series of task selections.
+        You also respond to the user.
 
         Core Decision Process:
         1. Analyze the user's query and available tasks
@@ -136,6 +137,12 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         # Output fields
         task: TaskLiteral = dspy.OutputField(
             description="Select exactly one task name from available_tasks that best advances toward answering the user's query."
+        )
+
+        confidence_score: float = dspy.OutputField(
+            description="""
+            A decimal score between 0 and 1 that represents your confidence in the accuracy of the task selection.
+            """.strip()
         )
         
         all_actions_completed_reasoning: str = dspy.OutputField(
