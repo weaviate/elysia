@@ -4,9 +4,10 @@ import asyncio
 sys.path.append(os.getcwd())
 os.chdir("../..")
 
-from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData, InitialiseTreeData
+from elysia.api.api_types import GetCollectionData, QueryData, GetCollectionsData, InitialiseTreeData, DebugData
 from rich import print
 
+from elysia.api.routes.utils import debug
 from elysia.api.routes.query import process
 from elysia.api.routes.tree import initialise_tree
 from elysia.api.services.tree import TreeManager
@@ -44,6 +45,13 @@ async def main():
     )
 
     await process(query_data.model_dump(), fake_websocket(), tree_manager)
+
+    debug_data = DebugData(
+        user_id="test",
+        conversation_id="test"
+    )
+
+    await debug(debug_data, tree_manager)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -226,6 +226,84 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
         ```
         Note the underscore `_` after the `sum` argument. This is intended and required.
 
+
+        # Example [6]:
+
+        In this example, an ecommerce collection is grouped by the property name "collection", referring to the collection of the product.
+        Only collections with a rating greater than 4 are returned.
+
+        ```
+        response = collection.aggregate.over_all(
+            group_by=GroupByAggregate(prop="collection"),
+            filters=Filter.by_property("rating").greater_than(4.),
+        )
+        ```
+
+        Note that the `filters` argument is used to filter the results after the aggregation has been performed.
+        
+        Also note that the `4.` is used with the full stop `.` to convert the integer 4 to a float. This is based on the data type of the property, which is a number.
+        If it was an integer, then you would use `4` without the full stop.
+
+        The `Filter` class has the following methods:
+        |  .all_of(filters: List[weaviate.collections.classes.filters._Filters]) -> weaviate.collections.classes.filters._Filters
+        |      Combine all filters in the input list with an AND operator.
+        |
+        |  .any_of(filters: List[weaviate.collections.classes.filters._Filters]) -> weaviate.collections.classes.filters._Filters
+        |      Combine all filters in the input list with an OR operator.
+        |
+        |  .by_property(name: str, length: bool = False) -> weaviate.collections.classes.filters._FilterByProperty
+        |      Define a filter based on a property to be used when querying and deleting from a collection.
+
+        Most of the time when using filters, you will be using the `.by_property` method.
+        The `.by_property` method has the following methods:
+        |  .contains_all(self, val: Union[Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property contains all of the given values.
+        |
+        |  .contains_any(self, val: Union[Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property contains any of the given values.
+        |
+        |  .equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is equal to the given value.
+        |
+        |  .greater_or_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is greater than or equal to the given value.
+        |
+        |  .greater_than(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is greater than the given value.
+        |
+        |  .is_none(self, val: bool) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is `None`.
+        |
+        |  .less_or_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is less than or equal to the given value.
+        |
+        |  .less_than(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is less than the given value.
+        |
+        |  .like(self, val: str) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is like the given value.
+        |
+        |      This filter can make use of `*` and `?` as wildcards. 
+        |
+        |  .not_equal(self, val: Union[int, float, str, bool, datetime.datetime, uuid.UUID, weaviate.collections.classes.filters._GeoCoordinateFilter, NoneType, Sequence[str], Sequence[bool], Sequence[int], Sequence[float], Sequence[datetime.datetime], Sequence[Union[str, uuid.UUID]]]) -> weaviate.collections.classes.filters._Filters
+        |      Filter on whether the property is not equal to the given value.
+        
+        ___
+
+        Do NOT assume any information about the contents of the collection when filtering, only use what information you have.
+        Another example of using the filters argument is something like
+        ```
+        collection.aggregate.over_all(
+            ...
+            filters=Filter.by_property("id").equal("123")
+        )
+        ```
+        which is ensuring the "id" property is equal to "123" across all results.
+
+        Use the collection information to determine the property to filter on, as this is likely requiring exact string matching between what is in the data.
+        
+        ONLY use filter if the data type is numerical, in which case the user prompt should specify exactly the numerical value to filter on.
+
         Use the above examples to guide you, but create your own aggregation function that is specific to the user prompt.
         You should not use one of the above examples directly, but rather use them as a guide to create your own aggregation function.
         """
@@ -340,7 +418,7 @@ def construct_aggregate_prompt(collection_names: list[str] = None) -> dspy.Signa
             format = str
         )
         reasoning_update_message: str = dspy.OutputField(
-            description="Write out current_message in full, then add one sentence to the paragraph which explains your task selection logic. Mark your new sentence with <NEW></NEW>. If current_message is empty, your whole message should be enclosed in <NEW></NEW>. Use gender-neutral language and communicate to the user in a friendly way."
+            description="Write out current_message in full, then add one sentence to the paragraph which explains your task selection logic. Mark your new sentence with <NEW></NEW>. If current_message is empty, your whole message should be enclosed in <NEW></NEW>. You are communicating directly to the user, so use gender-neutral language, be friendly, and do not say 'the user', as you're speaking to them directly."
         )
 
     return AggregatePrompt

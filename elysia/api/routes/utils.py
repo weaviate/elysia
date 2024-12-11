@@ -120,15 +120,22 @@ async def debug(
 
     histories = [None]*2
     for i, lm in enumerate([base_lm, complex_lm]):
-        histories[i] = [
-            lm_history["messages"] + [
+        histories[i] = []
+        for lm_history in lm.history:
+            message_thread = []
+            for message in lm_history["messages"]:
+                if isinstance(message["content"], list):
+                    # assume its a system message list with one dict element
+                    message["content"] = message["content"][0]["text"]
+                message_thread.append(message)
+
+            message_thread.append(
                 {
                     "role": "assistant",
                     "content": lm_history["response"].choices[0].message.content
                 }
-            ]
-            for lm_history in lm.history
-        ]
+            )
+            histories[i].append(message_thread)
         
     out = {
         "base_lm": {
