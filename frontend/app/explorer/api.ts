@@ -1,6 +1,6 @@
 "use server";
 
-import { CollectionPayload, CollectionData } from "../types";
+import { CollectionPayload, CollectionData, MetadataPayload } from "../types";
 
 import host from "../host";
 
@@ -36,16 +36,17 @@ export async function getCollectionMetadata(
   conversation_id: string,
   user_id: string
 ) {
-  const res = await fetch(`http://${host}/api/get_collection_metadata`, {
+  const res = await fetch(`http://${host}/api/collection_metadata`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ conversation_id, user_id }),
   });
-  const data: any = await res.json();
+  const data: MetadataPayload = await res.json();
   if (data.error) {
     throw new Error(data.error);
   }
+
   return data;
 }
