@@ -48,25 +48,26 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         )
 
         # Collection information for user to ask basic questions about collection
-        collection_information: dict = dspy.InputField(
-            description="""
-            Metadata about available collections:
-            {
-                "name": str,
-                "length": int,
-                "summary": str,
-                "fields": {
-                    "field_name": {
-                        "groups": list[str],  # unique values for text fields
-                        "mean": float,        # average length/value
-                        "range": [min, max],
-                        "type": str
-                    }
-                }
-            }
-            Use to determine if user's request is possible with available data.
-            """.strip()
-        )
+        # collection_information: dict = dspy.InputField(
+        #     description="""
+        #     Metadata about available collections:
+        #     {
+        #         "name": str,
+        #         "length": int,
+        #         "summary": str,
+        #         "fields": {
+        #             "field_name": {
+        #                 "groups": list[str],  # unique values for text fields
+        #                 "mean": float,        # average length/value
+        #                 "range": [min, max],
+        #                 "type": str
+        #             }
+        #         }
+        #     }
+        #     Use to determine if user's request is possible with available data.
+        #     """.strip()
+        # )
+        
         # Communication-based input fields
         previous_reasoning: dict = dspy.InputField(
             description="""
@@ -115,6 +116,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
                 "[name]": [task description]
             }
             You MUST select one task name exactly as written as it appears in the keys of the dictionary.
+            You can select a task again in the future if you need to, you are allowed to choose the same task multiple times.
             """.strip()
         )
         
@@ -168,7 +170,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         )
         
         reasoning_update_message: str = dspy.OutputField(
-            description="Write out current_message in full, then add one sentence to the paragraph which explains your task selection logic. Mark your new sentence with <NEW></NEW>. If current_message is empty, your whole message should be enclosed in <NEW></NEW>. Use gender-neutral language and communicate to the user in a friendly way."
+            description="Write out current_message in full, then add one sentence to the paragraph which explains your task selection logic. Mark your new sentence with <NEW></NEW>. If current_message is empty, your whole message should be enclosed in <NEW></NEW>. You are communicating directly to the user: use gender-neutral language, be friendly, do not say 'the user', speak directly to them."
         )
         
         full_chat_response: str = dspy.OutputField(

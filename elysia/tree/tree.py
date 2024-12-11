@@ -272,11 +272,15 @@ class Tree:
         # set up LLMs in dspy
         # self.base_lm = LM(model="gpt-4o-mini", max_tokens=6000)
         # self.complex_lm = LM(model="gpt-4o", max_tokens=6000)
-        self.base_lm = LM(model="claude-3-5-haiku-20241022", max_tokens=6000)
+        # self.complex_lm = LM(model="claude-3-5-haiku-20241022", max_tokens=6000    )
         self.complex_lm = LM(model="claude-3-5-sonnet-20241022", max_tokens=6000)
-        # self.base_lm = LM(model="bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0", max_tokens=6000)
+        # self.complex_lm = LM(model="bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0", max_tokens=6000)
         # self.complex_lm = LM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0", max_tokens=6000)
-        # dspy.settings.configure(lm=self.base_lm)
+        
+        # self.base_lm = LM(model="gemini-1.5-flash", max_tokens=6000)
+        # self.complex_lm = LM(model="gemini-1.5-flash", max_tokens=6000)
+        self.base_lm = LM(model="openrouter/google/gemini-flash-1.5", max_tokens=6000)
+        # self.complex_lm = LM(model="openrouter/meta-llama/llama-3.3-70b-instruct", max_tokens=6000)
 
         # keep track of the number of trees completed
         self.num_trees_completed = 0
@@ -340,24 +344,26 @@ class Tree:
             collection_names=self.collection_names
         )
 
+        # Summariser
+        self.summariser = Summarizer(
+            base_lm=self.base_lm,
+            complex_lm=self.complex_lm
+        )
+
         # -- Initialise the tree
         # default initialisations -
         self.add_decision_node(
             id = "base",
             instruction = """
-            Choose a task based on the user's prompt and the available information. 
-            Use all information available to you to make the decision.
-            If you _have searched already_ (based on completed_tasks), and there is no information (based on available_information), 
-            you should assume that the task is impossible, hence choose text_response to reply this to the user.
-            If you look forward and see that you will not be able to search for any relevant information, you should choose text_response.
-            Otherwise, if you haven't searched yet, you should search the knowledge base.
-            If you don't need to search, i.e. the user is talking to you, or you have already searched and there is no new information, choose text_response.
-            If you have searched, and there is available information, you should choose summarize to reply this to the user.
-            If you choose summarize, you should set all_actions_completed to True, since this is the last decision to make.
+            Choose a base-level task based on the user's prompt and available information. 
+            You can search, which includes aggregating or querying information - this should be used if the user needs (more) information.
+            You can end the conversation by choosing text response, or summarise some retrieved information.
+            Base your decision on what information is available and what the user is asking for - you can search multiple times if needed,
+            but you should not search if you have already found all the information you need.
             """,
             options = {
                 "search": {
-                    "description": "Search the knowledge base. This should be used when the user is lacking information about a specific issue. This retrieves information only and provides no output to the user except the information.",
+                    "description": "Search the knowledge base. This should be used when the user is lacking information for this particular prompt. This retrieves information only and provides no output to the user except the information.",
                     "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(all_return_types.values()),
                     "action": None,
                     "next": "search",
@@ -366,7 +372,7 @@ class Tree:
                 "summarize": {
                     "description": "Summarize some already required information. This should be used when the user wants a high-level overview of some retrieved information or a generic response based on the information.  This is usually the last decision to make, so you should set all_actions_completed to True if you choose this.",
                     "future": "",
-                    "action": Summarizer(),
+                    "action": self.summariser,
                     "next": None,
                     "status": "Summarising..."
                 },
@@ -779,11 +785,12 @@ class Tree:
                             model = "complex"
                         )
                         print(f"Time taken for decision (complex): {time.time() - t:.2f} seconds")
+
                 # extract task
                 if training_route is None:
                     task = decision.task
 
-                # additional end criteria, task picked is "text_response"
+                # additional end criteria, task picked is "text_response" - the model knows this
                 if task == "text_response":
                     model_completed = True
 
@@ -865,7 +872,7 @@ class Tree:
             if (
                 training_route is None or training_mimick_model
             ) and (
-                decision.full_chat_response != "" and task == "text_response"
+                decision.full_chat_response != "" and task != "summarize"
             ):
                 self._update_conversation_history("assistant", decision.full_chat_response, append_to_previous=True)
                 yield self.returner._parse_text(Response([{"text": decision.full_chat_response}], {}), query_id = self.prompt_to_query_id[user_prompt])
