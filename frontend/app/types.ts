@@ -22,6 +22,28 @@ export type Message = {
     | TreeUpdatePayload;
 };
 
+export type MetadataPayload = {
+  metadata: {
+    [key: string]: MetadataCollection;
+  };
+  error: string;
+};
+
+export type MetadataCollection = {
+  mappings: { [key: string]: [key: string] };
+  fields: { [key: string]: MetadataField };
+  length: number;
+  summary: string;
+  name: string;
+};
+
+export type MetadataField = {
+  range: [number, number];
+  type: string;
+  groups: string[];
+  mean: number;
+};
+
 export type ResponsePayload = {
   type: "response" | "summary" | "code";
   /* eslint-disable @typescript-eslint/no-explicit-any */

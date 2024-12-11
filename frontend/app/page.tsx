@@ -150,7 +150,13 @@ export default function Home() {
           pageSize={pageSize}
         />
       )}
-      {mode === "data-explorer" && !selectedCollection && <Dashboard />}
+      {mode === "data-explorer" && !selectedCollection && (
+        <Dashboard
+          collections={collections}
+          conversation_id={currentConversation || ""}
+          user_id={id || ""}
+        />
+      )}
     </div>
   );
 }
