@@ -388,8 +388,8 @@ class ObjectSummaryPrompt(dspy.Signature):
 
     These objects can be of any type, and you should summarise them in a way that is useful to the user.
     """
-    objects = dspy.InputField(desc="The objects to summarise.", format = list[dict])
-    current_message = dspy.InputField(
+    objects: list[dict] = dspy.InputField(desc="The objects to summarise.", format = list[dict])
+    current_message: str = dspy.InputField(
         description="""
         The current message you, the assistant, have written to send to the user. 
         This message has not been sent yet, you will add text to it, to be sent to the user later.
@@ -401,9 +401,10 @@ class ObjectSummaryPrompt(dspy.Signature):
     reasoning_update_message: str = dspy.OutputField(
         description="Write out current_message in full, then add one sentence to the paragraph which explains your task selection logic. Mark your new sentence with <NEW></NEW>. If current_message is empty, your whole message should be enclosed in <NEW></NEW>. Use gender-neutral language and communicate to the user in a friendly way."
     )
-    summaries = dspy.OutputField(desc="""
+    summaries: list[str] = dspy.OutputField(desc="""
         The summaries of each individaual object, in a list of strings.
         Your output should be a list of strings in Python format, e.g. `["summary_1", "summary_2", ...]`.
+        Do not enclose with ```python or ```. Just the list only.
         """.strip(), 
         format = list[str]
     )

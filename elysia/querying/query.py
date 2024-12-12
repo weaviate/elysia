@@ -51,7 +51,11 @@ class AgenticQuery:
         self.complex_lm = complex_lm
 
         self.querier = QueryExecutor(collection_names).activate_assertions(max_backtracks=3)
-        self.object_summariser = ObjectSummaryExecutor().activate_assertions(max_backtracks=1)
+        self.object_summariser = ObjectSummaryExecutor(
+            base_lm=self.base_lm, 
+            complex_lm=self.complex_lm
+        ).activate_assertions(max_backtracks=1)
+        
         if len(query_filepath) > 0:
             self.querier.load(query_filepath)
 

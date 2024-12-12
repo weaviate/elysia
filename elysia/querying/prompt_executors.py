@@ -605,17 +605,16 @@ class QueryExecutor(dspy.Module):
 
 class ObjectSummaryExecutor(dspy.Module):
 
-    def __init__(self):
+    def __init__(self, base_lm: dspy.LM, complex_lm: dspy.LM):
         super().__init__()
         self.object_summary_prompt = dspy.ChainOfThought(ObjectSummaryPrompt)
+        self.base_lm = base_lm
+        self.complex_lm = complex_lm
 
     def forward(self, objects: list[dict], current_message: str):
-        prediction = self.object_summary_prompt(objects=objects, current_message=current_message)
 
-        try:
-            summary_list = eval(prediction.summaries)
-        except Exception as e:
-            dspy.Assert(False, f"Error converting summaries to list: {e}", target_module=self.object_summary_prompt)
-
-        return summary_list, prediction
+        with dspy.context(lm=self.base_lm):
+            prediction = self.object_summary_prompt(objects=objects, current_message=current_message)
+        
+        return prediction.summaries, prediction
     

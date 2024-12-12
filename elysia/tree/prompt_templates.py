@@ -8,30 +8,30 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
 
     class DecisionPrompt(dspy.Signature):
         """
-        You are a routing agent within Elysia, named Elly (short for Elysia), responsible for selecting the most appropriate next task to handle a user's query.
+        You are a routing agent within Elysia, named Elly (short for Elysia), responsible for selecting the most appropriate next task to handle a user's input.
         Your goal is to ensure the user receives a complete and accurate response through a series of task selections.
         You also respond to the user.
 
         Core Decision Process:
-        1. Analyze the user's query and available tasks
+        1. Analyze the user's input prompt and available tasks
         2. Review completed tasks and their outcomes in previous_reasoning
-        3. Check if current information satisfies the query
+        3. Check if current information satisfies the input prompt
         4. Select the most appropriate next task from available_tasks
         5. Determine if all possible actions have been exhausted
 
         Decision Rules:
         - Always select from available_tasks list only
-        - Prefer tasks that directly progress toward answering the query
+        - Prefer tasks that directly progress toward answering the input prompt
         - Mark all_actions_completed=True only when:
           * All relevant tasks have been completed successfully, OR
-          * The query is impossible to satisfy with available tasks
+          * The input prompt is impossible to satisfy with available tasks
         - Consider tree_count to avoid repetitive decisions
         """
 
 
         # Regular input fields
         user_prompt: str = dspy.InputField(
-            description="The user's original query that needs to be answered"
+            description="The user's original question/prompt that needs to be answered"
         )
         instruction: str = dspy.InputField(
             description="Specific guidance for this decision point that must be followed"
@@ -77,7 +77,7 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
                 "tree_2": {"decision_1": str, "decision_2": str}
             }
             Use to build on past decisions and avoid repeating failed approaches.
-            Each tree represents a complete attempt at answering the query.
+            Each tree represents a complete attempt at answering the input prompt.
             """.strip()
         )
 
@@ -92,8 +92,8 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
         
         data_queried: str = dspy.InputField(
             description="""
-            Record of collection queries and results:
-            - Which collections were searched
+            Record of collection queries/aggregations and results:
+            - Which collections were searched (queried or aggregated)
             - Number of items retrieved per collection
             Use this to determine whether future searches for this prompt are necessary.
             If the search has been performed multiple times, it is unlikely performing the same search again will retrieve any more information.
@@ -132,13 +132,13 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
             description="""
             Available follow-up tasks for each current task choice:
             {"task_name": "description of subsequent possible tasks"}
-            Use to plan multi-step approaches to answering the query.
+            Use to plan multi-step approaches to answering the input prompt.
             """.strip()
         )
 
         # Output fields
         task: TaskLiteral = dspy.OutputField(
-            description="Select exactly one task name from available_tasks that best advances toward answering the user's query."
+            description="Select exactly one task name from available_tasks that best advances toward answering the user's input prompt."
         )
 
         confidence_score: float = dspy.OutputField(
@@ -157,15 +157,15 @@ def construct_decision_prompt(available_tasks_list: list[str] = None) -> dspy.Si
 
         all_actions_completed: bool = dspy.OutputField(
             description="""
-            - True: Choose this if (1) all necessary information to answer the query is available, or (2) the query cannot be answered with the available tasks.
-            - False: Choose this if additional tasks might help answer the query.
+            - True: Choose this if (1) all necessary information to answer the input prompt is available, or (2) the input prompt cannot be answered with the available tasks.
+            - False: Choose this if additional tasks might help answer the input prompt.
 
             Be pragmatic:
 
-            - Pick True when retrieved information relates to the prompt, even if you cannot answer the query directly.
-            - Do not assess the usefulness of the information, only its relevance to the prompt.
+            - Pick True when retrieved information relates to the input prompt, even if you cannot answer the input prompt directly.
+            - Do not assess the usefulness of the information, only its relevance to the input prompt.
 
-            If nested tasks are needed (e.g., multiple queries/multiple collections), pick False until all relevant information is retrieved. Then switch to True.
+            If nested tasks are needed (e.g., multiple queries/multiple aggregations/multiple collections), pick False until all relevant information is retrieved. Then switch to True.
             """.strip()
         )
         

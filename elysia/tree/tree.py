@@ -280,6 +280,7 @@ class Tree:
         # self.base_lm = LM(model="gemini-1.5-flash", max_tokens=6000)
         # self.complex_lm = LM(model="gemini-1.5-flash", max_tokens=6000)
         self.base_lm = LM(model="openrouter/google/gemini-flash-1.5", max_tokens=6000)
+        # self.base_lm = LM(model="openrouter/google/gemini-2.0-flash-exp", max_tokens=6000)
         # self.complex_lm = LM(model="openrouter/meta-llama/llama-3.3-70b-instruct", max_tokens=6000)
 
         # keep track of the number of trees completed
@@ -364,7 +365,7 @@ class Tree:
             options = {
                 "search": {
                     "description": "Search the knowledge base. This should be used when the user is lacking information for this particular prompt. This retrieves information only and provides no output to the user except the information.",
-                    "future": "Choose to query, or aggregate information. Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(all_return_types.values()),
+                    "future": "Choose to query (semantic or keyword search on a knowledge base), or aggregate information (calculate properties/summary statistics/averages and operations on the knowledge bases). Collections that can be queried are " + ", ".join(self.collection_names) + ". Return types that are available are: " + ", ".join(all_return_types.values()),
                     "action": None,
                     "next": "search",
                     "status": "Searching..."
@@ -390,9 +391,9 @@ class Tree:
         self.add_decision_node(
             id = "search",
             instruction = """
-            Choose between querying the knowledge base via semantic search, or aggregating information from the knowledge base.
-            Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query.
-            Aggregating is when the user is looking for a high-level overview of the dataset, such as summary statistics of the quantity of some items. Aggregation can also include grouping information by some property and returning statistics about the groups.
+            Choose between querying the knowledge base via semantic/keyword search, or aggregating information by performing operations, on the knowledge base.
+            Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query. This is for retrieving specific information via a _query_, similar to a search engine.
+            Aggregating is when the user is looking for a specific operations on the dataset, such as summary statistics of the quantity of some items. Aggregation can also include grouping information by some property and returning statistics about the groups. This is similar to SQL style queries (grouping/filtering/performing operations on the data).
             """,
             options = {
                 "query": {

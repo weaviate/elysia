@@ -26,7 +26,7 @@ if __name__ == "__main__":
     )
 
     outputs = tree.process_sync(
-        "show me some green pants",
+        "summarise all open tickets in verba",
     )
 
     tree.base_lm.inspect_history(5)
