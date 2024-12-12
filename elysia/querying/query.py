@@ -150,39 +150,39 @@ class AgenticQuery:
             objects[-1]["uuid"] = obj.uuid.hex
 
         # -- (Optional) Step 4: Summarise the objects
-        if query.output_type == "summary":
-            Branch({
-                "name": "Object Summariser",
-                "description": "Generate itemised summaries of the retrieved objects."
-            })
-            yield Status(f"Generating summaries of the retrieved objects")
+        # if query.output_type == "summary":
+        #     Branch({
+        #         "name": "Object Summariser",
+        #         "description": "Generate itemised summaries of the retrieved objects."
+        #     })
+        #     yield Status(f"Generating summaries of the retrieved objects")
 
-            try:
+        #     try:
 
-                # Run the object summariser
-                summary_list, summariser = self.object_summariser(objects, current_message)
-                current_message, message_update = update_current_message(current_message, summariser.reasoning_update_message)
+        #         # Run the object summariser
+        #         summary_list, summariser = self.object_summariser(objects, current_message)
+        #         current_message, message_update = update_current_message(current_message, summariser.reasoning_update_message)
 
-                # Yield results to front end
-                yield Response([{"text": message_update}], {})
-                yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning=summariser.reasoning, last = True)
-                yield Status(f"Summarised {len(summariser)} objects")
+        #         # Yield results to front end
+        #         yield Response([{"text": message_update}], {})
+        #         yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning=summariser.reasoning, last = True)
+        #         yield Status(f"Summarised {len(summariser)} objects")
 
-                # attach summaries to objects
-                for i, obj in enumerate(objects):
-                    if i < len(summary_list):
-                        obj["summary"] = summary_list[i]
-                    else:
-                        obj["summary"] = ""
+        #         # attach summaries to objects
+        #         for i, obj in enumerate(objects):
+        #             if i < len(summary_list):
+        #                 obj["summary"] = summary_list[i]
+        #             else:
+        #                 obj["summary"] = ""
             
-            except Exception as e:
-                yield Error(f"Error in object summarisation: {e}")
+        #     except Exception as e:
+        #         yield Error(f"Error in object summarisation: {e}")
 
-        # If no summarisation, attach empty strings
-        else:
-            yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="This step was skipped because it was determined that the output type was not a summary.", last = True)
-            for obj in objects:
-                obj["summary"] = ""
+        # # If no summarisation, attach empty strings
+        # else:
+        #     yield TreeUpdate(from_node="query_executor", to_node="object_summariser", reasoning="This step was skipped because it was determined that the output type was not a summary.", last = True)
+        for obj in objects:
+            obj["summary"] = ""
 
         metadata = {
             "previous_queries": [query.code], 

@@ -272,14 +272,14 @@ class Tree:
         # set up LLMs in dspy
         # self.base_lm = LM(model="gpt-4o-mini", max_tokens=6000)
         # self.complex_lm = LM(model="gpt-4o", max_tokens=6000)
-        # self.complex_lm = LM(model="claude-3-5-haiku-20241022", max_tokens=6000    )
+        self.base_lm = LM(model="claude-3-5-haiku-20241022", max_tokens=6000)
         self.complex_lm = LM(model="claude-3-5-sonnet-20241022", max_tokens=6000)
         # self.complex_lm = LM(model="bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0", max_tokens=6000)
         # self.complex_lm = LM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0", max_tokens=6000)
         
         # self.base_lm = LM(model="gemini-1.5-flash", max_tokens=6000)
         # self.complex_lm = LM(model="gemini-1.5-flash", max_tokens=6000)
-        self.base_lm = LM(model="openrouter/google/gemini-flash-1.5", max_tokens=6000)
+        # self.base_lm = LM(model="openrouter/google/gemini-flash-1.5", max_tokens=6000)
         # self.base_lm = LM(model="openrouter/google/gemini-2.0-flash-exp", max_tokens=6000)
         # self.complex_lm = LM(model="openrouter/meta-llama/llama-3.3-70b-instruct", max_tokens=6000)
 
