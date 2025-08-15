@@ -6,6 +6,7 @@ on:
       - main
       - dev
       - 'release/*'
+      - 'v*'
 
 permissions:
   contents: read
