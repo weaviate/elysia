@@ -154,8 +154,7 @@ class ClientManager:
                 )
             elif self.wcd_url == "":
                 self.logger.warning(
-                    "WCD_URL is not set. "
-                    "All Weaviate functionality will be disabled."
+                    "WCD_URL is not set. All Weaviate functionality will be disabled."
                 )
             elif self.wcd_api_key == "":
                 self.logger.warning(
@@ -239,23 +238,27 @@ class ClientManager:
         if self.wcd_url is None or self.wcd_api_key is None:
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
-        return weaviate.connect_to_weaviate_cloud(
-            cluster_url=self.wcd_url,
-            auth_credentials=Auth.api_key(self.wcd_api_key),
-            headers=self.headers,
-            skip_init_checks=True,
-        )
+        return weaviate.connect_to_local(host=self.wcd_url)
+
+    #        return weaviate.connect_to_weaviate_cloud(
+    #            cluster_url=self.wcd_url,
+    #            auth_credentials=Auth.api_key(self.wcd_api_key),
+    #            headers=self.headers,
+    #            skip_init_checks=True,
+    #        )
 
     async def get_async_client(self) -> WeaviateAsyncClient:
         if self.wcd_url is None or self.wcd_api_key is None:
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
-        return weaviate.use_async_with_weaviate_cloud(
-            cluster_url=self.wcd_url,
-            auth_credentials=Auth.api_key(self.wcd_api_key),
-            headers=self.headers,
-            skip_init_checks=True,
-        )
+        return weaviate.use_async_with_local()
+
+    #        return weaviate.use_async_with_weaviate_cloud(
+    #            cluster_url=self.wcd_url,
+    #            auth_credentials=Auth.api_key(self.wcd_api_key),
+    #            headers=self.headers,
+    #            skip_init_checks=True,
+    #        )
 
     @contextmanager
     def connect_to_client(self) -> Generator[WeaviateClient, Any, None]:
@@ -545,3 +548,4 @@ class _AsyncClientConnection:
         async with self.manager.async_lock:
             self.manager.async_in_use_counter -= 1
         self.manager.update_last_used_async_client()
+
