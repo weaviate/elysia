@@ -119,7 +119,7 @@ async def paginated_collection(
 ):
     collection = client.collections.get(collection_name)
 
-    if page_size * (page_number - 1) > 99_999:
+    if (page_size * (page_number - 1) + page_size) > 99_999:
         raise ValueError(
             "Page size exceeds Weaviate's limit of 100,000 objects for using offset."
         )
