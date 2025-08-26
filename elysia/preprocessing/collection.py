@@ -368,7 +368,7 @@ async def preprocess_async(
     collection_name: str,
     client_manager: ClientManager | None = None,
     min_sample_size: int = 10,
-    max_sample_size: int = 20,
+    max_sample_size: int | None = None,
     num_sample_tokens: int = 30000,
     force: bool = False,
     percentage_correct_threshold: float = 0.3,
@@ -443,6 +443,16 @@ async def preprocess_async(
         agg = await collection.aggregate.over_all(total_count=True)
         len_collection: int = agg.total_count  # type: ignore
 
+        if max_sample_size is None and len_collection > 50_000:
+            max_sample_size = 20
+            logger.warning(
+                f"Collection is large (greater than 50,000 objects), causing slowdown in pre-processing. "
+                f"Reducing maximum sample size to {max_sample_size} objects. "
+                "To override this, set `max_sample_size` as an argument to preprocess."
+            )
+        elif max_sample_size is None:
+            max_sample_size = 50
+
         # Randomly sample sample_size objects for the summary
         indices = random.sample(
             range(min(99_999, len_collection)),
@@ -455,17 +465,20 @@ async def preprocess_async(
         subset_objects: list[dict] = [obj.objects[0].properties]  # type: ignore
 
         # Get number of objects to sample to get close to num_sample_tokens
-        num_sample_objects = max(min_sample_size, num_sample_tokens // token_count_0)
+        num_sample_objects = min(
+            max(min_sample_size, num_sample_tokens // token_count_0),
+            max_sample_size,
+        )
+
+        # Estimate number of tokens
+        logger.debug(
+            f"Estimated token count of sample: {token_count_0*num_sample_objects}"
+        )
+        logger.debug(f"Number of objects in sample: {num_sample_objects}")
 
         for index in indices[1:num_sample_objects]:
             obj = await collection.query.fetch_objects(limit=1, offset=index)
             subset_objects.append(obj.objects[0].properties)  # type: ignore
-
-        # Estimate number of tokens
-        logger.debug(
-            f"Estimated token count of sample: {token_count_0*len(subset_objects)}"
-        )
-        logger.debug(f"Number of objects in sample: {len(subset_objects)}")
 
         # Summarise the collection using LLM and the subset of the data
         summary, field_descriptions = await _summarise_collection(
@@ -481,7 +494,7 @@ async def preprocess_async(
             message="Generated summary of collection",
         )
 
-        if len_collection > max_sample_size:
+        if len_collection > 10_000:  # arbitrary cutoff for estimating field statistics
             full_response = subset_objects
         else:
             weaviate_resp = await collection.query.fetch_objects(limit=len_collection)
@@ -782,7 +795,7 @@ async def _preprocess_async(
     collection_names: list[str] | str,
     client_manager: ClientManager | None = None,
     min_sample_size: int = 10,
-    max_sample_size: int = 20,
+    max_sample_size: int | None = None,
     num_sample_tokens: int = 30000,
     settings: Settings = environment_settings,
     force: bool = False,
@@ -860,8 +873,8 @@ async def _preprocess_async(
 def preprocess(
     collection_names: str | list[str],
     client_manager: ClientManager | None = None,
-    min_sample_size: int = 5,
-    max_sample_size: int = 100,
+    min_sample_size: int = 10,
+    max_sample_size: int | None = None,
     num_sample_tokens: int = 30000,
     settings: Settings = environment_settings,
     force: bool = False,
