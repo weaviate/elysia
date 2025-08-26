@@ -119,6 +119,11 @@ async def paginated_collection(
 ):
     collection = client.collections.get(collection_name)
 
+    if page_size * (page_number - 1) > 99_999:
+        raise ValueError(
+            "Page size exceeds Weaviate's limit of 100,000 objects for using offset."
+        )
+
     filter_type = filter_config.get("type", "all")
     filters_list = filter_config.get("filters", [])
     filters = [f["field"] for f in filters_list]

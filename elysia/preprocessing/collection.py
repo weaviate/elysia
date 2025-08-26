@@ -446,7 +446,7 @@ async def preprocess_async(
         # Randomly sample sample_size objects for the summary
         indices = random.sample(
             range(len_collection),
-            max(min(max_sample_size, len_collection), 1),
+            max(min(max_sample_size, min(99_999, len_collection)), 1),
         )
 
         # Get first object to estimate token count
