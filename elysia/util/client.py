@@ -80,6 +80,9 @@ class ClientManager:
             client_timeout (datetime.timedelta | int | None): how long (in minutes) means the client should be restarted. Defaults to 3 minutes.
             logger (Logger | None): a logger object for logging messages. Defaults to None.
             settings (Settings | None): a settings object for the client manager. Defaults to environment settings.
+            query_timeout (int): the timeout for Weaviate queries. Defaults to 60 seconds (Weaviate default is 30 seconds).
+            insert_timeout (int): the timeout for Weaviate inserts. Defaults to 120 seconds (Weaviate default is 90 seconds).
+            init_timeout (int): the timeout for Weaviate initialisation. Defaults to 5 seconds (Weaviate default is 2 seconds).
             **kwargs (Any): any other api keys for third party services (formatted as e.g. OPENAI_APIKEY).
 
         Example:
