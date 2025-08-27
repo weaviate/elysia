@@ -8,7 +8,8 @@ from typing import AsyncGenerator, Generator, Any
 from logging import Logger
 
 import weaviate
-from weaviate.classes.init import Auth
+from weaviate.classes.init import Auth, Timeout
+from weaviate.config import AdditionalConfig
 from weaviate.client import WeaviateClient, WeaviateAsyncClient
 from elysia.config import settings as environment_settings, Settings
 
@@ -67,6 +68,9 @@ class ClientManager:
         client_timeout: datetime.timedelta | int | None = None,
         logger: Logger | None = None,
         settings: Settings | None = None,
+        query_timeout: int = 60,
+        insert_timeout: int = 120,
+        init_timeout: int = 5,
         **kwargs,
     ) -> None:
         """
@@ -115,6 +119,10 @@ class ClientManager:
             self.wcd_api_key = self.settings.WCD_API_KEY
         else:
             self.wcd_api_key = wcd_api_key
+
+        self.query_timeout = query_timeout
+        self.insert_timeout = insert_timeout
+        self.init_timeout = init_timeout
 
         # Set the api keys for non weaviate cluster (third parties)
         self.headers = {}
@@ -244,6 +252,13 @@ class ClientManager:
             auth_credentials=Auth.api_key(self.wcd_api_key),
             headers=self.headers,
             skip_init_checks=True,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(
+                    query=self.query_timeout,
+                    insert=self.insert_timeout,
+                    init=self.init_timeout,
+                )
+            ),
         )
 
     async def get_async_client(self) -> WeaviateAsyncClient:
@@ -255,6 +270,13 @@ class ClientManager:
             auth_credentials=Auth.api_key(self.wcd_api_key),
             headers=self.headers,
             skip_init_checks=True,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(
+                    query=self.query_timeout,
+                    insert=self.insert_timeout,
+                    init=self.init_timeout,
+                )
+            ),
         )
 
     @contextmanager
