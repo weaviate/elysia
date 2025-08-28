@@ -129,6 +129,9 @@ class UserManager:
             wcd_url=local_user["tree_manager"].settings.WCD_URL,
             wcd_api_key=local_user["tree_manager"].settings.WCD_API_KEY,
             api_keys=local_user["tree_manager"].settings.API_KEYS,
+            weaviate_is_local=local_user["tree_manager"].settings.WEAVIATE_IS_LOCAL,
+            local_weaviate_port=local_user["tree_manager"].settings.LOCAL_WEAVIATE_PORT,
+            local_weaviate_grpc_port=local_user["tree_manager"].settings.LOCAL_WEAVIATE_GRPC_PORT,
         )
 
     async def update_frontend_config(
