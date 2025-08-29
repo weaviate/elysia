@@ -122,7 +122,7 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
     Skips if local Weaviate is not running.
     """
     try:
-        import weaviate
+        import weaviate  # noqa: F401  # ensure dependency available for weaviate classes below
         from weaviate.classes.config import Property, DataType, Configure
     except Exception:
         pytest.skip("weaviate client not installed")
@@ -132,43 +132,52 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
     GRPC_PORT = 50051
     COLLECTION = "DEMO_ITEMS_TEST"
 
+    client_manager = None
+
+    # First, verify local connectivity via ClientManager and skip if not reachable
     try:
-        client = weaviate.connect_to_local(
-            host=HOST,
-            port=HTTP_PORT,
-            grpc_port=GRPC_PORT,
-            skip_init_checks=True,
+        client_manager = ClientManager(
+            wcd_url=HOST,
+            wcd_api_key="",
+            weaviate_is_local=True,
+            local_weaviate_port=HTTP_PORT,
+            local_weaviate_grpc_port=GRPC_PORT,
         )
+        # Quick connectivity check; will raise if local weaviate is not reachable
+        with client_manager.connect_to_client() as _:
+            pass
     except Exception:
         pytest.skip("Local Weaviate not reachable on localhost:8080")
 
     try:
-        if client.collections.exists(COLLECTION):
-            coll = client.collections.get(COLLECTION)
-        else:
-            coll = client.collections.create(
-                COLLECTION,
-                vectorizer_config=Configure.Vectorizer.none(),
-                inverted_index_config=Configure.inverted_index(index_timestamps=True),
-                properties=[
-                    Property(name="name", data_type=DataType.TEXT),
-                    Property(name="age", data_type=DataType.INT),
-                ],
-            )
+        with client_manager.connect_to_client() as client:
+            if client.collections.exists(COLLECTION):
+                coll = client.collections.get(COLLECTION)
+            else:
+                coll = client.collections.create(
+                    COLLECTION,
+                    vectorizer_config=Configure.Vectorizer.none(),
+                    inverted_index_config=Configure.inverted_index(index_timestamps=True),
+                    properties=[
+                        Property(name="name", data_type=DataType.TEXT),
+                        Property(name="age", data_type=DataType.INT),
+                    ],
+                )
 
-        items = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25},
-            {"name": "Charlie", "age": 35},
-        ]
-        for obj in items:
-            coll.data.insert(obj)
+            items = [
+                {"name": "Alice", "age": 30},
+                {"name": "Bob", "age": 25},
+                {"name": "Charlie", "age": 35},
+            ]
+            for obj in items:
+                coll.data.insert(obj)
 
-        total = coll.aggregate.over_all(total_count=True).total_count
-        assert total >= len(items)
+            total = coll.aggregate.over_all(total_count=True).total_count
+            assert total >= len(items)
 
-        res = coll.query.fetch_objects(limit=3)
-        assert len(res.objects) > 0
-        assert all("name" in o.properties for o in res.objects)
+            res = coll.query.fetch_objects(limit=3)
+            assert len(res.objects) > 0
+            assert all("name" in o.properties for o in res.objects)
     finally:
-        client.close()
+        if client_manager is not None:
+            await client_manager.close_clients()
