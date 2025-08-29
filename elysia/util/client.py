@@ -120,7 +120,9 @@ class ClientManager:
             self.wcd_api_key = self.settings.WCD_API_KEY
         else:
             self.wcd_api_key = wcd_api_key
-        
+
+        if weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+            self.wcd_url = "localhost"
 
         # Set the api keys for non weaviate cluster (third parties)
         self.headers = {}
@@ -241,6 +243,10 @@ class ClientManager:
         self.weaviate_is_local = weaviate_is_local
         self.local_weaviate_port = local_weaviate_port
         self.local_weaviate_grpc_port = local_weaviate_grpc_port
+
+        # If using a local Weaviate instance and no URL was provided, default to localhost
+        if self.weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+            self.wcd_url = "localhost"
 
         self.headers = {}
 
