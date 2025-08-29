@@ -451,15 +451,8 @@ async def save_config_user(
         end_goal = user["tree_manager"].config.end_goal
         branch_initialisation = user["tree_manager"].config.branch_initialisation
 
-        # Ensure FE save-location client respects backend Settings for local Weaviate
-        try:
-            await user["frontend_config"].configure(
-                save_location_weaviate_is_local=settings.WEAVIATE_IS_LOCAL,
-                save_location_local_weaviate_port=settings.LOCAL_WEAVIATE_PORT,
-                save_location_local_weaviate_grpc_port=settings.LOCAL_WEAVIATE_GRPC_PORT,
-            )
-        except Exception:
-            pass
+        # Do not override frontend storage settings with backend settings here;
+        # storage cluster for configs/conversations is controlled via frontend payload
 
         # Check if the user has a valid save location (allow local without API key)
         if (

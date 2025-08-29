@@ -153,6 +153,9 @@ class FrontendConfig:
             "save_configs_to_weaviate": self.config["save_configs_to_weaviate"],
             "save_location_wcd_url": self.save_location_wcd_url,
             "save_location_wcd_api_key": self.save_location_wcd_api_key,
+            "save_location_weaviate_is_local": self.save_location_weaviate_is_local,
+            "save_location_local_weaviate_port": self.save_location_local_weaviate_port,
+            "save_location_local_weaviate_grpc_port": self.save_location_local_weaviate_grpc_port,
             "client_timeout": self.config["client_timeout"],
             "tree_timeout": self.config["tree_timeout"],
         }
