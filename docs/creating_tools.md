@@ -123,7 +123,7 @@ Finally, tools can interact with Elysia's environment, LMs and the Weaviate clie
 ```python
 @tool
 async def some_tool(
-    tree_data, base_lm, complex_lm, tree_data, # these inputs are automatically assigned as Elysia variables
+    tree_data, base_lm, complex_lm, client_manager, # these inputs are automatically assigned as Elysia variables
     x: str, y: int # these inputs are not assigned automatically and get assigned by the decision agent
 ):
     # do something
