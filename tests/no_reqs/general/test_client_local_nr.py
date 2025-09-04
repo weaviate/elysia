@@ -1,6 +1,7 @@
 import pytest
 
 from elysia.util.client import ClientManager
+from elysia.config import Settings
 
 
 class _DummySyncClient:
@@ -35,8 +36,17 @@ class _DummyAsyncClient:
 async def test_local_sync_client_connects(monkeypatch):
     calls = {}
 
-    def fake_connect_to_local(host, port, grpc_port, auth_credentials=None, headers=None, skip_init_checks=True):
-        print(f"fake_connect_to_local called with host: {host}, port: {port}, grpc_port: {grpc_port}, auth_credentials: {auth_credentials}, headers: {headers}, skip_init_checks: {skip_init_checks}")
+    def fake_connect_to_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
+        print(
+            f"fake_connect_to_local called with host: {host}, port: {port}, grpc_port: {grpc_port}, auth_credentials: {auth_credentials}, headers: {headers}, skip_init_checks: {skip_init_checks}"
+        )
         calls["host"] = host
         calls["port"] = port
         calls["grpc_port"] = grpc_port
@@ -82,10 +92,24 @@ async def test_local_sync_client_connects(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_local_async_client_connects(monkeypatch):
-    def fake_connect_to_local(host, port, grpc_port, auth_credentials=None, headers=None, skip_init_checks=True):
+    def fake_connect_to_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
         return _DummySyncClient()
 
-    def fake_use_async_with_local(host, port, grpc_port, auth_credentials=None, headers=None, skip_init_checks=True):
+    def fake_use_async_with_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
         # Real weaviate.use_async_with_local returns an async client object synchronously
         return _DummyAsyncClient()
 
@@ -112,7 +136,6 @@ async def test_local_async_client_connects(monkeypatch):
         assert client_manager.async_in_use_counter == 0
     finally:
         await client_manager.close_clients()
-
 
 
 @pytest.mark.asyncio
@@ -157,7 +180,9 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
                 coll = client.collections.create(
                     COLLECTION,
                     vectorizer_config=Configure.Vectorizer.none(),
-                    inverted_index_config=Configure.inverted_index(index_timestamps=True),
+                    inverted_index_config=Configure.inverted_index(
+                        index_timestamps=True
+                    ),
                     properties=[
                         Property(name="name", data_type=DataType.TEXT),
                         Property(name="age", data_type=DataType.INT),
@@ -181,3 +206,31 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
     finally:
         if client_manager is not None:
             await client_manager.close_clients()
+
+
+def test_local_weaviate_from_env_true():
+    import os
+
+    # modify env
+    os.environ["WEAVIATE_IS_LOCAL"] = "True"
+
+    # override settings with new settings
+    settings = Settings()
+    settings.smart_setup()
+
+    client_manager = ClientManager(settings=settings)
+    assert client_manager.weaviate_is_local is True
+
+
+def test_local_weaviate_from_env_false():
+    import os
+
+    # modify the environment variable WEAVIATE_IS_LOCAL to False
+    os.environ["WEAVIATE_IS_LOCAL"] = "False"
+
+    # override settings with new settings
+    settings = Settings()
+    settings.smart_setup()
+
+    client_manager = ClientManager(settings=settings)
+    assert not client_manager.weaviate_is_local

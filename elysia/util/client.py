@@ -66,9 +66,9 @@ class ClientManager:
         self,
         wcd_url: str | None = None,
         wcd_api_key: str | None = None,
-        weaviate_is_local: bool = False,
-        local_weaviate_port: int = 8080,
-        local_weaviate_grpc_port: int = 50051,
+        weaviate_is_local: bool | None = None,
+        local_weaviate_port: int | None = None,
+        local_weaviate_grpc_port: int | None = None,
         client_timeout: datetime.timedelta | int | None = None,
         logger: Logger | None = None,
         settings: Settings | None = None,
@@ -117,7 +117,7 @@ class ClientManager:
         else:
             self.settings = settings
 
-        # Set the weaviate cluster url and api key
+        # Set the weaviate url and api key
         if wcd_url is None:
             self.wcd_url = self.settings.WCD_URL
         else:
@@ -128,11 +128,26 @@ class ClientManager:
         else:
             self.wcd_api_key = wcd_api_key
 
+        if weaviate_is_local is None:
+            self.weaviate_is_local = self.settings.WEAVIATE_IS_LOCAL
+        else:
+            self.weaviate_is_local = weaviate_is_local
+
+        if local_weaviate_port is None:
+            self.local_weaviate_port = self.settings.LOCAL_WEAVIATE_PORT
+        else:
+            self.local_weaviate_port = local_weaviate_port
+
+        if local_weaviate_grpc_port is None:
+            self.local_weaviate_grpc_port = self.settings.LOCAL_WEAVIATE_GRPC_PORT
+        else:
+            self.local_weaviate_grpc_port = local_weaviate_grpc_port
+
         self.query_timeout = query_timeout
         self.insert_timeout = insert_timeout
         self.init_timeout = init_timeout
 
-        if weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+        if self.weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
             self.wcd_url = "localhost"
 
         # Set the api keys for non weaviate cluster (third parties)
@@ -160,10 +175,6 @@ class ClientManager:
 
         self.last_used_sync_client = datetime.datetime.now()
         self.last_used_async_client = datetime.datetime.now()
-
-        self.weaviate_is_local = weaviate_is_local
-        self.local_weaviate_port = local_weaviate_port
-        self.local_weaviate_grpc_port = local_weaviate_grpc_port
 
         self.async_client = None
         self.async_init_completed = False
