@@ -1,0 +1,155 @@
+name: Auto Update on Frontend Release
+on:
+  repository_dispatch:
+    types: [frontend-release]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse version and validate
+        id: version
+        run: |
+          RELEASE_TAG="${{ github.event.client_payload.release_tag }}"
+          echo "Release tag: $RELEASE_TAG"
+          
+          # Check if tag starts with 'v' and extract version parts
+          if [[ $RELEASE_TAG =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            MAJOR=${BASH_REMATCH[1]}
+            MINOR=${BASH_REMATCH[2]}
+            PATCH=${BASH_REMATCH[3]}
+            TARGET_BRANCH="release/v${MAJOR}.${MINOR}.x"
+            
+            echo "valid_version=true" >> $GITHUB_OUTPUT
+            echo "major=$MAJOR" >> $GITHUB_OUTPUT
+            echo "minor=$MINOR" >> $GITHUB_OUTPUT
+            echo "patch=$PATCH" >> $GITHUB_OUTPUT
+            echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+            
+            echo "Parsed version: v${MAJOR}.${MINOR}.${PATCH}"
+            echo "Target branch: $TARGET_BRANCH"
+          else
+            echo "valid_version=false" >> $GITHUB_OUTPUT
+            echo "Release tag '$RELEASE_TAG' does not match expected pattern (vX.Y.Z)"
+          fi
+
+      - name: Skip if invalid version
+        if: steps.version.outputs.valid_version != 'true'
+        run: |
+          echo "Skipping workflow - release tag does not match vX.Y.Z pattern"
+          exit 0
+
+      - name: Checkout
+        if: steps.version.outputs.valid_version == 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 
+
+      - name: Check if target branch exists
+        if: steps.version.outputs.valid_version == 'true'
+        id: branch_check
+        run: |
+          TARGET_BRANCH="${{ steps.version.outputs.target_branch }}"
+          
+          # Check if branch exists locally or remotely
+          if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "Branch $TARGET_BRANCH exists locally"
+          elif git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "Branch $TARGET_BRANCH exists remotely"
+          else
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+            echo "Branch $TARGET_BRANCH does not exist"
+          fi
+
+      - name: Skip if target branch doesn't exist
+        if: steps.version.outputs.valid_version == 'true' && steps.branch_check.outputs.branch_exists != 'true'
+        run: |
+          echo "Skipping workflow - target branch ${{ steps.version.outputs.target_branch }} does not exist"
+          exit 0
+
+      - name: Create working branch
+        if: steps.version.outputs.valid_version == 'true' && steps.branch_check.outputs.branch_exists == 'true'
+        id: working_branch
+        run: |
+          TARGET_BRANCH="${{ steps.version.outputs.target_branch }}"
+          WORKING_BRANCH="auto-frontend-deploy/${{ github.event.client_payload.release_tag }}-$(date +%s)"
+          echo "WORKING_BRANCH=$WORKING_BRANCH" >> $GITHUB_OUTPUT
+                    
+          # Checkout target branch and create working branch from it
+          git checkout $TARGET_BRANCH
+          git checkout -b $WORKING_BRANCH
+          
+          echo "Created working branch: $WORKING_BRANCH"
+          echo "Based on target branch: $TARGET_BRANCH"
+
+      - name: Build and prepare files
+        if: steps.version.outputs.valid_version == 'true' && steps.branch_check.outputs.branch_exists == 'true'
+        run: |
+          echo "Processing release: ${{ github.event.client_payload.release_tag }}"
+          echo "Major: ${{ steps.version.outputs.major }}"
+          echo "Minor: ${{ steps.version.outputs.minor }}"
+          echo "Patch: ${{ steps.version.outputs.patch }}"
+          
+          echo "Configuring git identity..."
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Checkout target branch first
+          git checkout ${{ steps.version.outputs.target_branch }}
+          
+          echo "Cloning elysia-frontend repository..."
+          git clone https://github.com/weaviate/elysia-frontend
+
+          echo "Changing directory to elysia-frontend"
+          cd elysia-frontend
+
+          echo "Fetching tags from elysia-frontend..."
+          git fetch --tags
+
+          echo "Checking out release tag: ${{ github.event.client_payload.release_tag }}"
+          git checkout tags/${{ github.event.client_payload.release_tag }}
+          
+          echo "Removing current static files"
+          rm -rf ../elysia/api/static/*
+          
+          echo "Running assemble script..."
+          npm install
+          npm run assemble
+
+          echo "Moving back to root directory"
+          cd ..
+
+          echo "Removing the cloned frontend repository to avoid submodule issues..."
+          rm -rf elysia-frontend/.git
+          rm -rf elysia-frontend
+
+      - name: Create Pull Request
+        if: steps.version.outputs.valid_version == 'true' && steps.branch_check.outputs.branch_exists == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto-update from frontend release ${{ github.event.client_payload.release_tag }}"
+          title: "Auto-update from frontend release ${{ github.event.client_payload.release_tag }}"
+          body: |
+            ## Automated Frontend Update
+            
+            This PR was automatically created in response to a new release from the frontend repository.
+            
+            **Release Details:**
+            - Tag: `${{ github.event.client_payload.release_tag }}`
+            - URL: ${{ github.event.client_payload.release_url }}
+            - Target Branch: `${{ steps.version.outputs.target_branch }}`
+            
+            **Version Information:**
+            - Major: `${{ steps.version.outputs.major }}`
+            - Minor: `${{ steps.version.outputs.minor }}`
+            - Patch: `${{ steps.version.outputs.patch }}`
+            
+            Please review the changes before merging into `${{ steps.version.outputs.target_branch }}`.
+          branch: "auto-frontend-deploy/${{ github.event.client_payload.release_tag }}"
+          base: ${{ steps.version.outputs.target_branch }}
+          delete-branch: true
+          draft: false
