@@ -171,18 +171,27 @@ class ClientManager:
             self.wcd_api_key != "" or self.weaviate_is_local
         )
 
-        if self.logger:
-            if self.wcd_api_key == "" and self.wcd_url == "":
+        if self.logger and not self.is_client:
+            if self.wcd_url == "" and self.weaviate_is_local:
                 self.logger.warning(
-                    "WCD_URL and WCD_API_KEY are not set. "
+                    "WCD_URL not set for local Weaviate (This should probably be localhost). "
                     "All Weaviate functionality will be disabled."
                 )
-            elif self.wcd_url == "":
+            elif (
+                not self.weaviate_is_local
+                and self.wcd_api_key == ""
+                and self.wcd_url != ""
+            ):
+                self.logger.warning(
+                    "WCD_API_KEY and WCD_URL are not set. "
+                    "All Weaviate functionality will be disabled."
+                )
+            elif self.wcd_url == "" and not self.weaviate_is_local:
                 self.logger.warning(
                     "WCD_URL is not set. "
                     "All Weaviate functionality will be disabled."
                 )
-            elif self.wcd_api_key == "":
+            elif self.wcd_api_key == "" and not self.weaviate_is_local:
                 self.logger.warning(
                     "WCD_API_KEY is not set. "
                     "All Weaviate functionality will be disabled."
@@ -303,13 +312,13 @@ class ClientManager:
         self.last_used_async_client = datetime.datetime.now()
 
     def get_client(self) -> WeaviateClient:
-        if self.weaviate_is_local and self.wcd_url is not None:
+        if self.weaviate_is_local and self.wcd_url != "":
             auth_credentials = (
                 Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
             )
             host, port = self._get_local_host_and_port()
             if self.logger:
-                self.logger.info(
+                self.logger.debug(
                     f"Getting client with weaviate_is_local: {self.weaviate_is_local}, "
                     f"wcd_url: {self.wcd_url}, parsed_host: {host}, api_key_set: {self.wcd_api_key != ''}, "
                     f"http_port: {port}, grpc_port: {self.local_weaviate_grpc_port}"
@@ -323,7 +332,7 @@ class ClientManager:
                 skip_init_checks=True,
             )
 
-        if self.wcd_url is None or self.wcd_api_key is None:
+        if self.wcd_url == "" or self.wcd_api_key == "":
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
         return weaviate.connect_to_weaviate_cloud(
@@ -341,13 +350,13 @@ class ClientManager:
         )
 
     async def get_async_client(self) -> WeaviateAsyncClient:
-        if self.weaviate_is_local and self.wcd_url is not None:
+        if self.weaviate_is_local and self.wcd_url != "":
             auth_credentials = (
                 Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
             )
             host, port = self._get_local_host_and_port()
             if self.logger:
-                self.logger.info(
+                self.logger.debug(
                     f"Getting async client with weaviate_is_local: {self.weaviate_is_local}, "
                     f"wcd_url: {self.wcd_url}, parsed_host: {host}, api_key_set: {self.wcd_api_key != ''}, "
                     f"http_port: {port}, grpc_port: {self.local_weaviate_grpc_port}"
@@ -361,7 +370,7 @@ class ClientManager:
                 skip_init_checks=True,
             )
 
-        if self.wcd_url is None or self.wcd_api_key is None:
+        if self.wcd_url == "" or self.wcd_api_key == "":
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
         return weaviate.use_async_with_weaviate_cloud(
@@ -393,7 +402,7 @@ class ClientManager:
         """
         if not self.is_client:
             raise ValueError(
-                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings."
+                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings or connect to a local Weaviate instance."
             )
 
         self.sync_restart_event.wait()
@@ -423,7 +432,7 @@ class ClientManager:
         """
         if not self.is_client:
             raise ValueError(
-                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings."
+                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings or connect to a local Weaviate instance."
             )
 
         if not self.async_init_completed:
