@@ -786,9 +786,19 @@ async def preprocess_async(
             error=f"Error preprocessing collection: {str(e)}",
         )
 
-    finally:
-        if close_clients_after_completion:
-            await client_manager.close_clients()
+    # finally:
+    #     print(f"\n\n\n\n\n\n\nCHECKING CLOSE CLIENT\n\n\n\n\n\n")
+    #     if close_clients_after_completion:
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
+
+    #         await client_manager.close_clients()
 
 
 async def _preprocess_async(
