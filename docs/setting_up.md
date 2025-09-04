@@ -91,9 +91,39 @@ WCD_URL=... # replace with your WCD_URL
 WCD_API_KEY=... # replace with your WCD_API_KEY
 ```
 
+### Local Weaviate (backend setup)
+
+You can run Elysia against a locally running Weaviate (e.g. Docker). Configure Elysia to use the local instance by setting:
+
+```
+WEAVIATE_IS_LOCAL=True
+# URL can be just a host or full URL; defaults shown below
+WCD_URL=localhost            # or http://localhost:8080
+LOCAL_WEAVIATE_PORT=8080     # optional override
+LOCAL_WEAVIATE_GRPC_PORT=50051  # optional override
+# No API key required for local unless you enabled local auth
+WCD_API_KEY=
+```
+
+Or via code:
+
+```python
+from elysia import configure
+configure(
+    weaviate_is_local=True,
+    wcd_url="http://localhost:8080",  # or "localhost"
+    local_weaviate_port=8080,
+    local_weaviate_grpc_port=50051,
+)
+```
+
+Notes:
+- If `WEAVIATE_IS_LOCAL=True` and no URL is provided, Elysia defaults to `localhost` with ports shown above.
+- Local mode can work without an API key; if you enable auth locally, set `WCD_API_KEY` accordingly.
+
 Additionally, you need to _preprocess_ your collections for Elysia to use the built in Weaviate-based tools, see below for details.
 
-*Note: using a local Weaviate instance is currently not supported. This is coming soon! [You can sign up for a 14-day sandbox for free.](https://weaviate.io/deployment/serverless)
+*Note: using a local Weaviate instance is experimental. [You can sign up for a 14-day sandbox for free.](https://weaviate.io/deployment/serverless)
 
 ## Preprocessing Collections
 

@@ -132,6 +132,9 @@ class ClientManager:
         self.insert_timeout = insert_timeout
         self.init_timeout = init_timeout
 
+        if weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+            self.wcd_url = "localhost"
+
         # Set the api keys for non weaviate cluster (third parties)
         self.headers = {}
         for api_key in self.settings.API_KEYS:
@@ -248,6 +251,10 @@ class ClientManager:
         self.weaviate_is_local = weaviate_is_local
         self.local_weaviate_port = local_weaviate_port
         self.local_weaviate_grpc_port = local_weaviate_grpc_port
+
+        # If using a local Weaviate instance and no URL was provided, default to localhost
+        if self.weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+            self.wcd_url = "localhost"
 
         self.headers = {}
 
