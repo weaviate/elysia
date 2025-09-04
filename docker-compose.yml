@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  elysia:
+    container_name: elysia
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    # Carga variables de entorno desde .env (WCD_URL, API keys, etc.)
+    env_file:
+      - .env
+    # Monta .env para que los cambios (p.ej. FIRST_START_ELYSIA) persistan
+    volumes:
+      - ./.env:/app/.env:rw
+    restart: unless-stopped
+
