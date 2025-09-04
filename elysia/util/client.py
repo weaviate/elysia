@@ -127,7 +127,6 @@ class ClientManager:
             self.wcd_api_key = self.settings.WCD_API_KEY
         else:
             self.wcd_api_key = wcd_api_key
-        
 
         self.query_timeout = query_timeout
         self.insert_timeout = insert_timeout
@@ -165,11 +164,8 @@ class ClientManager:
 
         self.async_client = None
         self.async_init_completed = False
-        # self.is_client = (
-        #     self.wcd_url != "" and self.wcd_api_key != "" and not self.weaviate_is_local
-        # )
-        self.is_client = (
-            self.wcd_url != "" and (self.wcd_api_key != "" or self.weaviate_is_local)
+        self.is_client = self.wcd_url != "" and (
+            self.wcd_api_key != "" or self.weaviate_is_local
         )
 
         if self.logger:
