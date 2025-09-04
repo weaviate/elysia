@@ -9,7 +9,8 @@ from logging import Logger
 from urllib.parse import urlparse
 
 import weaviate
-from weaviate.classes.init import Auth
+from weaviate.classes.init import Auth, Timeout
+from weaviate.config import AdditionalConfig
 from weaviate.client import WeaviateClient, WeaviateAsyncClient
 from elysia.config import settings as environment_settings, Settings
 
@@ -71,6 +72,9 @@ class ClientManager:
         client_timeout: datetime.timedelta | int | None = None,
         logger: Logger | None = None,
         settings: Settings | None = None,
+        query_timeout: int = 60,
+        insert_timeout: int = 120,
+        init_timeout: int = 5,
         **kwargs,
     ) -> None:
         """
@@ -81,6 +85,9 @@ class ClientManager:
             client_timeout (datetime.timedelta | int | None): how long (in minutes) means the client should be restarted. Defaults to 3 minutes.
             logger (Logger | None): a logger object for logging messages. Defaults to None.
             settings (Settings | None): a settings object for the client manager. Defaults to environment settings.
+            query_timeout (int): the timeout for Weaviate queries. Defaults to 60 seconds (Weaviate default is 30 seconds).
+            insert_timeout (int): the timeout for Weaviate inserts. Defaults to 120 seconds (Weaviate default is 90 seconds).
+            init_timeout (int): the timeout for Weaviate initialisation. Defaults to 5 seconds (Weaviate default is 2 seconds).
             **kwargs (Any): any other api keys for third party services (formatted as e.g. OPENAI_APIKEY).
 
         Example:
@@ -121,6 +128,10 @@ class ClientManager:
         else:
             self.wcd_api_key = wcd_api_key
         
+
+        self.query_timeout = query_timeout
+        self.insert_timeout = insert_timeout
+        self.init_timeout = init_timeout
 
         # Set the api keys for non weaviate cluster (third parties)
         self.headers = {}
@@ -317,6 +328,13 @@ class ClientManager:
             auth_credentials=Auth.api_key(self.wcd_api_key),
             headers=self.headers,
             skip_init_checks=True,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(
+                    query=self.query_timeout,
+                    insert=self.insert_timeout,
+                    init=self.init_timeout,
+                )
+            ),
         )
 
     async def get_async_client(self) -> WeaviateAsyncClient:
@@ -348,6 +366,13 @@ class ClientManager:
             auth_credentials=Auth.api_key(self.wcd_api_key),
             headers=self.headers,
             skip_init_checks=True,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(
+                    query=self.query_timeout,
+                    insert=self.insert_timeout,
+                    init=self.init_timeout,
+                )
+            ),
         )
 
     @contextmanager

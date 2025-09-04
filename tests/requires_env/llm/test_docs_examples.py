@@ -1,4 +1,6 @@
 from httpx import delete
+import pytest
+import os
 
 
 def test_create_tools_simple():
@@ -158,3 +160,98 @@ def test_query_weaviate():
             from elysia import delete_preprocessed_collection
 
             delete_preprocessed_collection("JeopardyQuestion", client_manager)
+
+
+def test_data_analysis():
+    try:
+        import sklearn
+    except:
+        pytest.skip(
+            "Skipping data analysis test as sklearn is not installed. "
+            "To run this test, install sklearn. "
+            "`pip install -U scikit-learn`"
+        )
+
+    # Box 1: Configure Elysia
+    from elysia import configure
+
+    configure(
+        base_model="gemini-2.0-flash-001",  # replace models and providers with which ever LM you want to use
+        complex_model="gemini-2.0-flash-001",
+        base_provider="openrouter/google",
+        complex_provider="openrouter/google",
+        wcd_url=os.getenv("WCD_URL"),  # replace with your Weaviate REST endpoint URL
+        wcd_api_key=os.getenv(
+            "WCD_API_KEY"
+        ),  # replace with your Weaviate cloud API key
+        openrouter_api_key=os.getenv(
+            "OPENROUTER_API_KEY"
+        ),  # replace with your OpenAI API key, or whichever API key you will use for your LMs
+        logging_level="DEBUG",
+    )
+
+    # Box2: Download and Process Data
+    from sklearn import datasets
+
+    data = datasets.load_diabetes()
+    X, Y = data.data, data.target
+
+    # Box 3: Import to Weaviate
+    from elysia.util.client import ClientManager
+    import weaviate.classes.config as wvc
+
+    with ClientManager().connect_to_client() as client:
+        collection = client.collections.create(
+            "ELYSIA_Test_Diabetes", vector_config=wvc.Configure.Vectors.self_provided()
+        )
+
+        with collection.batch.dynamic() as batch:
+            for i in range(len(X)):
+                batch.add_object({"predictor": X[i, 0], "target": Y[i]})
+
+    # Box 4: Preprocess
+    from elysia import preprocess
+
+    preprocess("ELYSIA_Test_Diabetes")
+
+    # Box 5: Create Tool
+    from elysia import tool
+    from sklearn.linear_model import LinearRegression
+    import matplotlib.pyplot as plt
+
+    @tool
+    async def fit_linear_regression(env_key, x_var, y_var, collection_name, tree_data):
+        """
+        Fit a linear regression model to data.
+        Requires querying for data first.
+
+        Args:
+            env_key: The key of the environment to use (e.g. 'query').
+            x_var: Independent variable field name in environment under the key.
+            y_var: Dependent variable field name in environment under the key.
+        """
+        objs = tree_data.environment.find(env_key, collection_name, 0)["objects"]
+        X = [[datum.get(x_var)] for datum in objs]
+        Y = [datum.get(y_var) for datum in objs]
+
+        model = LinearRegression().fit(X, Y)
+
+        # plt.scatter(X, Y)
+        # plt.plot(X, model.predict(X), color="red")
+        # plt.show()
+
+        return {
+            "intercept": model.intercept_,
+            "coef": model.coef_,
+            "collection_name": collection_name,
+        }
+
+    # Box 6: Run
+    from elysia import Tree
+
+    tree = Tree()
+    tree.add_tool(fit_linear_regression)
+    response, objects = tree(
+        "Fit a linear regression on the Diabetes data",
+        collection_names=["ELYSIA_Test_Diabetes"],
+    )
