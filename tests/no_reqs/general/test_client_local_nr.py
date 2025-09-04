@@ -2,6 +2,10 @@ import pytest
 
 from elysia.util.client import ClientManager
 
+import weaviate
+import weaviate.classes as wvc
+from elysia.config import Settings
+
 
 class _DummySyncClient:
     def __init__(self):
@@ -35,8 +39,29 @@ class _DummyAsyncClient:
 async def test_local_sync_client_connects(monkeypatch):
     calls = {}
 
-    def fake_connect_to_local(host, port, grpc_port, auth_credentials=None, headers=None, skip_init_checks=True):
-        print(f"fake_connect_to_local called with host: {host}, port: {port}, grpc_port: {grpc_port}, auth_credentials: {auth_credentials}, headers: {headers}, skip_init_checks: {skip_init_checks}")
+    def fake_connect_to_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
+        print(
+            f"fake_connect_to_local called with host: {host}, port: {port}, grpc_port: {grpc_port}, auth_credentials: {auth_credentials}, headers: {headers}, skip_init_checks: {skip_init_checks}"
+        )
+
+    def fake_connect_to_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
+        print(
+            f"fake_connect_to_local called with host: {host}, port: {port}, grpc_port: {grpc_port}, auth_credentials: {auth_credentials}, headers: {headers}, skip_init_checks: {skip_init_checks}"
+        )
         calls["host"] = host
         calls["port"] = port
         calls["grpc_port"] = grpc_port
@@ -82,10 +107,24 @@ async def test_local_sync_client_connects(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_local_async_client_connects(monkeypatch):
-    def fake_connect_to_local(host, port, grpc_port, auth_credentials=None, headers=None, skip_init_checks=True):
+    def fake_connect_to_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
         return _DummySyncClient()
 
-    def fake_use_async_with_local(host, port, grpc_port, auth_credentials=None, headers=None, skip_init_checks=True):
+    def fake_use_async_with_local(
+        host,
+        port,
+        grpc_port,
+        auth_credentials=None,
+        headers=None,
+        skip_init_checks=True,
+    ):
         # Real weaviate.use_async_with_local returns an async client object synchronously
         return _DummyAsyncClient()
 
@@ -114,27 +153,29 @@ async def test_local_async_client_connects(monkeypatch):
         await client_manager.close_clients()
 
 
-
 @pytest.mark.asyncio
 async def test_local_weaviate_seed_and_query(monkeypatch):
     """
     Creates a simple collection and inserts dummy data using the official weaviate client.
     Skips if local Weaviate is not running.
     """
-    try:
-        import weaviate  # noqa: F401  # ensure dependency available for weaviate classes below
-        from weaviate.classes.config import Property, DataType, Configure
-    except Exception:
-        pytest.skip("weaviate client not installed")
 
     HOST = "localhost"
     HTTP_PORT = 8080
     GRPC_PORT = 50051
-    COLLECTION = "DEMO_ITEMS_TEST"
+    COLLECTION = "Test_ELYSIA_local_weaviate_seed_and_query"
+
+    try:
+        client = weaviate.connect_to_local(
+            host=HOST,
+            port=HTTP_PORT,
+            grpc_port=GRPC_PORT,
+            skip_init_checks=True,
+        )
+    except Exception:
+        pytest.skip("Local Weaviate not reachable on localhost:8080")
 
     client_manager = None
-
-    # First, verify local connectivity via ClientManager and skip if not reachable
     try:
         client_manager = ClientManager(
             wcd_url=HOST,
@@ -143,41 +184,71 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
             local_weaviate_port=HTTP_PORT,
             local_weaviate_grpc_port=GRPC_PORT,
         )
-        # Quick connectivity check; will raise if local weaviate is not reachable
-        with client_manager.connect_to_client() as _:
-            pass
-    except Exception:
-        pytest.skip("Local Weaviate not reachable on localhost:8080")
 
-    try:
         with client_manager.connect_to_client() as client:
             if client.collections.exists(COLLECTION):
                 coll = client.collections.get(COLLECTION)
             else:
                 coll = client.collections.create(
                     COLLECTION,
-                    vectorizer_config=Configure.Vectorizer.none(),
-                    inverted_index_config=Configure.inverted_index(index_timestamps=True),
+                    vectorizer_config=wvc.config.Configure.Vectorizer.none(),
+                    inverted_index_config=wvc.config.Configure.inverted_index(
+                        index_timestamps=True
+                    ),
                     properties=[
-                        Property(name="name", data_type=DataType.TEXT),
-                        Property(name="age", data_type=DataType.INT),
+                        wvc.config.Property(
+                            name="name", data_type=wvc.config.DataType.TEXT
+                        ),
+                        wvc.config.Property(
+                            name="age", data_type=wvc.config.DataType.INT
+                        ),
                     ],
                 )
 
-            items = [
-                {"name": "Alice", "age": 30},
-                {"name": "Bob", "age": 25},
-                {"name": "Charlie", "age": 35},
-            ]
-            for obj in items:
-                coll.data.insert(obj)
+                items = [
+                    {"name": "Alice", "age": 30},
+                    {"name": "Bob", "age": 25},
+                    {"name": "Charlie", "age": 35},
+                ]
+                for obj in items:
+                    coll.data.insert(obj)
 
-            total = coll.aggregate.over_all(total_count=True).total_count
-            assert total >= len(items)
+                total = coll.aggregate.over_all(total_count=True).total_count
+                assert total >= len(items)
 
-            res = coll.query.fetch_objects(limit=3)
-            assert len(res.objects) > 0
-            assert all("name" in o.properties for o in res.objects)
+                res = coll.query.fetch_objects(limit=3)
+                assert len(res.objects) > 0
+                assert all("name" in o.properties for o in res.objects)
     finally:
         if client_manager is not None:
             await client_manager.close_clients()
+
+
+def test_local_weaviate_from_env_true():
+    import os
+
+    # modify env
+    os.environ["WEAVIATE_IS_LOCAL"] = "True"
+    os.environ["WCD_URL"] = "localhost"
+    os.environ["WCD_API_KEY"] = ""
+
+    # override settings with new settings
+    settings = Settings()
+    settings.smart_setup()
+
+    client_manager = ClientManager(settings=settings)
+    assert client_manager.weaviate_is_local
+
+
+def test_local_weaviate_from_env_false():
+    import os
+
+    # modify the environment variable WEAVIATE_IS_LOCAL to False
+    os.environ["WEAVIATE_IS_LOCAL"] = "False"
+
+    # override settings with new settings
+    settings = Settings()
+    settings.smart_setup()
+
+    client_manager = ClientManager(settings=settings)
+    assert not client_manager.weaviate_is_local

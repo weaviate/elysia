@@ -288,7 +288,7 @@ class Settings:
         self.MODEL_API_BASE = os.getenv("MODEL_API_BASE", None)
         self.LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "NOTSET")
 
-        self.set_api_keys_from_env()
+        self.set_from_env()
 
         # check what API keys are available
         if (
