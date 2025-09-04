@@ -1,0 +1,16 @@
+[ req ]
+default_bits       = 2048
+prompt             = no
+default_md         = sha256
+x509_extensions    = v3_req
+distinguished_name = dn
+
+[ dn ]
+CN = weaviate.local
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = weaviate.local
+DNS.2 = grpc-weaviate.local

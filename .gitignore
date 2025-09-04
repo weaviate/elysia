@@ -165,6 +165,17 @@ elysia-frontend/.git/*
 # resources
 resources.txt
 
+# Local dev artifacts (volumes, self-signed certs)
+weaviate_data/
+ollama/
+reverse-proxy/certs/ca.crt
+reverse-proxy/certs/ca.key
+reverse-proxy/certs/ca.srl
+reverse-proxy/certs/server.crt
+reverse-proxy/certs/server.csr
+reverse-proxy/certs/server.key
+!reverse-proxy/certs/.gitkeep
+
 # local user configs
 elysia/api/user_configs/*
 !elysia/api/user_configs/__init__.py
