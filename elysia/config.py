@@ -126,6 +126,7 @@ class Settings:
     - The base and complex models to use.
     - The providers for the base and complex models.
     - The Weaviate cloud URL and API key.
+    - Whether the Weaviate cluster is local.
     - The API keys for the providers.
     - The logger and logging level.
 
@@ -156,7 +157,9 @@ class Settings:
 
         self.WCD_URL: str = ""
         self.WCD_API_KEY: str = ""
-
+        self.WEAVIATE_IS_LOCAL: bool = False
+        self.LOCAL_WEAVIATE_PORT: int = 8080
+        self.LOCAL_WEAVIATE_GRPC_PORT: int = 50051
         self.MODEL_API_BASE: str | None = None
 
         self.API_KEYS: dict[str, str] = {}
@@ -244,6 +247,9 @@ class Settings:
         self.COMPLEX_PROVIDER = os.getenv("COMPLEX_PROVIDER", None)
         self.MODEL_API_BASE = os.getenv("MODEL_API_BASE", None)
         self.LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "NOTSET")
+        self.WEAVIATE_IS_LOCAL = os.getenv("WEAVIATE_IS_LOCAL", "False") == "True"
+        self.LOCAL_WEAVIATE_PORT = os.getenv("LOCAL_WEAVIATE_PORT", 8080)
+        self.LOCAL_WEAVIATE_GRPC_PORT = os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
         self.set_api_keys_from_env()
 
     def set_api_keys_from_env(self):
@@ -256,6 +262,8 @@ class Settings:
             "WEAVIATE_API_KEY",
             os.getenv("WCD_API_KEY", ""),
         )
+        self.LOCAL_WEAVIATE_PORT = os.getenv("LOCAL_WEAVIATE_PORT", 8080)
+        self.LOCAL_WEAVIATE_GRPC_PORT = os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
 
         self.API_KEYS = {
             env_var.lower(): os.getenv(env_var, "")
@@ -280,7 +288,7 @@ class Settings:
         self.MODEL_API_BASE = os.getenv("MODEL_API_BASE", None)
         self.LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "NOTSET")
 
-        self.set_api_keys_from_env()
+        self.set_from_env()
 
         # check what API keys are available
         if (
@@ -334,6 +342,9 @@ class Settings:
                 - model_api_base (str): The API base to use.
                 - wcd_url (str): The Weaviate cloud URL to use.
                 - wcd_api_key (str): The Weaviate cloud API key to use.
+                - weaviate_is_local (bool): Whether the Weaviate cluster is local.
+                - local_weaviate_port (int): The port to use for the local Weaviate cluster.
+                - local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
                 - logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
                 - use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
                     If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.
@@ -413,6 +424,18 @@ class Settings:
         if "wcd_api_key" in kwargs:
             self.WCD_API_KEY = kwargs["wcd_api_key"]
             kwargs.pop("wcd_api_key")
+
+        if "weaviate_is_local" in kwargs:
+            self.WEAVIATE_IS_LOCAL = kwargs["weaviate_is_local"]
+            kwargs.pop("weaviate_is_local")
+
+        if "local_weaviate_port" in kwargs:
+            self.LOCAL_WEAVIATE_PORT = kwargs["local_weaviate_port"]
+            kwargs.pop("local_weaviate_port")
+
+        if "local_weaviate_grpc_port" in kwargs:
+            self.LOCAL_WEAVIATE_GRPC_PORT = kwargs["local_weaviate_grpc_port"]
+            kwargs.pop("local_weaviate_grpc_port")
 
         if "weaviate_url" in kwargs:
             self.WCD_URL = kwargs["weaviate_url"]
@@ -544,6 +567,9 @@ class Settings:
             and self.COMPLEX_PROVIDER != "",
             "wcd_url": self.WCD_URL != "",
             "wcd_api_key": self.WCD_API_KEY != "",
+            "weaviate_is_local": self.WEAVIATE_IS_LOCAL,
+            "local_weaviate_port": self.LOCAL_WEAVIATE_PORT != 8080,
+            "local_weaviate_grpc_port": self.LOCAL_WEAVIATE_GRPC_PORT != 50051,
         }
 
 
@@ -606,6 +632,9 @@ class ElysiaKeyManager:
             "MODEL_API_BASE": self.settings.MODEL_API_BASE,
             "WCD_URL": self.settings.WCD_URL,
             "WCD_API_KEY": self.settings.WCD_API_KEY,
+            "WEAVIATE_IS_LOCAL": str(self.settings.WEAVIATE_IS_LOCAL),
+            "LOCAL_WEAVIATE_PORT": str(self.settings.LOCAL_WEAVIATE_PORT),
+            "LOCAL_WEAVIATE_GRPC_PORT": str(self.settings.LOCAL_WEAVIATE_GRPC_PORT),
         }
 
         # update all api keys in env
@@ -779,6 +808,9 @@ def configure(**kwargs) -> None:
             - model_api_base (str): The API base to use.
             - wcd_url (str): The Weaviate cloud URL to use.
             - wcd_api_key (str): The Weaviate cloud API key to use.
+            - weaviate_is_local (bool): Whether the Weaviate cluster is local.
+            - local_weaviate_port (int): The port to use for the local Weaviate cluster.
+            - local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
             - logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
             - use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
                 If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.

@@ -11,30 +11,31 @@ This example will walk through using Elysia to:
 
 Before setting up your environment and connecting to Weaviate, make sure you have the necessary API keys and access credentials for both your language models and your Weaviate instance. This will ensure a smooth setup process in the following steps.
 
-1. [You should have a Weaviate cloud cluster - see Step 1.1 in the Weaviate quickstart guide.](https://docs.weaviate.io/weaviate/quickstart#step-1-set-up-weaviate)
-2. [You need to find your REST endpoint URL and Admin API key for your cluster - see Step 1.3 in the Weaviate quickstart guide](https://docs.weaviate.io/weaviate/quickstart#13-connect-to-weaviate)
-3. You additionally need API keys for any LLMs you want to use. We recommend [OpenRouter](https://openrouter.ai/) to gain access to a range of models.
+1. You should have a Weaviate cloud cluster or locally running Weaviate instance - [see Step 1.1 in the Weaviate quickstart guide for cloud](https://docs.weaviate.io/weaviate/quickstart#step-1-set-up-weaviate) and [see here for running Weaviate locally with Docker](https://docs.weaviate.io/deploy/installation-guides/docker-installation).
+2. [You need to find your REST endpoint URL and Admin API key for your cloud cluster - see Step 1.3 in the Weaviate quickstart guide](https://docs.weaviate.io/weaviate/quickstart#13-connect-to-weaviate), or 
+3. You additionally need API keys for any LLMs you want to use. We recommend [OpenRouter](https://openrouter.ai/) to gain access to a range of models, or [Ollama](https://ollama.com/) for locally running models.
 
 ## Setting up
 
-Let's use the basic elysia `configure` to both *set up your models* and *connect to your Weaviate cluster*.
+Let's use the basic elysia `configure` to both *set up your models* and *connect to your Weaviate instance*.
 
 ```python
 from elysia import configure
 configure(
+    weaviate_is_local = False, # replace with True if locally running Weaviate
     wcd_url = "...", # replace with your Weaviate REST endpoint URL
     wcd_api_key = "..." # replace with your Weaviate cluster API key,
-    base_model = "gemini-2.0.flash-001",
-    base_provider = "gemini",
+    base_model = "gemini-2.0.flash-001", # replace with whichever model you are using
+    base_provider = "gemini", # replace with your model provider or 'ollama' for locally running ollama models
     complex_model = "gemini-2.5.flash-001",
     complex_provider = "gemini",
-    gemini_api_key = "..." # replace with your GEMINI_API_KEY from Google AI studio
+    gemini_api_key = "..." # replace with your GEMINI_API_KEY from Google AI studio, or whichever API key you need for Weaviate/your LLMs
 )
 ```
 Alternatively, you can use different models, such as `gpt-4.1-mini`, `gpt-4.1`, with `base_provider="openai"` and `complex_provider="openai"`, as well as an `openai_api_key`. Or any model/provider combination that you wish, [see the full LiteLLM docs for all API keys and models/providers](https://docs.litellm.ai/docs/providers).
 
-## Optional: Add some data to your Weaviate cluster
 
+## Optional: Add some data to your Weaviate cluster
 
 We're going to create some basic data and an example collection for this demo. This is based on [this example in the Weaviate docs](https://docs.weaviate.io/weaviate/recipes/generative_search_aws_bedrock).
 
