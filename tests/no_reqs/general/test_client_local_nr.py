@@ -227,6 +227,20 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
 def test_local_weaviate_from_env_true():
     import os
 
+    HOST = "localhost"
+    HTTP_PORT = 8080
+    GRPC_PORT = 50051
+
+    try:
+        client = weaviate.connect_to_local(
+            host=HOST,
+            port=HTTP_PORT,
+            grpc_port=GRPC_PORT,
+            skip_init_checks=True,
+        )
+    except Exception:
+        pytest.skip("Local Weaviate not reachable on localhost:8080")
+
     # modify env
     old_weaviate_is_local = os.environ.get("WEAVIATE_IS_LOCAL", None)
     old_wcd_url = os.environ.get("WCD_URL", None)
