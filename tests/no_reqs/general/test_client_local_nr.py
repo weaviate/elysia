@@ -227,28 +227,73 @@ async def test_local_weaviate_seed_and_query(monkeypatch):
 def test_local_weaviate_from_env_true():
     import os
 
+    HOST = "localhost"
+    HTTP_PORT = 8080
+    GRPC_PORT = 50051
+
+    try:
+        client = weaviate.connect_to_local(
+            host=HOST,
+            port=HTTP_PORT,
+            grpc_port=GRPC_PORT,
+            skip_init_checks=True,
+        )
+    except Exception:
+        pytest.skip("Local Weaviate not reachable on localhost:8080")
+
     # modify env
+    old_weaviate_is_local = os.environ.get("WEAVIATE_IS_LOCAL", None)
+    old_wcd_url = os.environ.get("WCD_URL", None)
+    old_wcd_api_key = os.environ.get("WCD_API_KEY", None)
+
     os.environ["WEAVIATE_IS_LOCAL"] = "True"
     os.environ["WCD_URL"] = "localhost"
     os.environ["WCD_API_KEY"] = ""
 
-    # override settings with new settings
-    settings = Settings()
-    settings.smart_setup()
+    try:
+        # override settings with new settings
+        settings = Settings()
+        settings.smart_setup()
 
-    client_manager = ClientManager(settings=settings)
-    assert client_manager.weaviate_is_local
+        client_manager = ClientManager(settings=settings)
+        assert client_manager.weaviate_is_local
+
+    finally:
+
+        if old_weaviate_is_local is not None:
+            os.environ["WEAVIATE_IS_LOCAL"] = old_weaviate_is_local
+        else:
+            del os.environ["WEAVIATE_IS_LOCAL"]
+
+        if old_wcd_url is not None:
+            os.environ["WCD_URL"] = old_wcd_url
+        else:
+            del os.environ["WCD_URL"]
+
+        if old_wcd_api_key is not None:
+            os.environ["WCD_API_KEY"] = old_wcd_api_key
+        else:
+            del os.environ["WCD_API_KEY"]
 
 
 def test_local_weaviate_from_env_false():
     import os
 
     # modify the environment variable WEAVIATE_IS_LOCAL to False
+    old_weaviate_is_local = os.environ.get("WEAVIATE_IS_LOCAL", None)
     os.environ["WEAVIATE_IS_LOCAL"] = "False"
 
-    # override settings with new settings
-    settings = Settings()
-    settings.smart_setup()
+    try:
+        # override settings with new settings
+        settings = Settings()
+        settings.smart_setup()
 
-    client_manager = ClientManager(settings=settings)
-    assert not client_manager.weaviate_is_local
+        client_manager = ClientManager(settings=settings)
+        assert not client_manager.weaviate_is_local
+
+    finally:
+
+        if old_weaviate_is_local is not None:
+            os.environ["WEAVIATE_IS_LOCAL"] = old_weaviate_is_local
+        else:
+            del os.environ["WEAVIATE_IS_LOCAL"]
