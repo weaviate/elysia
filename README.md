@@ -139,9 +139,15 @@ preprocess(collection_names=["YourCollectionName"])
 
 </details>
 
+
 <details>
-<summary><b>Can I use a locally running version of Weaviate such as with Docker?</b></summary>
-Locally running versions of Weaviate are currently not implemented in the current version of the app but this is planned for a future release. Stay tuned!
+<summary><b>Can I run Elysia completely locally? (Locally running Weaviate, local models)</b></summary>
+
+Yes!
+
+You can connect to a locally running Weaviate instance in Docker, and connect to Ollama for locally running language models.
+[See the setup page to get started.](https://weaviate.github.io/elysia/setting_up/)
+
 </details>
 
 
@@ -179,16 +185,5 @@ Make your changes, push them to your branch, go to GitHub and submit a pull requ
 <summary><b>Where is the best place I can start contributing?</b></summary>
 
 There are no 'huge' new features we are planning for Elysia (for the moment). You could start with creating a new tool, or multiple new tools to create a custom workflow for something specific. Look for pain points you experience from your user journey and find what exactly is causing these. Then try to fix them or create an alternative way of doing things!
-
-</details>
-
-
-<details>
-<summary><b>Can I run Elysia completely locally? (Locally running Weaviate, local models)</b></summary>
-
-Yes!
-
-You can connect to a locally running Weaviate instance in Docker, and connect to Ollama for locally running language models.
-[See the setup page to get started.](https://weaviate.github.io/elysia/setting_up/)
 
 </details>
