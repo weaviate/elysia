@@ -3,6 +3,10 @@ on:
   repository_dispatch:
     types: [frontend-release]
 
+permissions:
+  contents: read
+  pull-requests: write
+  
 jobs:
   update:
     runs-on: ubuntu-latest
