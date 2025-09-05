@@ -46,13 +46,13 @@ Unlike other agent-based packages, Elysia is pre-configured to run a wide range 
 
 Or you could customise Elysia to your liking, create your own custom tools and add them to the Elysia decision tree.
 
-To use Elysia to search your data, you need a Weaviate cluster (or you can define your own custom tool to search another data source!).
+To use Elysia to search your data, you need to either have [a Weaviate cloud cluster or a locally running Weaviate instance](setting_up.md#weaviate-integration) (or you can define your own custom tool to search another data source!).
 
-[Sign up to Weaviate! A 14 day sandbox cluster is free.](https://weaviate.io/deployment/serverless)
+[Sign up to Weaviate Cloud! A 14 day sandbox cluster is free.](https://weaviate.io/deployment/serverless)
 
-For more information on signing up to Weaviate, [click here](https://weaviate.io/developers/wcs/platform/create-account). 
+For more information on signing up to Weaviate Cloud, [click here](https://weaviate.io/developers/wcs/platform/create-account). 
 
-From your weaviate cluster, you can upload data via a CSV on the cloud console, or [you can upload via the Weaviate APIs](https://weaviate.io/developers/academy/py/zero_to_mvp/schema_and_imports/import).
+From your Weaviate cloud cluster, you can upload data via a CSV on the cloud console, or [you can upload via the Weaviate APIs](https://weaviate.io/developers/academy/py/zero_to_mvp/schema_and_imports/import).
 
 ## About
 
@@ -63,7 +63,6 @@ Check out the Github Repositories for the backend and the frontend
 - [elysia-frontend](https://github.com/weaviate/elysia-frontend) (frontend)
 
 Elysia was developed by Edward Schmuhl (frontend) and Danny Williams (backend). Check out our socials below:
-
 
 - [Edward's Linkedin](https://www.linkedin.com/in/edwardschmuhl/)
 

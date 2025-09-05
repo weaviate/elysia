@@ -66,18 +66,22 @@ configure(
 
 On the app side, this is configurable via the 'Api Base URL' parameter in the Settings. Set both of your providers to `ollama`, and your base and complex model to whatever model you are currently hosting, and this should work out-of-the-box.
 
-Warning: Elysia uses a *long context*, quite long context, due to the nature of the collection schemas, environment and more being included in every prompt. So these models will run quite slowly. However, on the backend, you can configure this to be faster by disabling connection to your Weaviate cluster, if applicable, by removing your weaviate api key and url. Also, there is an optional setting
+**Warning**: Elysia uses a *long context*, quite long context, due to the nature of the collection schemas, environment and more being included in every prompt. So these models will run quite slowly. However, on the backend, you can configure this to be faster by disabling connection to your Weaviate cluster, if applicable, by removing your weaviate api key and url. There is an optional setting
 ```python
 settings.configure(
 	base_use_reasoning=False,
 	complex_use_reasoning=False
 )
 ```
-which will remove chain of thought prompting for the base and complex model, respectively. Use this with caution though, as it will degrade accuracy significantly. Additionally, some smaller models struggle with the complex nature of multiple outputs in DSPy and Elysia, so you might encounter some errors. In testing, the `gpt-oss` models work relatively well.
+which will remove chain of thought prompting for the base and complex model, respectively. *Use this with caution though*, as it will degrade accuracy significantly. Additionally, some smaller models struggle with the complex nature of multiple outputs in DSPy and Elysia, so you might encounter some errors. In testing, the `gpt-oss` models work relatively well.
+
+*Note: Simplifying model outputs and reducing the context window size for local models is planned for a future version of Elysia. Stay tuned!*
 
 ## Weaviate Integration
 
-To use Elysia with Weaviate, you need to specify your Weaviate cluster details. These can be set via the Weaviate Cluster URL (`WCD_URL`) and the Weaviate Cluster API Key (`WCD_API_KEY`). To set these values, you can use `configure` on the settings:
+### Weaviate Cloud 
+
+To use Elysia with Weaviate cloud, you need to specify your Weaviate cluster details. These can be set via the Weaviate Cluster URL (`WCD_URL`) and the Weaviate Cluster API Key (`WCD_API_KEY`). To set these values, you can use `configure` on the settings:
 ```python
 from elysia import configure
 configure(
@@ -91,21 +95,25 @@ WCD_URL=... # replace with your WCD_URL
 WCD_API_KEY=... # replace with your WCD_API_KEY
 ```
 
-### Local Weaviate (backend setup)
+[You can sign up for a 14-day sandbox to Weaviate cloud for free.](https://weaviate.io/deployment/serverless)
 
-You can run Elysia against a locally running Weaviate (e.g. Docker). Configure Elysia to use the local instance by setting:
+### Local Weaviate
+
+You can run Elysia with a locally running Weaviate (e.g. Docker), making Elysia able to be run with *completely open source* software. To do so, you only need to set your local Weaviate instance variables. Configure Elysia to use the local instance by setting in the `.env` file:
 
 ```
 WEAVIATE_IS_LOCAL=True
+
 # URL can be just a host or full URL; defaults shown below
 WCD_URL=localhost            # or http://localhost:8080
 LOCAL_WEAVIATE_PORT=8080     # optional override
 LOCAL_WEAVIATE_GRPC_PORT=50051  # optional override
+
 # No API key required for local unless you enabled local auth
 WCD_API_KEY=
 ```
 
-Or via code:
+Or within Python via:
 
 ```python
 from elysia import configure
@@ -121,9 +129,12 @@ Notes:
 - If `WEAVIATE_IS_LOCAL=True` and no URL is provided, Elysia defaults to `localhost` with ports shown above.
 - Local mode can work without an API key; if you enable auth locally, set `WCD_API_KEY` accordingly.
 
+The easiest way to set up a local Weaviate instance is via Docker, [see here for detailed instructions.](https://docs.weaviate.io/deploy/installation-guides/docker-installation)
+
 Additionally, you need to _preprocess_ your collections for Elysia to use the built in Weaviate-based tools, see below for details.
 
-*Note: using a local Weaviate instance is experimental. [You can sign up for a 14-day sandbox for free.](https://weaviate.io/deployment/serverless)
+*Note: Using a local Weaviate instance is experimental. If you run into any issues, please open a [Github Issue](https://github.com/weaviate/elysia/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen)!*
+
 
 ## Preprocessing Collections
 
