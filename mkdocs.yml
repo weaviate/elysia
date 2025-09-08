@@ -45,6 +45,8 @@ nav:
  
   - Examples:
     - Index: Examples/index.md
+    - Querying Weaviate: Examples/query_weaviate.md
+    # - Sending an Automated Email: Examples/email.md
     - Basic Linear Regression: Examples/data_analysis.md
 
   - Reference:

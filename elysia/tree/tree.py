@@ -1,6 +1,7 @@
 import inspect
 import json
 import time
+import textwrap
 from copy import deepcopy
 from typing import AsyncGenerator, Literal
 
@@ -1021,6 +1022,87 @@ class Tree:
         self.tree = {}
         self._construct_tree(self.root, self.tree)
 
+    def view(
+        self,
+        indent: int = 0,
+        prefix: str = "",
+        max_width: int = 80,
+        tree_dict: dict | None = None,
+    ):
+        """
+        Format a tree dictionary into a nice hierarchical text representation.
+
+        Args:
+            tree_dict: The tree dictionary to format
+            indent: Current indentation level
+            prefix: Prefix for the current line (for tree structure visualization)
+            max_width: Maximum width for text wrapping
+
+        Returns:
+            str: Formatted tree string
+        """
+        if tree_dict is None:
+            tree_dict = self.tree
+
+        result = []
+
+        name = tree_dict.get("name", "Unknown")
+        node_id = tree_dict.get("id", "")
+        description = tree_dict.get("description", "")
+        is_branch = tree_dict.get("branch", False)
+
+        indent_str = "  " * indent
+        node_line = (
+            f"{indent_str}{prefix}📁 {name}"
+            if is_branch
+            else f"{indent_str}{prefix}🔧 {name}"
+        )
+
+        result.append(node_line)
+
+        if description:
+            desc_indent = len(indent_str) + 4  # Extra space for description
+            available_width = max_width - desc_indent
+
+            wrapped_desc = textwrap.fill(
+                description,
+                width=available_width,
+                initial_indent="",
+                subsequent_indent="",
+            )
+
+            for i, line in enumerate(wrapped_desc.split("\n")):
+                if i == 0:
+                    result.append(f"{indent_str}    💬 {line}")
+                else:
+                    result.append(f"{indent_str}       {line}")
+
+            result.append("")
+
+        options = tree_dict.get("options", {})
+        if options:
+            option_items = list(options.items())
+            for i, (key, option) in enumerate(option_items):
+                is_last = i == len(option_items) - 1
+                child_prefix = "└── " if is_last else "├── "
+                child_result = self.view(
+                    indent + 1, child_prefix, max_width, tree_dict=option
+                )
+                result.append(child_result)
+
+                if indent == 0 and not is_last:
+                    result.append("")
+
+        return "\n".join(result)
+
+    @property
+    def conversation_history(self):
+        return self.tree_data.conversation_history
+
+    @property
+    def environment(self):
+        return self.tree_data.environment
+
     async def create_conversation_title_async(self) -> str:
         """
         Create a title for the tree (async) using the base LM.
@@ -1191,6 +1273,13 @@ class Tree:
     def _add_error(self, function_name: str, error: Error) -> None:
         if function_name not in self.tree_data.errors:
             self.tree_data.errors[function_name] = []
+
+        self.tree_data.update_tasks_completed(
+            prompt=self.user_prompt,
+            task=function_name,
+            num_trees_completed=self.tree_data.num_trees_completed,
+            error=True,
+        )
 
         if error.feedback != "An unknown issue occurred.":
             self.tree_data.errors[function_name].append(

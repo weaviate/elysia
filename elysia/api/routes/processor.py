@@ -17,7 +17,7 @@ from elysia.api.services.user import UserManager
 from elysia.api.utils.websocket import help_websocket
 
 # Preprocessing
-from elysia.preprocess.collection import preprocess_async
+from elysia.preprocessing.collection import preprocess_async
 
 router = APIRouter()
 

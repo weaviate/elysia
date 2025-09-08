@@ -14,13 +14,13 @@ This page will detail all relevant information for tool construction, to get sta
 A tool must be initialised with
 ```python
     def __init__(self, logger: Logger | None = None, **kwargs):
-        
         super().__init__(
             name=...,
             description=...,
             status=..., # optional
             inputs=..., # optional
             end=..., # optional
+            **kwargs # required
         )
 ```
 
@@ -97,10 +97,6 @@ Within your tool's call method, you may want to `yield` different objects to bri
 
 A **[`Status`](../Reference/Objects.md#elysia.objects.Status)** message is initialised with a single string argument, this displays on the frontend or the progress bar a unique message.
 
-#### Warning
-
-A **[`Warning`](../Reference/Objects.md#elysia.objects.Warning)** is initialised with a single string argument. This will display on a connected frontend a warning message, or a warning box in the terminal.
-
 
 #### Result
 
@@ -115,7 +111,7 @@ Running inside of the call something like:
         ]
     )
 ```
-will mean that this particular object gets added to the Tree's `Environment`, and the LLM can look at this to make further decisions. This will also automatically parse this object as a payload to a frontend, if one is connected.
+will mean that this particular object gets added to the Tree's 'Environment', and the LLM can look at this to make further decisions. This will also automatically parse this object as a payload to a frontend, if one is connected.
 
 The arguments for the `Result` are:
  - `objects`: a list of dictionaries that contain your specific objects. Currently, the keys of the dictionary do not matter, but if you want to display these items on the frontend, they need to conform to specific keys ([see later](#displaying-objects-frontend-only))

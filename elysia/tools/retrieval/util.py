@@ -922,7 +922,7 @@ def _build_return_metrics(tool_args: dict) -> list[Metrics] | None:
                         ):
                             full_metrics.append(
                                 Metrics(prop_name).text(
-                                    min_occurrences=agg.min_occurrences,
+                                    limit=agg.min_occurrences,
                                     **{
                                         metric_name: True
                                         for metric_name in metric_names

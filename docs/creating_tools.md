@@ -21,6 +21,16 @@ tree = Tree()
 tree.add_tool(add)
 ```
 
+Then when calling the tree, the decision agent should use the tool if it recognises it as the best tool for the task.
+
+```python
+response, objects = tree("What is 1238213 + 1238213?")
+print(response)
+```
+```
+'I will calculate the sum for you using the add tool. The sum of 1238213 + 1238213 is 2476426.'
+```
+
 And this is all you need to do to add a tool to Elysia! Some things to note:
 
 - Your tool must be an async function (must be defined via `async def` instead of `def`).
@@ -113,7 +123,7 @@ Finally, tools can interact with Elysia's environment, LMs and the Weaviate clie
 ```python
 @tool
 async def some_tool(
-    tree_data, base_lm, complex_lm, tree_data, # these inputs are automatically assigned as Elysia variables
+    tree_data, base_lm, complex_lm, client_manager, # these inputs are automatically assigned as Elysia variables
     x: str, y: int # these inputs are not assigned automatically and get assigned by the decision agent
 ):
     # do something

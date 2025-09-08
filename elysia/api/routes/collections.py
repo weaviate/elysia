@@ -13,7 +13,7 @@ from elysia.util.collection import (
     async_get_collection_data_types,
     paginated_collection,
 )
-from elysia.preprocess.collection import (
+from elysia.preprocessing.collection import (
     edit_preprocessed_collection_async,
     delete_preprocessed_collection_async,
     preprocessed_collection_exists_async,

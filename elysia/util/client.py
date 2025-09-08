@@ -6,9 +6,11 @@ import threading
 from contextlib import asynccontextmanager, contextmanager
 from typing import AsyncGenerator, Generator, Any
 from logging import Logger
+from urllib.parse import urlparse
 
 import weaviate
-from weaviate.classes.init import Auth
+from weaviate.classes.init import Auth, Timeout
+from weaviate.config import AdditionalConfig
 from weaviate.client import WeaviateClient, WeaviateAsyncClient
 from elysia.config import settings as environment_settings, Settings
 
@@ -64,18 +66,28 @@ class ClientManager:
         self,
         wcd_url: str | None = None,
         wcd_api_key: str | None = None,
+        weaviate_is_local: bool | None = None,
+        local_weaviate_port: int | None = None,
+        local_weaviate_grpc_port: int | None = None,
         client_timeout: datetime.timedelta | int | None = None,
         logger: Logger | None = None,
         settings: Settings | None = None,
+        query_timeout: int = 60,
+        insert_timeout: int = 120,
+        init_timeout: int = 5,
         **kwargs,
     ) -> None:
         """
         Args:
             wcd_url (str): the url of the Weaviate cluster. Defaults to global settings config.
             wcd_api_key (str): the api key for the Weaviate cluster. Defaults to global settings config.
+            weaviate_is_local (bool): whether the weaviate cluster is local. Defaults to False.
             client_timeout (datetime.timedelta | int | None): how long (in minutes) means the client should be restarted. Defaults to 3 minutes.
             logger (Logger | None): a logger object for logging messages. Defaults to None.
             settings (Settings | None): a settings object for the client manager. Defaults to environment settings.
+            query_timeout (int): the timeout for Weaviate queries. Defaults to 60 seconds (Weaviate default is 30 seconds).
+            insert_timeout (int): the timeout for Weaviate inserts. Defaults to 120 seconds (Weaviate default is 90 seconds).
+            init_timeout (int): the timeout for Weaviate initialisation. Defaults to 5 seconds (Weaviate default is 2 seconds).
             **kwargs (Any): any other api keys for third party services (formatted as e.g. OPENAI_APIKEY).
 
         Example:
@@ -105,7 +117,7 @@ class ClientManager:
         else:
             self.settings = settings
 
-        # Set the weaviate cluster url and api key
+        # Set the weaviate url and api key
         if wcd_url is None:
             self.wcd_url = self.settings.WCD_URL
         else:
@@ -115,6 +127,28 @@ class ClientManager:
             self.wcd_api_key = self.settings.WCD_API_KEY
         else:
             self.wcd_api_key = wcd_api_key
+
+        if weaviate_is_local is None:
+            self.weaviate_is_local = self.settings.WEAVIATE_IS_LOCAL
+        else:
+            self.weaviate_is_local = weaviate_is_local
+
+        if local_weaviate_port is None:
+            self.local_weaviate_port = self.settings.LOCAL_WEAVIATE_PORT
+        else:
+            self.local_weaviate_port = local_weaviate_port
+
+        if local_weaviate_grpc_port is None:
+            self.local_weaviate_grpc_port = self.settings.LOCAL_WEAVIATE_GRPC_PORT
+        else:
+            self.local_weaviate_grpc_port = local_weaviate_grpc_port
+
+        self.query_timeout = query_timeout
+        self.insert_timeout = insert_timeout
+        self.init_timeout = init_timeout
+
+        if self.weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+            self.wcd_url = "localhost"
 
         # Set the api keys for non weaviate cluster (third parties)
         self.headers = {}
@@ -144,20 +178,31 @@ class ClientManager:
 
         self.async_client = None
         self.async_init_completed = False
-        self.is_client = self.wcd_url != "" and self.wcd_api_key != ""
+        self.is_client = self.wcd_url != "" and (
+            self.wcd_api_key != "" or self.weaviate_is_local
+        )
 
-        if self.logger:
-            if self.wcd_api_key == "" and self.wcd_url == "":
+        if self.logger and not self.is_client:
+            if self.wcd_url == "" and self.weaviate_is_local:
                 self.logger.warning(
-                    "WCD_URL and WCD_API_KEY are not set. "
+                    "WCD_URL not set for local Weaviate (This should probably be localhost). "
                     "All Weaviate functionality will be disabled."
                 )
-            elif self.wcd_url == "":
+            elif (
+                not self.weaviate_is_local
+                and self.wcd_api_key == ""
+                and self.wcd_url != ""
+            ):
+                self.logger.warning(
+                    "WCD_API_KEY and WCD_URL are not set. "
+                    "All Weaviate functionality will be disabled."
+                )
+            elif self.wcd_url == "" and not self.weaviate_is_local:
                 self.logger.warning(
                     "WCD_URL is not set. "
                     "All Weaviate functionality will be disabled."
                 )
-            elif self.wcd_api_key == "":
+            elif self.wcd_api_key == "" and not self.weaviate_is_local:
                 self.logger.warning(
                     "WCD_API_KEY is not set. "
                     "All Weaviate functionality will be disabled."
@@ -175,11 +220,43 @@ class ClientManager:
         self.client = self.get_client()
         self.sync_restart_event.set()
 
+    def _get_local_host_and_port(self) -> tuple[str, int]:
+        """
+        Derive host and port for local connections from wcd_url and configured ports.
+        Accepts full URLs like "http://localhost:8080" and extracts hostname/port.
+        """
+        host = self.wcd_url if self.wcd_url is not None else "localhost"
+        port = self.local_weaviate_port
+        try:
+            parsed = urlparse(host)
+            if parsed.scheme in ("http", "https"):
+                if parsed.hostname:
+                    host = parsed.hostname
+                if parsed.port:
+                    port = parsed.port
+            # If no scheme, assume the value is a bare hostname (optionally with :port)
+            elif ":" in host:
+                # Split manually to support host:port form without scheme
+                parts = host.split(":")
+                host = parts[0]
+                try:
+                    port = int(parts[1])
+                except Exception:
+                    port = self.local_weaviate_port
+        except Exception:
+            # Fallback to defaults
+            host = "localhost" if not host else host
+            port = self.local_weaviate_port
+        return host, port
+
     async def reset_keys(
         self,
         wcd_url: str | None = None,
         wcd_api_key: str | None = None,
         api_keys: dict[str, str] = {},
+        weaviate_is_local: bool = False,
+        local_weaviate_port: int = 8080,
+        local_weaviate_grpc_port: int = 50051,
     ) -> None:
         """
         Set the API keys, WCD_URL and WCD_API_KEY from the settings object.
@@ -191,6 +268,13 @@ class ClientManager:
         """
         self.wcd_url = wcd_url
         self.wcd_api_key = wcd_api_key
+        self.weaviate_is_local = weaviate_is_local
+        self.local_weaviate_port = local_weaviate_port
+        self.local_weaviate_grpc_port = local_weaviate_grpc_port
+
+        # If using a local Weaviate instance and no URL was provided, default to localhost
+        if self.weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
+            self.wcd_url = "localhost"
 
         self.headers = {}
 
@@ -198,7 +282,10 @@ class ClientManager:
             if api_key.lower() in [a.lower() for a in api_key_map.keys()]:
                 self.headers[api_key_map[api_key.upper()]] = api_keys[api_key]
 
-        self.is_client = self.wcd_url != "" and self.wcd_api_key != ""
+        # Local Weaviate can work without an API key
+        self.is_client = self.wcd_url != "" and (
+            self.wcd_api_key != "" or self.weaviate_is_local
+        )
         if self.is_client:
             await self.restart_client(force=True)
             await self.restart_async_client(force=True)
@@ -236,7 +323,27 @@ class ClientManager:
         self.last_used_async_client = datetime.datetime.now()
 
     def get_client(self) -> WeaviateClient:
-        if self.wcd_url is None or self.wcd_api_key is None:
+        if self.weaviate_is_local and self.wcd_url != "":
+            auth_credentials = (
+                Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
+            )
+            host, port = self._get_local_host_and_port()
+            if self.logger:
+                self.logger.debug(
+                    f"Getting client with weaviate_is_local: {self.weaviate_is_local}, "
+                    f"wcd_url: {self.wcd_url}, parsed_host: {host}, api_key_set: {self.wcd_api_key != ''}, "
+                    f"http_port: {port}, grpc_port: {self.local_weaviate_grpc_port}"
+                )
+            return weaviate.connect_to_local(
+                host=host,
+                port=port,
+                grpc_port=self.local_weaviate_grpc_port,
+                auth_credentials=auth_credentials,
+                headers=self.headers,
+                skip_init_checks=True,
+            )
+
+        if self.wcd_url == "" or self.wcd_api_key == "":
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
         return weaviate.connect_to_weaviate_cloud(
@@ -244,10 +351,37 @@ class ClientManager:
             auth_credentials=Auth.api_key(self.wcd_api_key),
             headers=self.headers,
             skip_init_checks=True,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(
+                    query=self.query_timeout,
+                    insert=self.insert_timeout,
+                    init=self.init_timeout,
+                )
+            ),
         )
 
     async def get_async_client(self) -> WeaviateAsyncClient:
-        if self.wcd_url is None or self.wcd_api_key is None:
+        if self.weaviate_is_local and self.wcd_url != "":
+            auth_credentials = (
+                Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
+            )
+            host, port = self._get_local_host_and_port()
+            if self.logger:
+                self.logger.debug(
+                    f"Getting async client with weaviate_is_local: {self.weaviate_is_local}, "
+                    f"wcd_url: {self.wcd_url}, parsed_host: {host}, api_key_set: {self.wcd_api_key != ''}, "
+                    f"http_port: {port}, grpc_port: {self.local_weaviate_grpc_port}"
+                )
+            return weaviate.use_async_with_local(
+                host=host,
+                port=port,
+                grpc_port=self.local_weaviate_grpc_port,
+                auth_credentials=auth_credentials,
+                headers=self.headers,
+                skip_init_checks=True,
+            )
+
+        if self.wcd_url == "" or self.wcd_api_key == "":
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
         return weaviate.use_async_with_weaviate_cloud(
@@ -255,6 +389,13 @@ class ClientManager:
             auth_credentials=Auth.api_key(self.wcd_api_key),
             headers=self.headers,
             skip_init_checks=True,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(
+                    query=self.query_timeout,
+                    insert=self.insert_timeout,
+                    init=self.init_timeout,
+                )
+            ),
         )
 
     @contextmanager
@@ -270,6 +411,11 @@ class ClientManager:
             ...
         ```
         """
+        if not self.is_client:
+            raise ValueError(
+                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings or connect to a local Weaviate instance."
+            )
+
         self.sync_restart_event.wait()
         with self.sync_lock:
             self.sync_in_use_counter += 1
@@ -295,6 +441,11 @@ class ClientManager:
             ...
         ```
         """
+        if not self.is_client:
+            raise ValueError(
+                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings or connect to a local Weaviate instance."
+            )
+
         if not self.async_init_completed:
             await self.start_clients()
 

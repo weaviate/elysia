@@ -22,4 +22,11 @@ from elysia.objects import (
     Retrieval,
     tool,
 )
-from elysia.config import Settings, settings, configure
+from elysia.preprocessing.collection import (
+    preprocess,
+    preprocessed_collection_exists,
+    edit_preprocessed_collection,
+    delete_preprocessed_collection,
+    view_preprocessed_collection,
+)
+from elysia.config import Settings, settings, configure, smart_setup, set_from_env

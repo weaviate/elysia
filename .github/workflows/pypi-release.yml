@@ -72,10 +72,10 @@ jobs:
         name: python-package-distributions
         path: dist/
 
-    - name: Publish distribution to PyPI
+    - name: Publish release distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        repository-url: https://pypi.org/legacy/
+        packages-dir: dist/
 
 
   create-release:
@@ -94,33 +94,5 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           generate_release_notes: true
-          draft: false
+          draft: true
           prerelease: false
-
-  # publish-to-pypi:
-  #   name: >-
-  #     Publish Python distribution to PyPI
-
-  #   if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
-
-  #   needs:
-  #   - build
-
-  #   runs-on: ubuntu-latest
-
-  #   environment:
-  #     name: pypi
-  #     url: https://pypi.org/p/elysia-ai
-
-  #   permissions:
-  #     id-token: write 
-
-  #   steps:
-  #   - name: Download all the dists
-  #     uses: actions/download-artifact@v4
-  #     with:
-  #       name: python-package-distributions
-  #       path: dist/
-
-  #   - name: Publish distribution to PyPI
-  #     uses: pypa/gh-action-pypi-publish@release/v1    

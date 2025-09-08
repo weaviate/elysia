@@ -6,8 +6,7 @@ from weaviate.classes.config import Configure, DataType, Property, ReferenceProp
 from weaviate.collections.classes.data import DataObject, DataReference
 from weaviate.collections import CollectionAsync
 from weaviate.collections.classes.internal import Object, QueryReturn
-from weaviate.collections.classes.config_vectorizers import _Vectorizer
-from weaviate.collections.classes.config_named_vectors import _NamedVectors
+from weaviate.collections.classes.config_vectors import _VectorConfigCreate
 from weaviate.exceptions import WeaviateInvalidInputError
 from weaviate.util import generate_uuid5
 from weaviate.client import WeaviateAsyncClient
@@ -190,7 +189,7 @@ class AsyncCollectionChunker:
 
     async def get_vectoriser(
         self, content_field: str, client: WeaviateAsyncClient
-    ) -> Configure.Vectorizer:
+    ) -> _VectorConfigCreate:
         collection_config = await client.collections.get(
             self.collection_name
         ).config.get()
@@ -210,7 +209,8 @@ class AsyncCollectionChunker:
                 ):
                     try:
                         vectorizer = getattr(
-                            _NamedVectors, named_vector_name.replace("-", "_")
+                            Configure.Vectors,
+                            named_vectorizer.vectorizer.replace("-", "_"),
                         )
 
                         valid_args = inspect.signature(vectorizer).parameters
@@ -220,8 +220,11 @@ class AsyncCollectionChunker:
                             **{
                                 arg: named_vectorizer.model[arg]
                                 for arg in named_vectorizer.model
-                                if arg in valid_args
+                                if arg in valid_args and arg != "vector_index_config"
                             },
+                            vector_index_config=Configure.VectorIndex.hnsw(
+                                quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
+                            ),
                         )
                     except AttributeError as e:
                         pass
@@ -232,21 +235,29 @@ class AsyncCollectionChunker:
                 vectorizer_name = (
                     collection_config.vectorizer_config.vectorizer.replace("-", "_")
                 )
-                vectorizer = getattr(_Vectorizer, vectorizer_name)
+                vectorizer = getattr(Configure.Vectors, vectorizer_name)
                 valid_args = inspect.signature(vectorizer).parameters
 
                 return vectorizer(
                     **{
                         arg: collection_config.vectorizer_config.model[arg]
                         for arg in collection_config.vectorizer_config.model
-                        if arg in valid_args
-                    }
+                        if arg in valid_args and arg != "vector_index_config"
+                    },
+                    vector_index_config=Configure.VectorIndex.hnsw(
+                        quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
+                    ),
                 )
             except AttributeError as e:
                 pass
 
         # otherwise use default weaviate embedding service
-        return Configure.Vectorizer.text2vec_weaviate(dimensions=256)
+        return Configure.Vectors.text2vec_weaviate(
+            dimensions=256,
+            vector_index_config=Configure.VectorIndex.hnsw(
+                quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
+            ),
+        )
 
     async def get_chunked_collection(
         self, content_field: str, client: WeaviateAsyncClient
@@ -268,10 +279,7 @@ class AsyncCollectionChunker:
                         name="fullDocument", target_collection=self.collection_name
                     )
                 ],
-                vectorizer_config=await self.get_vectoriser(content_field, client),
-                vector_index_config=Configure.VectorIndex.hnsw(
-                    quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
-                ),
+                vector_config=await self.get_vectoriser(content_field, client),
             )
 
     def generate_uuids(
@@ -462,206 +470,3 @@ class AsyncCollectionChunker:
                 await self.insert_references(
                     full_collection, original_uuid_to_chunk_uuids
                 )
-
-
-# class SyncCollectionChunker:
-#     def __init__(self, collection_name):
-#         self.collection_name = collection_name
-#         self.chunker = Chunker("sentences", num_sentences=5)
-
-#     def create_chunked_reference(
-#         self, content_field: str, client_manager: ClientManager
-#     ):
-#         with client_manager.connect_to_client() as client:
-#             collection = client.collections.get(
-#                 f"ELYSIA_CHUNKED_{self.collection_name}__"
-#             )
-#             try:
-#                 collection.config.add_reference(
-#                     ReferenceProperty(
-#                         name="isChunked",
-#                         target_collection=f"ELYSIA_CHUNKED_{self.collection_name}__",
-#                     )
-#                 )
-#             except WeaviateInvalidInputError:
-#                 pass
-
-#     def chunked_collection_exists(self, client):
-#         return client.collections.exists(f"ELYSIA_CHUNKED_{self.collection_name}__")
-
-#     def get_chunked_collection(self, content_field: str, client):
-#         # get properties of main collection
-#         data_types = get_collection_weaviate_data_types(client, self.collection_name)
-
-#         if client.collections.exists(f"ELYSIA_CHUNKED_{self.collection_name}__"):
-#             return client.collections.get(f"ELYSIA_CHUNKED_{self.collection_name}__")
-#         else:
-#             return client.collections.create(
-#                 f"ELYSIA_CHUNKED_{self.collection_name}__",
-#                 properties=[
-#                     Property(name=content_field, data_type=DataType.TEXT),
-#                     Property(
-#                         name="chunk_spans",
-#                         data_type=DataType.INT_ARRAY,
-#                         nested_data_type=DataType.INT,
-#                     ),
-#                 ]
-#                 + [
-#                     Property(name=name, data_type=data_type)
-#                     for name, data_type in data_types.items()
-#                     if name != content_field
-#                 ],  # add all properties except the content field TODO: this should be a reference to the original so no need to store twice
-#                 references=[
-#                     ReferenceProperty(
-#                         name="fullDocument", target_collection=self.collection_name
-#                     )
-#                 ],
-#                 vectorizer_config=Configure.Vectorizer.text2vec_openai(
-#                     model="text-embedding-3-large", dimensions=256
-#                 ),
-#                 vector_index_config=Configure.VectorIndex.hnsw(
-#                     quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
-#                 ),
-#             )
-
-#     def generate_uuids(
-#         self,
-#         chunks: list[str],
-#         spans: list[tuple[int, int]],
-#         properties,
-#         content_field: str,
-#     ):
-#         chunked_uuids = []
-#         for i, (chunk, span) in enumerate(zip(chunks, spans)):
-#             data_object = {content_field: chunk, "chunk_spans": span, **properties}
-#             chunked_uuids.append(generate_uuid5(data_object))
-#         return chunked_uuids
-
-#     def batch_sync_insert_chunks(
-#         self,
-#         chunked_collection,
-#         chunks,
-#         spans,
-#         chunked_uuids,
-#         properties,
-#         content_field: str,
-#     ):
-#         with chunked_collection.batch.dynamic() as batch:
-#             for i, (chunk, span) in enumerate(zip(chunks, spans)):
-#                 data_object = {
-#                     content_field: chunk,
-#                     "chunk_spans": span,
-#                     **properties[i],
-#                 }
-#                 batch.add_object(data_object, uuid=chunked_uuids[i])
-
-#     def batch_sync_insert_references(
-#         self, chunked_collection, full_collection, both_uuids
-#     ):
-#         """
-#         Both UUIDS: {original_uuid: [chunked_uuids], ...}
-#         keys are the original and list is the chunked UUIDs corresponding to the original
-#         """
-#         with chunked_collection.batch.dynamic() as chunked_batch:
-#             for original_uuid in both_uuids:
-#                 for chunked_uuid in both_uuids[original_uuid]:
-#                     chunked_batch.add_reference(
-#                         from_uuid=chunked_uuid,
-#                         from_property="fullDocument",
-#                         to=original_uuid,
-#                     )
-
-#         with full_collection.batch.dynamic() as full_batch:
-#             for original_uuid in both_uuids:
-#                 for chunked_uuid in both_uuids[original_uuid]:
-#                     full_batch.add_reference(
-#                         from_uuid=original_uuid,
-#                         from_property="isChunked",
-#                         to=chunked_uuid,
-#                     )
-
-#     def get_chunked_objects(self, objects):
-#         """
-#         Given a list of weaviate objects, find if a reference exists to a chunked object in the separate collection.
-#         Return the UUIDs of `objects` that have a reference to a chunked object.
-#         """
-#         uuids = []
-#         for object in objects.objects:
-#             if (
-#                 object.references is not None
-#                 and "isChunked" in object.references
-#                 and len(object.references["isChunked"].objects) > 0
-#             ):
-#                 uuids.append(object.uuid)
-#         return uuids
-
-#     def __call__(self, objects, content_field: str, client_manager: ClientManager):
-#         # always create the chunked reference, if it already exists, it will be skipped
-#         # self.create_chunked_reference(content_field)
-
-#         # get all UUIDs of current objects
-#         all_uuids = [object.uuid for object in objects.objects]
-
-#         # get all UUIDs of chunked objects
-#         chunked_uuids = self.get_chunked_objects(objects)
-
-#         # get all UUIDs of unchunked objects - these are the objects that need to be chunked
-#         unchunked_uuids = [uuid for uuid in all_uuids if uuid not in chunked_uuids]
-
-#         # get all unchunked objects for chunking and inserting
-#         unchunked_objects = [
-#             object for object in objects.objects if object.uuid in unchunked_uuids
-#         ]
-
-#         assert len(unchunked_objects) == len(unchunked_uuids)
-
-#         # if there are unchunked objects, chunk them
-#         if len(unchunked_objects) > 0:
-#             with client_manager.connect_to_client() as client:
-#                 # Get collections
-#                 chunked_collection = self.get_chunked_collection(content_field, client)
-#                 full_collection = client.collections.get(self.collection_name)
-
-#                 # keeping track of the chunks/spans, output uuids for each chunk object, and other properties from the collection
-#                 all_chunks = []
-#                 all_spans = []
-#                 chunk_uuids = []
-#                 all_uuids = {}
-#                 all_properties = []
-#                 for i, object in enumerate(unchunked_objects):
-#                     # chunk the text and get spans
-#                     chunks, spans = self.chunker.chunk(object.properties[content_field])
-
-#                     # get other properties from the collection for this object
-#                     other_properties = {
-#                         name: object.properties[name]
-#                         for name in object.properties.keys()
-#                         if name != content_field
-#                     }
-#                     chunk_uuids_i = self.generate_uuids(
-#                         chunks, spans, other_properties, content_field
-#                     )
-
-#                     # a single dict of properties for all chunks corresponding to the same original object
-#                     all_properties.extend([other_properties] * len(chunks))
-
-#                     # all chunks and spans
-#                     all_chunks.extend(chunks)
-#                     all_spans.extend(spans)
-
-#                     # chunk_uuids (list of uuids corresponding to all_chunks), all_uuids (dict of original uuids to chunked uuids, mapping)
-#                     chunk_uuids.extend(chunk_uuids_i)
-#                     all_uuids[unchunked_uuids[i]] = chunk_uuids_i
-
-#                 # insert into weaviate
-#                 self.batch_sync_insert_chunks(
-#                     chunked_collection,
-#                     all_chunks,
-#                     all_spans,
-#                     chunk_uuids,
-#                     all_properties,
-#                     content_field,
-#                 )
-#                 self.batch_sync_insert_references(
-#                     chunked_collection, full_collection, all_uuids
-#                 )

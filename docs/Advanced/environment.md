@@ -142,6 +142,8 @@ Notice how a new entry was not added to either the first or second level of the 
 
 ### `.add()` and `.add_objects()`
 
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.add)
+
 When calling a tool, you can specifically add a `Result` object to the environment via 
 ```python
 environment.add(tool_name, Result)
@@ -198,6 +200,8 @@ Even though we never interfaced with a tool called `descriptor`.
 
 ### `.replace()`
 
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.replace)
+
 Change an item in the environment with another item 
 ```python
 environment.replace(tool_name, name, objects, metadata, index)
@@ -242,6 +246,8 @@ Then the environment would be updated to
 
 ### `.find()`
 
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.find)
+
 You can use
 ```python
 environment.find(tool_name, name, index)
@@ -252,6 +258,8 @@ Which is an easy way to retrieve objects from the environment associated with th
 This is essentially just an alias to `environment.environment[tool_name][name][index]`.
 
 ### `.remove()`
+
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.remove)
 
 Items (objects + metadata) in the environment can be removed via
 ```python

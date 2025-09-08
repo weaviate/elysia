@@ -373,6 +373,18 @@ def tool(
 
         class ToolClass(Tool):
             def __init__(self, **kwargs):
+                self._original_function = function
+                self._original_function_args = {
+                    arg: None
+                    for arg in function.__code__.co_varnames[
+                        : function.__code__.co_argcount
+                    ]
+                }
+                for arg in function.__annotations__:
+                    if arg in self._original_function_args:
+                        self._original_function_args[arg] = function.__annotations__[
+                            arg
+                        ]
                 super().__init__(
                     name=function.__name__,
                     description=function.__doc__ or "",
@@ -384,12 +396,14 @@ def tool(
                     inputs={
                         input_key: {
                             "description": "",
-                            "type": input_value,
+                            "type": (
+                                "Not specified" if input_value is None else input_value
+                            ),
                             "default": defaults_mapping.get(input_key, None),
                             "required": defaults_mapping.get(input_key, None)
                             is not None,
                         }
-                        for input_key, input_value in function.__annotations__.items()
+                        for input_key, input_value in self._original_function_args.items()
                         if input_key
                         not in [
                             "tree_data",
@@ -401,7 +415,6 @@ def tool(
                     },
                     end=end,
                 )
-                self._original_function = function
 
             async def __call__(
                 self, tree_data, inputs, base_lm, complex_lm, client_manager, **kwargs
@@ -420,7 +433,7 @@ def tool(
                                     "client_manager": client_manager,
                                     **kwargs,
                                 }.items()
-                                if k in function.__annotations__
+                                if k in self._original_function_args
                             },
                         )
                     ]
@@ -437,7 +450,7 @@ def tool(
                                 "client_manager": client_manager,
                                 **kwargs,
                             }.items()
-                            if k in function.__annotations__
+                            if k in self._original_function_args
                         },
                     ):
                         results.append(result)
