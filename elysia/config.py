@@ -613,10 +613,11 @@ class ElysiaKeyManager:
         elif (
             provider in models_by_provider and model not in models_by_provider[provider]
         ):
+            models_by_provider_list = list(models_by_provider[provider])
             raise IncorrectModelError(
                 f"The model {model} is not available for provider {provider}. "
                 f"Some example models for {provider} are: "
-                f"{', '.join(models_by_provider[provider][:5])}. "
+                f"{', '.join(models_by_provider_list[:5])}. "
                 "Check the full model documentation (https://docs.litellm.ai/docs/providers)."
             )
 
