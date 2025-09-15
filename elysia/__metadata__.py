@@ -1,0 +1,6 @@
+__name__ = "elysia"
+__version__ = "0.1.0.dev6"
+__description__ = "Elysia"
+__url__ = "https://github.com/weaviate/elysia"
+__author__ = "Danny Williams"
+__author_email__ = "danny@weaviate.io"

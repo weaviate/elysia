@@ -1,0 +1,104 @@
+site_name: Elysia API
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline 
+        name: Switch to dark mode
+      primary: teal
+      accent: purple 
+    - scheme: slate 
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode    
+      primary: teal
+      accent: lime
+
+nav:
+  - Getting Started: index.md
+  - Setting Up: setting_up.md
+  - Basic Usage: basic.md
+  - Customising Elysia: advanced_usage.md
+  - Creating a Tool: creating_tools.md
+  - Advanced:
+    - Overview: Advanced/index.md
+    - Technical Overview: Advanced/technical_overview.md
+    - Tool Construction: Advanced/advanced_tool_construction.md
+    - Custom Objects: Advanced/custom_objects.md
+    - Environment: Advanced/environment.md
+  - API: 
+    - Overview: API/index.md
+    - User Management: API/user_and_tree_managers.md
+    - Payload Formats: API/payload_formats.md
+ 
+  - Examples:
+    - Index: Examples/index.md
+    - Querying Weaviate: Examples/query_weaviate.md
+    # - Sending an Automated Email: Examples/email.md
+    - Basic Linear Regression: Examples/data_analysis.md
+
+  - Reference:
+    - Preprocessor: Reference/Preprocessor.md
+    - Tree: Reference/Tree.md
+    - WeaviateClient: Reference/Client.md
+    - Managers: Reference/Managers.md
+    - Settings: Reference/Settings.md
+    - Objects: Reference/Objects.md
+    # - Tools: Reference/Tools.md
+    # - Result: Reference/Result.md
+    - Payload Types: Reference/PayloadTypes.md
+    - Util: Reference/Util.md
+plugins:
+  - social
+  - search
+  - mkdocstrings
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/weaviate/elysia
+    - icon: fontawesome/brands/github
+      link: https://github.com/weaviate/elysia-frontend
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/dannyjameswilliams
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/thomashacker
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/dannyjameswilliams/
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/edwardschmuhl/
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences 
+  - pymdownx.mark
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js

@@ -1,0 +1,58 @@
+name: Run Unit Test via Pytest
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+      - 'release/*'
+      
+permissions:
+  contents: read
+  pull-requests: write  
+  checks: write        
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+        continue-on-error: true
+        
+      - name: Install Elysia
+        run: |
+          pip install ".[dev]"
+        continue-on-error: true
+        
+      - name: Test with pytest
+        id: pytest
+        run: |
+          pytest --ignore=tests/requires_env --tb=short -v --junitxml=pytest-results.xml
+        continue-on-error: true
+        
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: (!cancelled())
+        with:
+          files: |
+            pytest-results.xml
+          check_name: "Pytest Results"
+          comment_title: "Unit Test Results"
+          comment_mode: always
+          
+      - name: Fail job if tests failed
+        if: steps.pytest.outcome == 'failure'
+        run: exit 1

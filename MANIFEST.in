@@ -1,0 +1,9 @@
+graft elysia
+graft tests
+graft docs
+
+include LICENSE
+include README.md
+
+
+global-exclude *.py[co] __pycache__
