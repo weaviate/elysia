@@ -246,7 +246,10 @@ class AsyncCollectionChunker:
                     arg: collection_config.vectorizer_config.model[arg]
                     for arg in collection_config.vectorizer_config.model
                     if arg in valid_args and arg != "vector_index_config"
-                }
+                },
+                vector_index_config=Configure.VectorIndex.hnsw(
+                    quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
+                ),
             )
 
         # otherwise use default weaviate embedding service
