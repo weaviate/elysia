@@ -1,0 +1,52 @@
+# Dynamic configuration for Traefik
+
+tls:
+  certificates:
+    - certFile: "/certs/server.crt"
+      keyFile: "/certs/server.key"
+
+http:
+  middlewares:
+    strip-api:
+      stripPrefix:
+        prefixes:
+          - "/api"
+  routers:
+    weaviate:
+      rule: "Host(`weaviate.local`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      service: weaviate-svc
+    weaviate-grpc:
+      rule: "Host(`grpc-weaviate.local`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      service: weaviate-grpc-svc
+    weaviate-v1:
+      rule: "(Host(`weaviate.local`) || PathPrefix(`/v1`)) && PathPrefix(`/v1`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      service: weaviate-svc
+      priority: 95
+    weaviate-api:
+      rule: "(Host(`weaviate.local`) || PathPrefix(`/api`)) && PathPrefix(`/api`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - strip-api
+      service: weaviate-svc
+      priority: 100
+
+  services:
+    weaviate-svc:
+      loadBalancer:
+        servers:
+          - url: "http://weaviate:8080"
+    weaviate-grpc-svc:
+      loadBalancer:
+        servers:
+          - url: "h2c://weaviate:50051"

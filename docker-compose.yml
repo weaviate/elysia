@@ -1,0 +1,133 @@
+
+services:
+  elysia:
+    container_name: elysia
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    # Load environment variables from .env (WCD_URL, API keys, etc.)
+    env_file:
+      - .env
+    # Mount .env so changes (e.g., FIRST_START_ELYSIA) persist
+    volumes:
+      - ./.env:/app/.env:rw
+      # Mount certificate folder (contains ca.crt, server.crt, server.key)
+      - ./reverse-proxy/certs:/certs:ro,z
+    depends_on:
+      weaviate-certs:
+        condition: service_completed_successfully
+      traefik:
+        condition: service_started
+    # Do not depend on local weaviate by default; lets you use cloud without starting local
+    restart: unless-stopped
+    environment:
+      # By default, point to local proxy (can be overridden in .env)
+      WCD_URL: ${WCD_URL:-https://weaviate.local}
+      WCD_API_KEY: ${WCD_API_KEY:-elysia-local-admin}
+    command: >
+      sh -c 'set -e; 
+      echo "Waiting for CA certificate..."; 
+      while [ ! -f /certs/ca.crt ]; do sleep 0.5; done; 
+      CERTIFI_PATH=$(python -c "import certifi,sys; print(certifi.where())"); 
+      echo "Patching certifi bundle at $$CERTIFI_PATH"; 
+      cp "$$CERTIFI_PATH" /tmp/cacert-plus.pem; 
+      cat /certs/ca.crt >> /tmp/cacert-plus.pem; 
+      cp /tmp/cacert-plus.pem "$$CERTIFI_PATH"; 
+      export GRPC_DEFAULT_SSL_ROOTS_FILE_PATH=/tmp/cacert-plus.pem; 
+      export SSL_CERT_FILE=/tmp/cacert-plus.pem; 
+      export REQUESTS_CA_BUNDLE=/tmp/cacert-plus.pem; 
+      exec elysia start --host 0.0.0.0 --port 8000'
+
+
+  weaviate:
+    container_name: weaviate
+    image: semitechnologies/weaviate:1.24.10
+    ports:
+      - "8080:8080"
+    environment:
+      QUERY_DEFAULTS_LIMIT: "25"
+      AUTHENTICATION_APIKEY_ENABLED: "true"
+      AUTHENTICATION_APIKEY_USERS: "elysia"
+      # Use the key from .env if present; otherwise fallback to a local default
+      AUTHENTICATION_APIKEY_ALLOWED_KEYS: "${WCD_API_KEY:-elysia-local-admin}"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      CLUSTER_HOSTNAME: "node1"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+
+  weaviate-certs:
+    image: alpine:3.20
+    container_name: weaviate-certs
+    # Install openssl then run the generator via sh (no exec bit required)
+    entrypoint: ["/bin/sh","-lc","apk add --no-cache openssl && sh /work/init.sh"]
+    volumes:
+      - ./reverse-proxy/certs:/work:z
+    restart: "no"
+
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    depends_on:
+      weaviate:
+        condition: service_started
+      weaviate-certs:
+        condition: service_completed_successfully
+    command:
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.websecure.address=:443
+      - --log.level=INFO
+    ports:
+      - "8443:443"
+    volumes:
+      - ./reverse-proxy/traefik/traefik.yml:/etc/traefik/traefik.yml:ro,z
+      - ./reverse-proxy/traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro,z
+      - ./reverse-proxy/certs:/certs:ro,z
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - weaviate.local
+          - grpc-weaviate.local
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    # Persist models/state for local ollama
+    volumes:
+      - ./ollama:/root/.ollama
+    restart: unless-stopped
+    # Optional service: start with `--profile ollama`
+    profiles: ["ollama"]
+
+  
+
+  weaviate-client-py:
+    build:
+      context: ./clients/python
+      dockerfile: Dockerfile
+    container_name: weaviate-client-py
+    depends_on:
+      weaviate:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      WEAVIATE_URL: ${WEAVIATE_URL:-http://weaviate:8080}
+      WEAVIATE_API_KEY: ${WCD_API_KEY:-elysia-local-admin}
+    volumes:
+      - ./clients/python:/work
+    working_dir: /work
+    command: ["python", "/work/py_check.py"]
+    profiles: ["clients"]
+
+  
+
+volumes:
+  weaviate_data:

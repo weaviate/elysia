@@ -32,6 +32,8 @@ response, objects = tree(
 ```
 This will use the built-in open source _query_ tool or _aggregate_ tool to interact with your Weaviate collections. To get started connecting to Weaviate, [see the setting up page](setting_up.md#weaviate-integration).
 
+Want to try everything locally? The repository ships with a Docker Compose stack that runs Elysia together with a TLS-enabled Weaviate. Follow the [local setup guide](setting_up.md#local-weaviate) for details.
+
 ## Installation
 
 ```bash

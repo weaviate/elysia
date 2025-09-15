@@ -165,6 +165,12 @@ elysia-frontend/.git/*
 # resources
 resources.txt
 
+# Local dev artifacts (volumes, self-signed certs)
+weaviate_data/
+ollama/
+reverse-proxy/certs/*
+!reverse-proxy/certs/.gitkeep
+
 # local user configs
 elysia/api/user_configs/*
 !elysia/api/user_configs/__init__.py
@@ -177,3 +183,5 @@ elysia/api/user_configs/*
 # run
 rundocs.sh
 runpy.sh
+
+!reverse-proxy/certs/init.sh

@@ -129,7 +129,26 @@ Notes:
 - If `WEAVIATE_IS_LOCAL=True` and no URL is provided, Elysia defaults to `localhost` with ports shown above.
 - Local mode can work without an API key; if you enable auth locally, set `WCD_API_KEY` accordingly.
 
-The easiest way to set up a local Weaviate instance is via Docker, [see here for detailed instructions.](https://docs.weaviate.io/deploy/installation-guides/docker-installation)
+#### Provided Docker Compose stack
+
+The repository ships with a `docker-compose.yml` that starts Elysia, a local Weaviate instance, and a Traefik proxy that exposes Weaviate over HTTPS (mirroring how Weaviate Cloud looks to the SDK).
+
+1. Copy `.env.example` to `.env` and fill in any model or API keys you need. Leave the Weaviate variables empty to use the bundled defaults (`https://weaviate.local` + `elysia-local-admin`).
+2. Run `docker compose up -d --build` to generate the certificates and bring the services online.
+3. Open the app at [http://localhost:8000](http://localhost:8000) → Settings and configure the Weaviate URL as `https://weaviate.local` with the matching API key.
+
+What happens behind the scenes:
+- `weaviate-certs` creates (or reuses) a local CA and a TLS certificate with Subject Alternative Names for `weaviate.local` and `grpc-weaviate.local`, storing the files under `reverse-proxy/certs/`.
+- `traefik` terminates TLS on port `8443` and forwards REST + gRPC traffic to the Weaviate container.
+- The Elysia container patches the generated CA into `certifi` so HTTPS and gRPC requests succeed without extra configuration.
+
+If you need to call Weaviate from outside the Docker network, add `weaviate.local` to your host's `hosts` file and trust `reverse-proxy/certs/ca.crt`. Persisted database files live in the named Docker volume `weaviate_data`.
+
+Optional extras:
+- Start the Ollama profile with `docker compose --profile ollama up -d` to run local models.
+- Run `docker compose --profile clients up` for a quick Python connectivity check against the proxy.
+
+Stop the stack with `docker compose down`.
 
 Additionally, you need to _preprocess_ your collections for Elysia to use the built in Weaviate-based tools, see below for details.
 

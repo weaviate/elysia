@@ -1,0 +1,13 @@
+# Static configuration for Traefik
+entryPoints:
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+log:
+  level: INFO
+

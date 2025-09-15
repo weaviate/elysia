@@ -28,6 +28,35 @@ Don't forget to check out [the Github Repository for the Frontend](https://githu
 
 Alternatively, we have created a demo version of Elysia (rate-limited, fixed datasets) to experiment with. Find it at: https://elysia.weaviate.io/
 
+## Local Development (Docker Compose)
+
+Run Elysia together with a local Weaviate instance that is exposed over HTTPS via Traefik. The stack mirrors the requirements of `connect_to_weaviate_cloud`, so the backend and Python client work without code changes.
+
+Prerequisites
+- Docker and the Docker Compose plugin
+- Host ports `8000` (Elysia UI) and `8443` (Traefik proxy) available
+
+Quick start
+1. Copy `.env.example` to `.env` and populate the keys you need. Leave `WCD_URL` and `WCD_API_KEY` empty to use the local defaults (`https://weaviate.local` and `elysia-local-admin`).
+2. Start everything once with
+   ```bash
+   docker compose up -d --build
+   ```
+3. Open [http://localhost:8000](http://localhost:8000) → Settings and set:
+   - Weaviate Cluster URL: `https://weaviate.local`
+   - API Key: the value you configured (default `elysia-local-admin`)
+   - Save the form and start exploring.
+
+What the stack includes
+- `weaviate-certs`: generates a self-signed CA plus a certificate with SANs for `weaviate.local` and `grpc-weaviate.local` (reuses existing files when possible).
+- `traefik`: terminates TLS and routes HTTPS traffic to Weaviate's REST (`8080`) and gRPC (`50051`) interfaces.
+- `elysia`: builds the current checkout, loads your `.env`, and patches the generated CA into `certifi` so HTTP and gRPC trust the proxy.
+- Optional profiles:
+  - `ollama`: enable with `docker compose --profile ollama up -d` if you want to run local models.
+  - `clients`: enable with `docker compose --profile clients up` to run a Python smoke test against the proxy.
+
+TLS assets live in `reverse-proxy/certs/` and the Weaviate persistence volume is `weaviate_data/`. If you need host-level HTTPS access, add `weaviate.local` to your hosts file and trust `reverse-proxy/certs/ca.crt` in your OS.
+
 ## Get Started (Python)
 
 To use Elysia, you need to either set up your models and API keys in your `.env` file, or specify them in the config. [See the setup page to get started.](https://weaviate.github.io/elysia/setting_up/)
