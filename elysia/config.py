@@ -762,15 +762,17 @@ def load_lm(
     if provider is None or lm_name is None:
         raise ValueError("Provider and LM name must be set")
 
-    api_base = model_api_base if provider == "ollama" else None
     full_lm_name = f"{provider}/{lm_name}"
 
     if lm_name.startswith("o1") or lm_name.startswith("o3"):
         return LM(
-            model=full_lm_name, api_base=api_base, max_tokens=8000, temperature=1.0
+            model=full_lm_name,
+            api_base=model_api_base,
+            max_tokens=8000,
+            temperature=1.0,
         )
 
-    return LM(model=full_lm_name, api_base=api_base, max_tokens=8000)
+    return LM(model=full_lm_name, api_base=model_api_base, max_tokens=8000)
 
 
 # global settings that should never be used by the frontend
