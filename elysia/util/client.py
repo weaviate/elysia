@@ -217,7 +217,15 @@ class ClientManager:
             return
 
         # Start sync client
-        self.client = self.get_client()
+        try:
+            self.client = self.get_client()
+        except Exception as e:
+            self.logger.error(
+                "Error initialising Weaviate client. Please check your Weaviate configuration is set correctly (WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, LOCAL_WEAVIATE_PORT, LOCAL_WEAVIATE_GRPC_PORT)."
+            )
+            self.logger.error(f"Full Weaviate connection error message: {e}")
+            self.is_client = False
+            return
         self.sync_restart_event.set()
 
     def _get_local_host_and_port(self) -> tuple[str, int]:
