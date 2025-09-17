@@ -40,9 +40,12 @@ class CitedSummarizingPrompt(dspy.Signature):
         1. Focus only on information relevant to the user's prompt
         2. Provide analysis and synthesis, not just extraction
         3. Only cite information that exists in the retrieved objects
-        4. Each text segment should map logically to its citations
-        5. Use multiple TextWithCitation objects to align text with its specific sources
-        6. Do not just repeat information from the environment. Create insights, offer suggestions, do not just list objects.
+        4. Only cite _relevant_ information from the objects as it relates to the text.
+        5. Each text segment should map logically to its citations
+        6. Use multiple TextWithCitation objects to align text with its specific sources
+        7. Do not just repeat information from the environment. Create insights, offer suggestions, do not just list objects.
+
+        Do not write multiple text segments which share the same ref_ids, combine the two text segments into one and use the ref_ids on both text segments.
         """.strip()
     )
 
