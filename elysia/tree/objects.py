@@ -774,19 +774,23 @@ class TreeData:
                 out += f"<task_{i+1}>\n"
 
                 if "action" in task and task["action"]:
-                    out += f"Chosen action: {task['task']} (this does not mean it has been completed, only that it was chosen) "
-                    out += "(Use the environment to judge if a task is completed)"
+                    out += (
+                        f"Chosen action: {task['task']} (this does not mean it has been completed, "
+                        "only that it was chosen, use the environment to judge if a task is completed)\n"
+                    )
                 else:
                     out += f"Chosen subcategory: {task['task']} (this action has not been completed, this is only a subcategory)"
 
                 if "error" in task and task["error"]:
-                    out += f" (There was an error during this tool call)\n"
+                    out += (
+                        f" (UNSUCCESSFUL) There was an error during this tool call. "
+                        "See the error messages for details. This action did not complete.\n"
+                    )
                 else:
-                    out += f" (Successfully completed)\n"
-
-                for key in task:
-                    if key != "task" and key != "action":
-                        out += f"{key.capitalize()}: {task[key]}\n"
+                    out += f" (SUCCESSFUL)\n"
+                    for key in task:
+                        if key != "task" and key != "action":
+                            out += f"{key.capitalize()}: {task[key]}\n"
 
                 out += f"</task_{i+1}>\n"
             out += f"</prompt_{j+1}>\n"

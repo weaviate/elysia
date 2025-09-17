@@ -446,18 +446,18 @@ def _catch_typing_errors(
                             "Object types cannot be filtered on."
                         )
 
-        # if "filter_buckets" in tool_args:
-        #     _reformat_incorrect_filters(
-        #         tool_args["filter_buckets"],
-        #         collection_property_types,
-        #         collection_name,
-        #     )
-        #     _catch_filter_errors(
-        #         tool_args["filter_buckets"],
-        #         collection_property_types,
-        #         collection_name,
-        #         schema,
-        #     )
+        if "filter_buckets" in tool_args:
+            _reformat_incorrect_filters(
+                tool_args["filter_buckets"],
+                collection_property_types,
+                collection_name,
+            )
+            _catch_filter_errors(
+                tool_args["filter_buckets"],
+                collection_property_types,
+                collection_name,
+                schema,
+            )
 
 
 def _catch_weaviate_errors(e: WeaviateBaseError):
