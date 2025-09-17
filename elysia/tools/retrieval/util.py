@@ -5,7 +5,7 @@ from typing import get_args, get_origin
 
 import weaviate
 from dateutil import parser
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from weaviate.collections import CollectionAsync
 from weaviate.classes.query import Filter, Metrics, QueryReference, Sort
 from weaviate.classes.aggregate import GroupByAggregate
@@ -29,12 +29,28 @@ class IntegerPropertyFilter(BaseModel):
     value: int | bool
     length: Optional[bool] = False
 
+    @field_validator("value")
+    @classmethod
+    def check_int(cls, v: int | float | bool) -> int | bool:
+        if isinstance(v, float) and v.is_integer():
+            return int(v)
+        else:
+            return v
+
 
 class FloatPropertyFilter(BaseModel):
     property_name: str
     operator: Literal["=", "!=", "<", ">", "<=", ">=", "IS_NULL"]
     value: float | bool
     length: Optional[bool] = False
+
+    @field_validator("value")
+    @classmethod
+    def check_float(cls, v: int | float | bool) -> float | bool:
+        if isinstance(v, int) and not v.is_integer():
+            return float(v)
+        else:
+            return v
 
 
 class TextPropertyFilter(BaseModel):
@@ -283,14 +299,14 @@ def _catch_filter_errors(
                         f"{collection_property_types[filter.property_name]}."
                     )
 
-            # check number
+            # check integer
             if (
                 not isinstance(
                     filter.value, IntegerPropertyFilter.__annotations__["value"]
                 )
                 and collection_property_types[filter.property_name] == "int"
             ):
-                if collection_property_types[filter.property_name] == "float":
+                if isinstance(filter.value, float):
                     raise QueryError(
                         f"Attempted to filter on property '{filter.property_name}' using a integer filter, "
                         f"but the property type is a {collection_property_types[filter.property_name]}. "
@@ -304,14 +320,14 @@ def _catch_filter_errors(
                         f"Filter value: {filter.value} is a {type(filter.value)}, not an integer. "
                     )
 
-            # check number
+            # check float
             if (
                 not isinstance(
                     filter.value, FloatPropertyFilter.__annotations__["value"]
                 )
                 and collection_property_types[filter.property_name] == "float"
             ):
-                if collection_property_types[filter.property_name] == "int":
+                if isinstance(filter.value, int):
                     raise QueryError(
                         f"Attempted to filter on property '{filter.property_name}' using a float filter, "
                         f"but the property type is a {collection_property_types[filter.property_name]}. "
@@ -430,13 +446,18 @@ def _catch_typing_errors(
                             "Object types cannot be filtered on."
                         )
 
-        if "filter_buckets" in tool_args:
-            _catch_filter_errors(
-                tool_args["filter_buckets"],
-                collection_property_types,
-                collection_name,
-                schema,
-            )
+        # if "filter_buckets" in tool_args:
+        #     _reformat_incorrect_filters(
+        #         tool_args["filter_buckets"],
+        #         collection_property_types,
+        #         collection_name,
+        #     )
+        #     _catch_filter_errors(
+        #         tool_args["filter_buckets"],
+        #         collection_property_types,
+        #         collection_name,
+        #         schema,
+        #     )
 
 
 def _catch_weaviate_errors(e: WeaviateBaseError):
@@ -454,6 +475,46 @@ def _catch_weaviate_errors(e: WeaviateBaseError):
         )
     else:
         raise e
+
+
+def _reformat_incorrect_filters(
+    filter_buckets: list[FilterBucket],
+    collection_property_types: dict[str, str],
+    collection_name: str,
+) -> None:
+
+    for filter_bucket in filter_buckets:
+
+        for i, filter in enumerate(filter_bucket.filters):
+            if isinstance(filter, FilterBucket):
+                _reformat_incorrect_filters(
+                    filter, collection_property_types, collection_name
+                )
+            else:
+
+                # If incorrectly specified IntegerPropertyFilter, on a float property, reformat to FloatPropertyFilter
+                if (
+                    isinstance(filter, IntegerPropertyFilter)
+                    and collection_property_types[filter.property_name] == "float"
+                ):
+                    filter_bucket.filters[i] = FloatPropertyFilter(
+                        property_name=filter.property_name,
+                        operator=filter.operator,
+                        value=filter.value,
+                        length=filter.length,
+                    )
+
+                # If incorrectly specified FloatPropertyFilter, on an int property, reformat to IntegerPropertyFilter
+                elif (
+                    isinstance(filter, FloatPropertyFilter)
+                    and collection_property_types[filter.property_name] == "int"
+                ):
+                    filter_bucket.filters[i] = IntegerPropertyFilter(
+                        property_name=filter.property_name,
+                        operator=filter.operator,
+                        value=filter.value,
+                        length=filter.length,
+                    )
 
 
 async def execute_weaviate_query(
