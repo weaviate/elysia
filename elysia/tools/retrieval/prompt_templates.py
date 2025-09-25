@@ -39,6 +39,10 @@ def construct_aggregation_output_prompt(vectorised: bool = False) -> str:
             "*car*" matches "car", "healthcare", etc
         - BooleanPropertyFilter: For boolean comparisons (=, !=)
         - DatePropertyFilter: For date comparisons (=, !=, <, >, <=, >=)
+        - ListPropertyFilter: For list comparisons (=, !=, CONTAINS_ANY, CONTAINS_ALL, IS_NULL) (only if the property type is a list, e.g. "text[]", or "number[]")
+            Note that you can also use operators on the data type itself, e.g. data type is "text[]", you can use LIKE, CONTAINS, etc.
+            e.g. data type is "float[]", you can use <, >, <=, >=, etc.
+            Same for integer, date, boolean, etc.
        Make sure to use the correct filter type for the property type. The property type is given in the schema (field.[field_name].type).
        If you use the incorrect filter type, the query will error. It is extremely important that you use the correct filter type!
        You CANNOT use any type of filter on an 'object' or 'object[]' property. It will raise an error!
@@ -165,6 +169,9 @@ def construct_query_output_prompt(vectorised: bool = False) -> str:
         - BooleanPropertyFilter: For boolean comparisons (=, !=, IS_NULL)
         - DatePropertyFilter: For date comparisons (=, !=, <, >, <=, >=, IS_NULL)
         - ListPropertyFilter: For list comparisons (=, !=, CONTAINS_ANY, CONTAINS_ALL, IS_NULL) (only if the property type is a list, e.g. "text[]", or "number[]")
+            Note that you can also use operators on the data type itself, e.g. data type is "text[]", you can use LIKE, CONTAINS, etc.
+            e.g. data type is "float[]", you can use <, >, <=, >=, etc.
+            Same for integer, date, boolean, etc.
         Make sure to use the correct filter type for the property type. The property type is given in the schema (field.[field_name].type).
         If you use the incorrect filter type, the query will error. It is extremely important that you use the correct filter type!
         You can also use the `length` parameter on NumberPropertyFilter/ListPropertyFilter ONLY (even if the property is not a number) to filter by the length of a list,

@@ -277,108 +277,100 @@ def _catch_filter_errors(
                     )
                 continue
 
-            # get the types from the union and extract their origins for isinstance check
+            # check list
             union_list_types = get_args(ListPropertyFilter.__annotations__["value"])
             valid_list_types = tuple(
                 get_origin(type_) or type_ for type_ in union_list_types
             )
 
-            if not isinstance(
-                filter.value, valid_list_types
-            ) and collection_property_types[filter.property_name].endswith("[]"):
-                if collection_property_types[filter.property_name] == "text":
+            if collection_property_types[filter.property_name].endswith("[]"):
+                if not isinstance(
+                    filter.value, valid_list_types
+                ) and filter.operator in ["CONTAINS_ANY", "CONTAINS_ALL"]:
                     raise QueryError(
-                        f"Attempted to filter on property '{filter.property_name}' using a list filter, "
-                        "but the property type is text. Text properties cannot be filtered on. "
-                        "Hint: use a text filter with the 'LIKE' operator instead."
+                        f"Attempted to filter on property '{filter.property_name}' using a the {filter.operator} operator, "
+                        f"but this requires a list of values. "
+                        f"Filter value used: `{filter.value}` is a {type(filter.value)}, not a list. "
+                        f"Hint: you could use `[{filter.value}]` instead, or use a different operator on the data type itself, "
+                        f"which is a {collection_property_types[filter.property_name]}."
                     )
-                else:
-                    raise QueryError(
-                        f"Attempted to filter on property '{filter.property_name}' using a list filter, "
-                        "but the property type is not a list. It is a "
-                        f"{collection_property_types[filter.property_name]}."
-                    )
+                continue
 
             # check integer
-            if (
-                not isinstance(
+            if collection_property_types[filter.property_name].startswith("int"):
+                if not isinstance(
                     filter.value, IntegerPropertyFilter.__annotations__["value"]
-                )
-                and collection_property_types[filter.property_name] == "int"
-            ):
-                if isinstance(filter.value, float):
-                    raise QueryError(
-                        f"Attempted to filter on property '{filter.property_name}' using a integer filter, "
-                        f"but the property type is a {collection_property_types[filter.property_name]}. "
-                        f"Filter value: {filter.value} is a {type(filter.value)}, not an integer. "
-                        f"Hint: you could use {float(filter.value)} instead (may require adjusting the filter operator)."
-                    )
-                else:
-                    raise QueryError(
-                        f"Attempted to filter on property '{filter.property_name}' using a integer filter, "
-                        f"but the property type is a {collection_property_types[filter.property_name]}. "
-                        f"Filter value: {filter.value} is a {type(filter.value)}, not an integer. "
-                    )
+                ):
+                    if isinstance(filter.value, float):
+                        raise QueryError(
+                            f"Attempted to filter on property '{filter.property_name}' using a integer filter, "
+                            f"but the property type is a {collection_property_types[filter.property_name]}. "
+                            f"Filter value used: `{filter.value}` is a {type(filter.value)}, not an integer. "
+                            f"Hint: you could use `{float(filter.value)}` instead (may require adjusting the filter operator)."
+                        )
+                    else:
+                        raise QueryError(
+                            f"Attempted to filter on property '{filter.property_name}' using a integer filter, "
+                            f"but the property type is a {collection_property_types[filter.property_name]}. "
+                            f"Filter value used: `{filter.value}` is a {type(filter.value)}, not an integer. "
+                        )
+                continue
 
             # check float
-            if (
-                not isinstance(
+            if collection_property_types[filter.property_name].startswith("float"):
+                if not isinstance(
                     filter.value, FloatPropertyFilter.__annotations__["value"]
-                )
-                and collection_property_types[filter.property_name] == "float"
-            ):
-                if isinstance(filter.value, int):
-                    raise QueryError(
-                        f"Attempted to filter on property '{filter.property_name}' using a float filter, "
-                        f"but the property type is a {collection_property_types[filter.property_name]}. "
-                        f"Filter value: {filter.value} is a {type(filter.value)}, not a float. "
-                        f"Hint: you could use {int(filter.value)} instead (may require adjusting the filter operator)."
-                    )
-                else:
-                    raise QueryError(
-                        f"Attempted to filter on property '{filter.property_name}' using a float filter, "
-                        f"but the property type is a {collection_property_types[filter.property_name]}. "
-                        f"Filter value: {filter.value} is a {type(filter.value)}, not a float. "
-                    )
+                ):
+                    if isinstance(filter.value, int):
+                        raise QueryError(
+                            f"Attempted to filter on property '{filter.property_name}' using a float filter, "
+                            f"but the property type is a {collection_property_types[filter.property_name]}. "
+                            f"Filter value used: `{filter.value}` is a {type(filter.value)}, not a float. "
+                            f"Hint: you could use `{int(filter.value)}` instead (may require adjusting the filter operator)."
+                        )
+                    else:
+                        raise QueryError(
+                            f"Attempted to filter on property '{filter.property_name}' using a float filter, "
+                            f"but the property type is a {collection_property_types[filter.property_name]}. "
+                            f"Filter value: {filter.value} is a {type(filter.value)}, not a float. "
+                        )
+                continue
 
             # check date
-            if (
-                not isinstance(
+            if collection_property_types[filter.property_name].startswith("date"):
+                if not isinstance(
                     filter.value, DatePropertyFilter.__annotations__["value"]
-                )
-                and collection_property_types[filter.property_name] == "date"
-            ):
-                raise QueryError(
-                    f"Attempted to filter on property '{filter.property_name}' using a date filter, "
-                    f"but the property type is a {collection_property_types[filter.property_name]}. "
-                    f"Filter value: {filter.value} is a {type(filter.value)}, not a date."
-                )
+                ):
+                    raise QueryError(
+                        f"Attempted to filter on property '{filter.property_name}' using a date filter, "
+                        f"but the property type is a {collection_property_types[filter.property_name]}. "
+                        f"Filter value: {filter.value} is a {type(filter.value)}, not a date."
+                    )
+                continue
 
             # check boolean
-            if (
-                not isinstance(
+            if collection_property_types[filter.property_name].startswith("boolean"):
+                if not isinstance(
                     filter.value, BooleanPropertyFilter.__annotations__["value"]
-                )
-                and collection_property_types[filter.property_name] == "boolean"
-            ):
-                raise QueryError(
-                    f"Attempted to filter on property '{filter.property_name}' using a boolean filter, "
-                    f"but the property type is a {collection_property_types[filter.property_name]}. "
-                    f"Filter value: {filter.value} is a {type(filter.value)}, not a boolean."
-                )
+                ):
+                    raise QueryError(
+                        f"Attempted to filter on property '{filter.property_name}' using a boolean filter, "
+                        f"but the property type is a {collection_property_types[filter.property_name]}. "
+                        f"Filter value: {filter.value} is a {type(filter.value)}, not a boolean."
+                    )
+                continue
 
             # check text
-            if (
-                not isinstance(
+            if collection_property_types[filter.property_name].startswith("text"):
+                if not isinstance(
                     filter.value, TextPropertyFilter.__annotations__["value"]
-                )
-                and collection_property_types[filter.property_name] == "text"
-            ):
-                raise QueryError(
-                    f"Attempted to filter on property '{filter.property_name}' using a text filter, "
-                    f"but the property type is a {collection_property_types[filter.property_name]}. "
-                    f"Filter value: {filter.value} is a {type(filter.value)}, not a text."
-                )
+                ):
+                    raise QueryError(
+                        f"Attempted to filter on property '{filter.property_name}' using a text filter, "
+                        f"but the property type is a {collection_property_types[filter.property_name]}. "
+                        f"Filter value: {filter.value} is a {type(filter.value)}, not a text."
+                    )
+                continue
 
 
 # == Define functions for executing queries and aggregations
