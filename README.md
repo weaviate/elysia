@@ -155,6 +155,8 @@ You can connect to a locally running Weaviate instance in Docker, and connect to
 
 Elysia works with quite long context, so some smaller models will struggle with this - it will either take a very long time to complete or the model will error to output the correct structured response.
 
+For a complete guide and troubleshooting, [see this page of the documentation](https://weaviate.github.io/elysia/Advanced/local_models/).
+
 </details>
 
 <details>
