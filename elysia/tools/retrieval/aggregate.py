@@ -64,8 +64,11 @@ class Aggregate(Tool):
         client_manager: ClientManager,
     ) -> bool:
         """
-        Only available when there is a Weaviate connection.
-        If this tool is not available, inform the user that they need to set the WCD_URL and WCD_API_KEY in the settings.
+        Only available if:
+        1. There is a Weaviate connection
+        2. There are collections available
+        If this tool is not available, inform the user that they should make sure they have set the WCD_URL and WCD_API_KEY in the settings.
+        And also they should make sure they have added collections to the tree.
         """
         return client_manager.is_client and tree_data.collection_names != []
 
