@@ -67,7 +67,7 @@ class Aggregate(Tool):
         Only available when there is a Weaviate connection.
         If this tool is not available, inform the user that they need to set the WCD_URL and WCD_API_KEY in the settings.
         """
-        return client_manager.is_client
+        return client_manager.is_client and tree_data.collection_names != []
 
     def _find_previous_aggregations(
         self, environment: dict, collection_names: list[str]
