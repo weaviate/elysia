@@ -35,6 +35,7 @@ nav:
   - Advanced:
     - Overview: Advanced/index.md
     - Technical Overview: Advanced/technical_overview.md
+    - Local Models: Advanced/local_models.md
     - Tool Construction: Advanced/advanced_tool_construction.md
     - Custom Objects: Advanced/custom_objects.md
     - Environment: Advanced/environment.md

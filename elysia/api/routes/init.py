@@ -70,32 +70,38 @@ async def initialise_user(
 
         # if a user does not exist, create a user and set up the configs
         if not user_exists:
-            await user_manager.add_user_local(
-                user_id,
-            )  # leave config empty to create defaults for a new user
-
-            # find any default configs
-            if user_manager.users[user_id][
-                "frontend_config"
-            ].save_location_client_manager.is_client:
-                default_config = await get_default_config(
-                    user_manager.users[user_id][
-                        "frontend_config"
-                    ].save_location_client_manager,
+            try:
+                await user_manager.add_user_local(
                     user_id,
-                )
-                if default_config:
-                    await user_manager.update_config(
+                )  # leave config empty to create defaults for a new user
+
+                # find any default configs
+                if user_manager.users[user_id][
+                    "frontend_config"
+                ].save_location_client_manager.is_client:
+                    default_config = await get_default_config(
+                        user_manager.users[user_id][
+                            "frontend_config"
+                        ].save_location_client_manager,
                         user_id,
-                        config_id=default_config.id,
-                        config_name=default_config.name,
-                        settings=default_config.settings.to_json(),
-                        style=default_config.style,
-                        agent_description=default_config.agent_description,
-                        end_goal=default_config.end_goal,
-                        branch_initialisation=default_config.branch_initialisation,
                     )
-                    logger.debug("Using default config")
+                    if default_config:
+                        await user_manager.update_config(
+                            user_id,
+                            config_id=default_config.id,
+                            config_name=default_config.name,
+                            settings=default_config.settings.to_json(),
+                            style=default_config.style,
+                            agent_description=default_config.agent_description,
+                            end_goal=default_config.end_goal,
+                            branch_initialisation=default_config.branch_initialisation,
+                        )
+                        logger.debug("Using default config")
+            except Exception as e:
+                logger.exception(e)
+                logger.error("Error initialising user, removing user")
+                if user_id in user_manager.users:
+                    del user_manager.users[user_id]
 
         # if a user exists, get the existing configs
         user = await user_manager.get_user_local(user_id)

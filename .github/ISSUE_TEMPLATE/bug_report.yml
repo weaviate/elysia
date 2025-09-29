@@ -1,0 +1,58 @@
+name: Bug Report
+description: Report a bug in the project
+title: "[Bug] "
+labels: bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Bug Report
+        Please fill out all required fields to help us diagnose and fix the issue.
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Elysia version"
+      description: "Tell us your Elysia version. (You can find this out via `pip show elysia-ai` in your environment that you installed Elysia in.)"
+    validations:
+      required: true
+
+  - type: input
+    id: installation_method
+    attributes:
+      label: "Installation method"
+      description: "How did you install Elysia? (e.g. pip, uv, conda, from source, etc.)"
+      placeholder: "pip install elysia-ai"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: app_or_python
+    attributes:
+      label: "Is the issue occurring in the Elysia package or the Elysia web app?"
+      description: "Please note that if your bug looks like a frontend problem (e.g. items not displaying, etc.), you might want to submit a bug report to the Elysia frontend repository instead: https://github.com/weaviate/elysia-frontend. However, if you are getting _errors_ in the app, then it is likely the backend and suited for here."
+      options:
+        - "Python package (running Elysia in python)"
+        - "Elysia web app (using the app via `elysia start`)"
+        - "Both"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "What happened?"
+      description: "Clearly describe the unexpected behavior. Attach a full error log if possible. In the web app, you may have an error in the terminal you ran `elysia start` from."
+      placeholder: "Whenever I try to run a query, I get an error message..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: "Steps to reproduce"
+      description: "Please provide a code snippet if applicable, or what you were doing when the issue occurred. If it seems a problem with your data, attach a (dummy) sample of your data or your schema. In Weaviate, you can do `print(client.collections.get(\"<your_collection_name>\").config.get())`"
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional context"
+      description: "Tell us any additional context that might be helpful. E.g., are you running local weaviate, is it a local model (which one), any special considerations, etc."

@@ -194,7 +194,6 @@ class AsyncCollectionChunker:
             self.collection_name
         ).config.get()
 
-        # see if any named vectors exclusively vectorise the content field
         if collection_config.vector_config is not None:
             for (
                 named_vector_name,
@@ -203,9 +202,15 @@ class AsyncCollectionChunker:
 
                 named_vectorizer = named_vector_config.vectorizer
 
-                if (
+                if (  # default weaviate naming "default" or a single named vector
+                    (
+                        named_vector_name == "default"
+                        or len(collection_config.vector_config) == 1
+                    )
+                    and named_vectorizer.source_properties is None
+                ) or (  # named vector with source properties which includes the content field
                     named_vectorizer.source_properties is not None
-                    and named_vectorizer.source_properties == [content_field]
+                    and content_field in named_vectorizer.source_properties
                 ):
                     try:
                         vectorizer = getattr(
@@ -229,27 +234,23 @@ class AsyncCollectionChunker:
                     except AttributeError as e:
                         pass
 
-        # if we haven't returned yet, try the overall vectoriser
-        if collection_config.vectorizer_config is not None:
-            try:
-                vectorizer_name = (
-                    collection_config.vectorizer_config.vectorizer.replace("-", "_")
-                )
-                vectorizer = getattr(Configure.Vectors, vectorizer_name)
-                valid_args = inspect.signature(vectorizer).parameters
-
-                return vectorizer(
-                    **{
-                        arg: collection_config.vectorizer_config.model[arg]
-                        for arg in collection_config.vectorizer_config.model
-                        if arg in valid_args and arg != "vector_index_config"
-                    },
-                    vector_index_config=Configure.VectorIndex.hnsw(
-                        quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
-                    ),
-                )
-            except AttributeError as e:
-                pass
+        # check old vectorizer config
+        elif collection_config.vectorizer_config is not None:
+            vectorizer_name = collection_config.vectorizer_config.vectorizer.replace(
+                "-", "_"
+            )
+            vectorizer = getattr(Configure.Vectors, vectorizer_name)
+            valid_args = inspect.signature(vectorizer).parameters
+            return vectorizer(
+                **{
+                    arg: collection_config.vectorizer_config.model[arg]
+                    for arg in collection_config.vectorizer_config.model
+                    if arg in valid_args and arg != "vector_index_config"
+                },
+                vector_index_config=Configure.VectorIndex.hnsw(
+                    quantizer=Configure.VectorIndex.Quantizer.sq()  # scalar quantization
+                ),
+            )
 
         # otherwise use default weaviate embedding service
         return Configure.Vectors.text2vec_weaviate(

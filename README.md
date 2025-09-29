@@ -150,6 +150,14 @@ You can connect to a locally running Weaviate instance in Docker, and connect to
 
 </details>
 
+<details>
+<summary><b>Help! My local model isn't working with Elysia. It's timing out or there are errors.</b></summary>
+
+Elysia works with quite long context, so some smaller models will struggle with this - it will either take a very long time to complete or the model will error to output the correct structured response.
+
+For a complete guide and troubleshooting, [see this page of the documentation](https://weaviate.github.io/elysia/Advanced/local_models/).
+
+</details>
 
 <details>
 <summary><b>How do I clear all my Elysia data?</b></summary>

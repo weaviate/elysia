@@ -9,7 +9,8 @@ class TextWithCitation(BaseModel):
         description=(
             "The ref_ids of the citations relevant to the text. "
             "Can be an empty list if the text is not related to any of the citations."
-        )
+        ),
+        default_factory=list,
     )
 
 
