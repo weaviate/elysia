@@ -88,6 +88,15 @@ def cleanup_collections(request):
             elif collection_name.startswith("ELYSIA_Test_"):
                 client.collections.delete(collection_name)
 
+        # check metadata for test collections
+        metadata_collection = client.collections.get("ELYSIA_METADATA__")
+        metadata_response = metadata_collection.query.fetch_objects(
+            limit=len(metadata_collection)
+        )
+        for metadata in metadata_response.objects:
+            if metadata.properties["name"].startswith("Test_ELYSIA_"):
+                metadata_collection.data.delete_by_id(metadata.uuid)
+
     client_manager.client.close()
 
 
