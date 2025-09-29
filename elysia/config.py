@@ -347,6 +347,7 @@ class Settings:
                 - local_weaviate_port (int): The port to use for the local Weaviate cluster.
                 - local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
                 - logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+                - api_keys (dict): A dictionary of API keys to set. E.g. `{"openai_apikey": "..."}`.
                 - use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
                     If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.
                     These are implemented via few-shot examples for the decision node.
