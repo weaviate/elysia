@@ -14,9 +14,9 @@ This PR contains the following changes:
 ## ✅ Contributor Checklist
 
 <!--  -->
-- [] `no_reqs` tests are passing locally
-- [] `requires_env` tests are passing locally (optional - see [Testing guidelines](https://github.com/weaviate/elysia?tab=contributing-ov-file#testing))
-- [] You agree to Weaviate's [Contributor License Agreement](https://weaviate.io/service/contributor-license-agreement)
+- [ ] `no_reqs` tests are passing locally
+- [ ] `requires_env` tests are passing locally (optional - see [Testing guidelines](https://github.com/weaviate/elysia?tab=contributing-ov-file#testing))
+- [ ] You agree to Weaviate's [Contributor License Agreement](https://weaviate.io/service/contributor-license-agreement)
 
 <!-- ## Additional Info (Optional) -->
 
