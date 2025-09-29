@@ -52,7 +52,6 @@ body:
       label: "Steps to reproduce"
       description: "Please provide a code snippet if applicable, or what you were doing when the issue occurred. If it seems a problem with your data, attach a (dummy) sample of your data or your schema. In Weaviate, you can do `print(client.collections.get("<your_collection_name>").config.get())`"
 
-
   - type: textarea
     id: additional_context
     attributes:
