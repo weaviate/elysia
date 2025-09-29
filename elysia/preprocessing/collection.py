@@ -326,32 +326,66 @@ async def _evaluate_index_properties(collection: CollectionAsync) -> dict:
 
 async def _find_vectorisers(collection: CollectionAsync) -> dict[str, dict]:
     schema_info = await collection.config.get()
+    default_set = False
     if not schema_info.vector_config:
         named_vectors = None
     else:
-        named_vectors = [
-            {
-                "name": vector,
-                "vectorizer": schema_info.vector_config[
-                    vector
-                ].vectorizer.vectorizer.name,
-                "model": (
-                    schema_info.vector_config[vector].vectorizer.model["model"]
-                    if "model" in schema_info.vector_config[vector].vectorizer.model
-                    else None
-                ),
-                "source_properties": schema_info.vector_config[
-                    vector
-                ].vectorizer.source_properties,
-                "enabled": True,
-                "description": "",
-            }
-            for vector in schema_info.vector_config
-        ]
+        vector_keys = list(schema_info.vector_config.keys())
+        if "default" in vector_keys:
+            which_default = vector_keys.index("default")
 
-    if not schema_info.vectorizer_config:
+            if (
+                not schema_info.vectorizer_config
+                and schema_info.vector_config[
+                    vector_keys[which_default]
+                ].vectorizer.vectorizer.name.lower()
+                != "none"
+            ):
+                vectoriser = {
+                    "vectorizer": schema_info.vector_config[
+                        vector_keys[which_default]
+                    ].vectorizer.vectorizer.name,
+                    "model": (
+                        schema_info.vector_config[
+                            vector_keys[which_default]
+                        ].vectorizer.model["model"]
+                        if "model"
+                        in schema_info.vector_config[
+                            vector_keys[which_default]
+                        ].vectorizer.model
+                        else None
+                    ),
+                }
+                default_set = True
+
+            vector_keys.pop(which_default)
+
+        if len(vector_keys) > 0:
+            named_vectors = [
+                {
+                    "name": vector,
+                    "vectorizer": schema_info.vector_config[
+                        vector
+                    ].vectorizer.vectorizer.name,
+                    "model": (
+                        schema_info.vector_config[vector].vectorizer.model["model"]
+                        if "model" in schema_info.vector_config[vector].vectorizer.model
+                        else None
+                    ),
+                    "source_properties": schema_info.vector_config[
+                        vector
+                    ].vectorizer.source_properties,
+                    "enabled": True,
+                    "description": "",
+                }
+                for vector in vector_keys
+            ]
+        else:
+            named_vectors = None
+
+    if not schema_info.vectorizer_config and not default_set:
         vectoriser = None
-    else:
+    elif not default_set:
         vectoriser = {
             "vectorizer": schema_info.vectorizer_config.vectorizer.name,
             "model": (
@@ -652,7 +686,7 @@ async def preprocess_async(
             else:
                 metadata_collection = await client.collections.create(
                     f"ELYSIA_METADATA__",
-                    vectorizer_config=Configure.Vectorizer.none(),
+                    vector_config=Configure.Vectors.self_provided(),
                     properties=[
                         Property(
                             name="name",
@@ -1315,12 +1349,22 @@ async def view_preprocessed_collection_async(
             metadata_collection = client.collections.get(metadata_name)
             metadata = await metadata_collection.query.fetch_objects(
                 filters=Filter.by_property("name").equal(collection_name),
-                limit=1,
+                limit=100,
             )
             if len(metadata.objects) == 0:
                 raise Exception(f"Metadata for {collection_name} does not exist")
 
-            properties: dict = metadata.objects[0].properties  # type: ignore
+            metadata_collection_names = [
+                metadata_object.properties["name"]
+                for metadata_object in metadata.objects
+            ]
+
+            if collection_name not in metadata_collection_names:
+                raise Exception(f"Metadata for {collection_name} does not exist")
+
+            properties: dict = metadata.objects[
+                metadata_collection_names.index(collection_name)
+            ].properties  # type: ignore
 
     if close_clients_after_completion:
         await client_manager.close_clients()
