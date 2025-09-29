@@ -188,7 +188,11 @@ async def _evaluate_field_statistics(
         # For text, we want to evaluate the length of the text in tokens (use spacy)
         lengths = []
         for obj in sample_objects:
-            if property in obj and isinstance(obj[property], str):
+            if (
+                property in obj
+                and isinstance(obj[property], str)
+                and obj[property] is not None
+            ):
                 lengths.append(len(nlp(obj[property])))
 
         if len(lengths) == 0:
@@ -228,7 +232,11 @@ async def _evaluate_field_statistics(
 
     # List (lengths)
     elif properties[property].endswith("[]"):
-        lengths = [len(obj[property]) for obj in sample_objects]
+        lengths = [
+            len(obj[property])
+            for obj in sample_objects
+            if isinstance(obj[property], list)
+        ]
 
         if len(lengths) == 0:
             out["range"] = None

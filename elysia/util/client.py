@@ -101,8 +101,6 @@ class ClientManager:
         ```
         """
 
-        self.logger = logger
-
         if client_timeout is None:
             self.client_timeout = datetime.timedelta(
                 minutes=int(os.getenv("CLIENT_TIMEOUT", 3))
@@ -116,6 +114,11 @@ class ClientManager:
             self.settings = environment_settings
         else:
             self.settings = settings
+
+        if logger is None:
+            self.logger = self.settings.logger
+        else:
+            self.logger = logger
 
         # Set the weaviate url and api key
         if wcd_url is None:
@@ -220,10 +223,11 @@ class ClientManager:
         try:
             self.client = self.get_client()
         except Exception as e:
-            self.logger.error(
-                "Error initialising Weaviate client. Please check your Weaviate configuration is set correctly (WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, LOCAL_WEAVIATE_PORT, LOCAL_WEAVIATE_GRPC_PORT)."
-            )
-            self.logger.error(f"Full Weaviate connection error message: {e}")
+            if self.logger:
+                self.logger.error(
+                    "Error initialising Weaviate client. Please check your Weaviate configuration is set correctly (WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, LOCAL_WEAVIATE_PORT, LOCAL_WEAVIATE_GRPC_PORT)."
+                )
+                self.logger.error(f"Full Weaviate connection error message: {e}")
             self.is_client = False
             return
         self.sync_restart_event.set()
