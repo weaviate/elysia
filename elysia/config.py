@@ -669,8 +669,18 @@ class ElysiaKeyManager:
             )
 
         # update all api keys in env
+        warning_api_keys = []
         for api_key, value in self.settings.API_KEYS.items():
-            os.environ[api_key.upper()] = value
+            if isinstance(value, str):
+                os.environ[api_key.upper()] = value
+            else:
+                warning_api_keys.append(api_key)
+
+        if len(warning_api_keys) > 0:
+            self.settings.logger.warning(
+                f"The following API keys are either not found or not strings: {', '.join(warning_api_keys)}. "
+                "These have been ignored. Please ensure the API keys in the settings are available and strings."
+            )
 
         pass
 
