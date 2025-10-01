@@ -6,15 +6,22 @@ on:
       - "v*"
 
 jobs:
-  build:
-    name: Build and publish
+  build-and-publish:
+    name: Build and publish to PyPI
     runs-on: ubuntu-latest
+    if: github.repository_owner == 'weaviate'
+    permissions:
+      id-token: write
+      contents: write
+
+    environment:
+      name: pypi
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
           fetch-depth: 1  
 
       - name: Set up Python
@@ -22,18 +29,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install toml
-        run: >-
-          python3 -m
-          pip install
-          toml
-          --user
-
       - name: Update version in pyproject.toml
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           echo "Setting version to $TAG_VERSION in pyproject.toml"
-          python -c "import toml; data = toml.load('pyproject.toml'); data['project']['version'] = '$TAG_VERSION'; toml.dump(data, open('pyproject.toml', 'w'))"
+          # Use sed without the '' flag for Linux compatibility
+          sed -i "/#replace_package_version_marker/{n;s/version *= *\"[^\"]*\"/version=\"$TAG_VERSION\"/;}" pyproject.toml
+          sed -i "/# replace_package_version_marker/{n;s/__version__ *= *\"[^\"]*\"/__version__=\"$TAG_VERSION\"/;}" ./elysia/__metadata__.py
 
       - name: Install pypa/build
         run: >-
@@ -50,37 +52,56 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
-
-  publish-to-pypi:
-    name: >-
-      Publish Python distribution to PyPI
-    needs:
-    - build
-    runs-on: ubuntu-latest
     
-    environment:
-      name: pypi
-      url: https://pypi.org/p/elysia-ai
-    
-    permissions:
-      id-token: write
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
 
-    steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
+      - name: Publish release distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
 
-    - name: Publish release distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages-dir: dist/
+      - name: Create test environment
+        run: python -m venv test_before_pypi
+
+      - name: Check the install
+        run: |
+            source test_before_pypi/bin/activate
+            pip install dist/*.whl
+            deactivate
+            rm -r test_before_pypi
+
+      - uses: stefanzweifel/git-auto-commit-action@v5 # auto commit changes to main
+        with:
+          commit_message: Update versions
+          create_branch: true
+          branch: release/${{ github.ref }}
+
+      - name: Checkout main branch
+        run: |
+          git fetch origin
+          git checkout main
+
+      - name: Configure git user
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "Github Actions"
+
+      - name: Merge release branch into main
+        run: |
+          git merge --no-ff release/${{ github.ref }}
+
+      - name: Push changes to main
+        run: |
+          git push origin main
 
 
   create-release:
     name: Create Release
-    needs: publish-to-pypi
+    needs: build-and-publish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -93,6 +114,5 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          generate_release_notes: true
           draft: true
           prerelease: false
