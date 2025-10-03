@@ -26,12 +26,12 @@ from weaviate.exceptions import (
 class IntegerPropertyFilter(BaseModel):
     property_name: str
     operator: Literal["=", "!=", "<", ">", "<=", ">=", "IS_NULL"]
-    value: int | bool
+    value: int | float | bool
     length: Optional[bool] = False
 
     @field_validator("value")
     @classmethod
-    def check_int(cls, v: int | float | bool) -> int | bool:
+    def check_int(cls, v: int | float | bool) -> int | float | bool:
         if isinstance(v, float) and v.is_integer():
             return int(v)
         else:
@@ -41,12 +41,12 @@ class IntegerPropertyFilter(BaseModel):
 class FloatPropertyFilter(BaseModel):
     property_name: str
     operator: Literal["=", "!=", "<", ">", "<=", ">=", "IS_NULL"]
-    value: float | bool
+    value: float | int | bool
     length: Optional[bool] = False
 
     @field_validator("value")
     @classmethod
-    def check_float(cls, v: int | float | bool) -> float | bool:
+    def check_float(cls, v: int | float | bool) -> float | int | bool:
         if isinstance(v, int) and not v.is_integer():
             return float(v)
         else:
@@ -433,7 +433,7 @@ def _catch_typing_errors(
                         "object"
                     ):
                         raise QueryError(
-                            f"Attempted to filter on property '{filter.property_name}', "
+                            f"Attempted to filter on property '{agg_operator.property_name}', "
                             "but the property type is an object. "
                             "Object types cannot be filtered on."
                         )
@@ -480,7 +480,7 @@ def _reformat_incorrect_filters(
         for i, filter in enumerate(filter_bucket.filters):
             if isinstance(filter, FilterBucket):
                 _reformat_incorrect_filters(
-                    filter, collection_property_types, collection_name
+                    [filter], collection_property_types, collection_name
                 )
             else:
 
