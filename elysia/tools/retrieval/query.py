@@ -144,11 +144,12 @@ class Query(Tool):
         threshold: int = 400,  # number of tokens to be considered large enough to chunk
     ) -> bool:
         content_field, content_len = self._evaluate_content_field(
-            schema["fields"],
+            metadata_fields=schema["fields"],
         )
 
         return (
             content_field is not None
+            and content_len is not None
             and content_len > threshold
             and query_type != "filter_only"
             and display_type
