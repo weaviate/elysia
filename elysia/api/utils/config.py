@@ -122,14 +122,15 @@ class FrontendConfig:
         }
         self.save_location_wcd_url: str = os.getenv("WCD_URL", "")
         self.save_location_wcd_api_key: str = os.getenv("WCD_API_KEY", "")
-        self.save_location_weaviate_is_local: bool = os.getenv(
-            "WEAVIATE_IS_LOCAL", "False"
-        ) == "True"
+        self.save_location_weaviate_is_local: bool = (
+            os.getenv("WEAVIATE_IS_LOCAL", "False") == "True"
+        )
         self.save_location_local_weaviate_port: int = int(
             os.getenv("LOCAL_WEAVIATE_PORT", 8080)
         )
-        self.save_location_local_weaviate_grpc_port: int = int(os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
-        )   
+        self.save_location_local_weaviate_grpc_port: int = int(
+            os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
+        )
         self.save_location_client_manager: ClientManager = ClientManager(
             wcd_url=self.save_location_wcd_url,
             wcd_api_key=self.save_location_wcd_api_key,
@@ -199,13 +200,19 @@ class FrontendConfig:
             self.save_location_wcd_api_key = kwargs["save_location_wcd_api_key"]
             reload_client_manager = True
         if "save_location_weaviate_is_local" in kwargs:
-            self.save_location_weaviate_is_local = kwargs["save_location_weaviate_is_local"]
+            self.save_location_weaviate_is_local = kwargs[
+                "save_location_weaviate_is_local"
+            ]
             reload_client_manager = True
         if "save_location_local_weaviate_port" in kwargs:
-            self.save_location_local_weaviate_port = kwargs["save_location_local_weaviate_port"]
+            self.save_location_local_weaviate_port = kwargs[
+                "save_location_local_weaviate_port"
+            ]
             reload_client_manager = True
         if "save_location_local_weaviate_grpc_port" in kwargs:
-            self.save_location_local_weaviate_grpc_port = kwargs["save_location_local_weaviate_grpc_port"]
+            self.save_location_local_weaviate_grpc_port = kwargs[
+                "save_location_local_weaviate_grpc_port"
+            ]
             reload_client_manager = True
         if "save_trees_to_weaviate" in kwargs:
             self.config["save_trees_to_weaviate"] = kwargs["save_trees_to_weaviate"]
