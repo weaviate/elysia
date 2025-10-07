@@ -15,6 +15,8 @@ Elysia is an agentic platform designed to use tools in a decision tree. A decisi
 
 [Read the docs!](https://weaviate.github.io/elysia/)
 
+> 💡 Don't forget to check out [the Github Repository for the Frontend](https://github.com/weaviate/elysia-frontend)!
+
 Installation is as simple as:
 ```bash
 pip install elysia-ai
@@ -53,8 +55,6 @@ Run the app via
 elysia start
 ```
 Then navigate to the settings page, add your required API keys, Weaviate cloud cluster details and specify your models.
-
-> 💡 Don't forget to check out [the Github Repository for the Frontend](https://github.com/weaviate/elysia-frontend)!
 
 Alternatively, we have created a demo version of Elysia (rate-limited, fixed datasets) to experiment with. Find it at: https://elysia.weaviate.io/
 
