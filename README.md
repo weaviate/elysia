@@ -1,4 +1,9 @@
-# Elysia: Agentic Framework Powered by Decision Trees
+
+
+<p align="center">
+  <img src="./img/banner.gif" alt="Elysia: Decision Tree Agentic Framework">
+</p>
+
 
 > **⚠️ Elysia is in beta!**
 >
@@ -15,28 +20,29 @@ Installation is as simple as:
 pip install elysia-ai
 ```
 
-![Demo of Elysia](https://github.com/weaviate/elysia/blob/main/img/elysia.gif)
+<p align="center">
+  <img src="./img/elysia.gif" alt="Demo of Elysia" width="85%">
+</p>
+
+### Watch our newest Elysia video here:
+
+<p align="center">
+  <a href="https://youtu.be/PhCrlpUwEhU?si=rnJVBziKTEdPJiKz">
+    <img src="./img/thumbnail.png" alt="https://youtu.be/PhCrlpUwEhU?si=rnJVBziKTEdPJiKz" width="70%">
+  </a>
+</p>
 
 ## Table of Contents
 
-- [Elysia](#elysia-agentic-framework-powered-by-decision-trees)
 - [Get started (App)](#get-started-app)
 - [Get Started (Python)](#get-started-python)
-- [Installation (bash) (Linux/MacOS)](#installation-bash-linuxmacos)
+- [Installation](#installation-bash-linuxmacos)
   - [PyPi (Recommended)](#pypi-recommended)
   - [GitHub](#github)
   - [Configuring Settings](#configuring-settings)
 - [Architecture](#architecture)
+- [Open Source Spirit](#open-source-spirit-)
 - [FAQ](#faq)
-
-
-## Open Source Spirit ✨
-
-**Weaviate** is proud to offer this open source project for the community. While we strive to address issues as fast as we can, please understand that it may not be maintained with the same rigor as production software. We welcome and encourage community contributions to help keep it running smoothly. Your support in fixing open issues quickly is greatly appreciated.
-
-### Watch our newest Elysia video here:
-
-[![VIDEO LINK](https://github.com/weaviate/elysia/blob/main/img/thumbnail.png)](https://youtu.be/PhCrlpUwEhU?si=rnJVBziKTEdPJiKz)
 
 
 ## Get started (App)
@@ -122,11 +128,13 @@ pip install -e .
 ```
 Done! You can now use the Elysia python package
 
-![Settings page](https://github.com/weaviate/elysia/blob/main/img/config.png)
-
 ### Configuring Settings
 
-To use Elysia with Weaviate, i.e. for agentic searching and retrieval, you need to either have a *locally running* instance of Weaviate, or access to a *Weaviate cloud cluster* via an api key and URL. This can be specific in the app directly, or by creating a `.env` file with
+<p align="center">
+  <img src="./img/config.png" alt="Settings page"/>
+</p>
+
+To use Elysia with Weaviate, i.e. for agentic searching and retrieval, you need to either have a *locally running* instance of Weaviate, or access to a *Weaviate cloud cluster* via an api key and URL. This can be specific in the app directly (see above image), or by creating a `.env` file with
 ```
 WCD_URL=...
 WCD_API_KEY=...
@@ -155,7 +163,17 @@ Unlike simple agentic platforms which have access to all possible tools at runti
 
 Read more about how we built Elysia in [this blog](https://weaviate.io/blog/elysia-agentic-rag).
 
-![Architecture Diagram](https://github.com/weaviate/elysia/blob/main/img/architecture.png)
+<p align="center">
+  <img src="./img/architecture.png" alt="Architecture Diagram"/>
+</p>
+
+
+## Open Source Spirit ✨
+
+**Weaviate** is proud to offer this open source project for the community. While we strive to address issues as fast as we can, please understand that it may not be maintained with the same rigor as production software. We welcome and encourage community contributions to help keep it running smoothly. Your support in fixing open issues quickly is greatly appreciated.
+
+
+See the full [contributor guidelines](CONTRIBUTING.md) to see how you can get started contributing to Elysia!
 
 ## FAQ
 
