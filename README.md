@@ -15,6 +15,30 @@ Installation is as simple as:
 pip install elysia-ai
 ```
 
+![Demo of Elysia](https://github.com/weaviate/elysia/blob/main/img/elysia.gif)
+
+## Table of Contents
+
+- [Elysia](#elysia-agentic-framework-powered-by-decision-trees)
+- [Get started (App)](#get-started-app)
+- [Get Started (Python)](#get-started-python)
+- [Installation (bash) (Linux/MacOS)](#installation-bash-linuxmacos)
+  - [PyPi (Recommended)](#pypi-recommended)
+  - [GitHub](#github)
+  - [Configuring Settings](#configuring-settings)
+- [Architecture](#architecture)
+- [FAQ](#faq)
+
+
+## Open Source Spirit ✨
+
+**Weaviate** is proud to offer this open source project for the community. While we strive to address issues as fast as we can, please understand that it may not be maintained with the same rigor as production software. We welcome and encourage community contributions to help keep it running smoothly. Your support in fixing open issues quickly is greatly appreciated.
+
+### Watch our newest Elysia video here:
+
+[![VIDEO LINK](https://github.com/weaviate/elysia/blob/main/img/thumbnail.png)](https://youtu.be/PhCrlpUwEhU?si=rnJVBziKTEdPJiKz)
+
+
 ## Get started (App)
 
 Run the app via
@@ -24,7 +48,7 @@ elysia start
 ```
 Then navigate to the settings page, add your required API keys, Weaviate cloud cluster details and specify your models.
 
-Don't forget to check out [the Github Repository for the Frontend](https://github.com/weaviate/elysia-frontend)!
+> 💡 Don't forget to check out [the Github Repository for the Frontend](https://github.com/weaviate/elysia-frontend)!
 
 Alternatively, we have created a demo version of Elysia (rate-limited, fixed datasets) to experiment with. Find it at: https://elysia.weaviate.io/
 
@@ -98,6 +122,7 @@ pip install -e .
 ```
 Done! You can now use the Elysia python package
 
+![Settings page](https://github.com/weaviate/elysia/blob/main/img/config.png)
 
 ### Configuring Settings
 
@@ -121,6 +146,16 @@ Elysia's recommended config is to use [OpenRouter](https://openrouter.ai/) to gi
 ```
 OPENROUTER_API_KEY=...
 ```
+
+## Architecture
+
+Elysia is architectured as a modern web application with a full-featured frontend for a responsive, real-time interface and a FastAPI backend serving both the web interface and API. The core logic is written in pure Python – what we call "blood, sweat, and tears" custom logic – with DSPy handling LLM interactions. 
+
+Unlike simple agentic platforms which have access to all possible tools at runtime, Elysia has a pre-defined web of possible nodes, each with a corresponding action. Each node in the tree is orchestrated by a decision agent with global context awareness about its environment and its available options. The decision agent evaluates its environment, available actions, past actions and future actions to strategize the best tool to use.
+
+Read more about how we built Elysia in [this blog](https://weaviate.io/blog/elysia-agentic-rag).
+
+![Architecture Diagram](https://github.com/weaviate/elysia/blob/main/img/architecture.png)
 
 ## FAQ
 
