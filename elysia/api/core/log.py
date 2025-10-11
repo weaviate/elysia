@@ -18,7 +18,7 @@ def get_logger():
                 level="DEBUG",
                 format=FORMAT,
                 datefmt="[%X]",
-                handlers=[RichHandler(rich_tracebacks=True, markup=True)],
+                handlers=[RichHandler(rich_tracebacks=True, markup=False)],
             )
 
         # Set log levels for specific loggers
@@ -41,6 +41,12 @@ def get_logger():
         logging.getLogger("LiteLLM Proxy").propagate = False
         logging.getLogger("matplotlib").setLevel(logging.WARNING)
         logging.getLogger("matplotlib").propagate = False
+        logging.getLogger("unstructured").setLevel(logging.WARNING)
+        logging.getLogger("unstructured").propagate = False
+        logging.getLogger("pdfminer").setLevel(logging.WARNING)
+        logging.getLogger("pdfminer").propagate = False
+        logging.getLogger("PIL").setLevel(logging.WARNING)
+        logging.getLogger("PIL").propagate = False
 
         _logger = logging.getLogger("rich")
         _logger.setLevel(logging.DEBUG)

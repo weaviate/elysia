@@ -22,6 +22,7 @@ from elysia.api.routes import (
     utils,
     tools,
     db,
+    documents,
 )
 from elysia.api.services.user import UserManager
 from elysia.api.utils.resources import print_resources
@@ -90,6 +91,7 @@ app.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 app.include_router(utils.router, prefix="/util", tags=["utilities"])
 app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(db.router, prefix="/db", tags=["db"])
+app.include_router(documents.router, prefix="/documents", tags=["documents"])
 
 
 # Health check endpoint (kept in main app.py due to its simplicity)

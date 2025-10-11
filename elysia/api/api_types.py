@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Literal
 
 from pydantic import BaseModel
@@ -153,3 +154,39 @@ class RemoveBranchFromTreeData(BaseModel):
 
 class AvailableModelsData(BaseModel):
     user_id: str
+
+
+class FileUploadResponse(BaseModel):
+    """Response after successful file upload"""
+    success: bool
+    message: str
+    document_id: str
+    collection_name: str
+    filename: str
+    file_type: str
+    chunks_created: int
+    parsing_strategy: Optional[str] = None
+    element_types: Optional[List[str]] = None
+    error: Optional[str] = None
+
+
+class DocumentMetadata(BaseModel):
+    """Metadata stored for each uploaded document"""
+    document_id: str
+    filename: str
+    file_type: Literal["pdf", "docx", "pptx", "md", "txt", "html", "doc", "ppt", "markdown", "htm", "xml", "json", "csv", "xlsx", "xls"]
+    file_size: int
+    upload_date: datetime
+    user_id: str
+    collection_name: str
+    chunk_count: int
+    content_preview: str
+    element_types: Optional[List[str]] = None
+
+
+class UploadedDocumentsList(BaseModel):
+    """List of documents uploaded by user"""
+    user_id: str
+    documents: List[DocumentMetadata]
+    total_count: int
+    error: Optional[str] = None
