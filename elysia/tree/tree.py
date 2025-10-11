@@ -3,7 +3,7 @@ import json
 import time
 import textwrap
 from copy import deepcopy
-from typing import AsyncGenerator, Literal
+from typing import AsyncGenerator, Literal, Optional
 
 import dspy
 from pympler import asizeof
@@ -27,6 +27,7 @@ from elysia.tree.util import (
     get_follow_up_suggestions,
     create_conversation_title,
 )
+from elysia.tree.topic_router import TopicRouter, LegalTopic  # ADD THIS IMPORT
 from elysia.objects import (
     Completed,
     Result,
@@ -79,6 +80,7 @@ class Tree:
         low_memory: bool = False,
         use_elysia_collections: bool = True,
         settings: Settings | None = None,
+        enable_topic_routing: bool = True,
     ) -> None:
         """
         Args:
@@ -99,6 +101,8 @@ class Tree:
                 If False, the tree will not use the processed collections.
             settings (Settings): The settings for the tree, an object of elysia.Settings.
                 This is automatically set to the environment settings if not provided.
+            enable_topic_routing (bool): Whether to enable specialized topic routing for legal domains.
+                If True, queries will be evaluated and routed to specialized agents.
         """
         # Define base variables of the tree
         if user_id is None:
@@ -137,6 +141,12 @@ class Tree:
         self._complex_lm = None
         self._config_modified = False
         self.root = None
+
+        # ADD TOPIC ROUTING INITIALIZATION (ADD THESE LINES)
+        self.enable_topic_routing = enable_topic_routing
+        self.topic_router = TopicRouter(self.settings) if enable_topic_routing else None
+        self.current_topic: Optional[LegalTopic] = None
+        self.original_atlas_config: Optional[dict] = None
 
         # Define the inputs to prompts
         self.tree_data = TreeData(
@@ -1462,6 +1472,20 @@ class Tree:
         # Some initial steps if this is the first run (no recursion yet)
         if _first_run:
 
+            # ADD TOPIC EVALUATION AND ROUTING HERE
+            # routed, topic = await self._evaluate_and_route_topic(user_prompt)
+            # routed, topic = await self.topic_router.evaluate_topic(user_prompt, base_lm=self.base_lm)
+            matched_topic, reasoning = await self.topic_router.evaluate_topic(user_prompt, base_lm=self.base_lm)
+            if matched_topic != "unrelated" and reasoning is not None:
+                self.settings.logger.info(
+                    f"Using specialized configuration for topic: {matched_topic}"
+                )
+                # # Yield a status update about routing
+                # yield await self.returner(
+                #     Update(f"Analyzing query for {matched_topic.replace('-', ' ')} expertise..."),
+                #     self.prompt_to_query_id.get(user_prompt, query_id or str(uuid.uuid4()))
+                # )
+
             self.settings.logger.debug(f"Style: {self.tree_data.atlas.style}")
             self.settings.logger.debug(
                 f"Agent description: {self.tree_data.atlas.agent_description}"
@@ -1987,6 +2011,8 @@ class Tree:
                 "settings": self.settings.to_json(),
                 "tool_names": list(self.tools.keys()),
                 "frontend_rebuild": self.returner.store,
+                "enable_topic_routing": self.enable_topic_routing,  # ADD THIS
+                "current_topic": self.current_topic,  # ADD THIS
             }
         except Exception as e:
             self.settings.logger.error(f"Error exporting tree to JSON: {str(e)}")
@@ -2034,7 +2060,7 @@ class Tree:
                         wc.Property(
                             name="title",
                             data_type=wc.DataType.TEXT,
-                        ),
+                                               ),
                     ],
                 )
 
@@ -2097,11 +2123,13 @@ class Tree:
             low_memory=json_data["low_memory"],
             use_elysia_collections=json_data["use_elysia_collections"],
             settings=settings,
+            enable_topic_routing=json_data.get("enable_topic_routing", True),  # ADD THIS
         )
 
         tree.returner.store = json_data["frontend_rebuild"]
         tree.tree_data = TreeData.from_json(json_data["tree_data"])
         tree.set_branch_initialisation(json_data["branch_initialisation"])
+        tree.current_topic = json_data.get("current_topic")  # ADD THIS
 
         # check tools
         for tool_name in json_data["tool_names"]:
