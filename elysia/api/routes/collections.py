@@ -108,14 +108,27 @@ async def collections_list(
 
         async with client_manager.connect_to_async_client() as client:
 
+            # System collections to exclude (internal Elysia metadata/config collections)
+            excluded_system_collections = {
+                "ELYSIA_METADATA__",
+                "ELYSIA_TREES__",
+                "ELYSIA_CONFIG__",
+            }
+
+            all_collections = await client.collections.list_all()
             collections = [
                 c
-                for c in await client.collections.list_all()
+                for c in all_collections
+                # Include user document collections (ELYSIA_UPLOADED_DOCUMENTS and ELYSIA_CHUNKED_*)
+                # but exclude internal system collections
                 if not c.startswith("ELYSIA_")
+                or c == "ELYSIA_UPLOADED_DOCUMENTS"
+                or c.startswith("ELYSIA_CHUNKED_")
+                and c not in excluded_system_collections
             ]
 
             # get processed collections
-            if await client.collections.exists("ELYSIA_METADATA__"):
+            if collections and await client.collections.exists("ELYSIA_METADATA__"):
                 metadata_collection = client.collections.get("ELYSIA_METADATA__")
                 processed_collections = await metadata_collection.query.fetch_objects(
                     filters=Filter.any_of(

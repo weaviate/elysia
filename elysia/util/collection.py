@@ -26,10 +26,23 @@ data_mapping = {
 
 async def retrieve_all_collection_names(client):
     all_collections = await client.collections.list_all()
+
+    # System collections to exclude (internal Elysia metadata/config collections)
+    excluded_system_collections = {
+        "ELYSIA_METADATA__",
+        "ELYSIA_TREES__",
+        "ELYSIA_CONFIG__",
+    }
+
     return [
         collection
         for collection in all_collections
+        # Include user document collections (ELYSIA_UPLOADED_DOCUMENTS and ELYSIA_CHUNKED_*)
+        # but exclude internal system collections
         if not collection.startswith("ELYSIA_")
+        or collection == "ELYSIA_UPLOADED_DOCUMENTS"
+        or collection.startswith("ELYSIA_CHUNKED_")
+        and collection not in excluded_system_collections
     ]
 
 

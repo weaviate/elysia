@@ -1431,7 +1431,7 @@ class Tree:
     async def async_run(
         self,
         user_prompt: str,
-        collection_names: list[str] = [],
+        collection_names: list[str] | None = None,
         client_manager: ClientManager | None = None,
         training_route: str = "",
         query_id: str | None = None,
@@ -1493,14 +1493,32 @@ class Tree:
 
                 # Initialise the collections
                 if self.use_elysia_collections:
-                    if collection_names == []:
+                    if collection_names is None:
+                        # No collections specified - fetch all available collections
                         async with client_manager.connect_to_async_client() as client:
                             collection_names = await retrieve_all_collection_names(
                                 client
                             )
+                        self.settings.logger.info(
+                            f"No collections specified - using all available collections: {collection_names}"
+                        )
+                    elif collection_names == []:
+                        # Empty array explicitly provided - user disabled all collections
+                        self.settings.logger.info(
+                            "Collections explicitly disabled (empty array) - no collections will be used for this query"
+                        )
+                    else:
+                        # Specific collections provided
+                        self.settings.logger.info(
+                            f"Collections for this query (dynamically set): {collection_names}"
+                        )
+
                     await self.set_collection_names(
-                        collection_names,
+                        collection_names if collection_names is not None else [],
                         client_manager,
+                    )
+                    self.settings.logger.info(
+                        f"Active collections after filtering: {self.tree_data.collection_names}"
                     )
 
             # If there are any empty branches, remove them (no tools attached to them)
@@ -1823,7 +1841,7 @@ class Tree:
     def run(
         self,
         user_prompt: str,
-        collection_names: list[str] = [],
+        collection_names: list[str] | None = None,
         client_manager: ClientManager | None = None,
         training_route: str = "",
         query_id: str | None = None,
@@ -1834,8 +1852,10 @@ class Tree:
 
         Args:
             user_prompt (str): The input from the user.
-            collection_names (list[str]): The names of the collections to use.
-                If not provided, Elysia will attempt to retrieve all collection names from the client.
+            collection_names (list[str] | None): The names of the collections to use.
+                If None (not provided), Elysia will retrieve all available collections.
+                If [] (empty array), no collections will be used.
+                If specific collection names are provided, only those collections will be used.
             client_manager (ClientManager): The client manager to use.
                 If not provided, a new ClientManager will be created.
             training_route (str): The route to use for training.

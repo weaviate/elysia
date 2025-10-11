@@ -12,7 +12,7 @@ from elysia.preprocessing.collection import preprocess_async
 from elysia.api.core.log import logger
 
 from weaviate.classes.config import Configure, Property, DataType
-from weaviate.classes.query import Filter
+from weaviate.classes.query import Filter, QueryReference
 
 
 class DocumentService:
@@ -272,6 +272,7 @@ class DocumentService:
                     filters=Filter.by_property("user_id").equal(user_id),
                     limit=limit,
                     offset=offset,
+                    return_references=QueryReference(link_on="isChunked"),
                 )
 
                 documents = []
