@@ -67,8 +67,15 @@ class ClientManager:
         wcd_url: str | None = None,
         wcd_api_key: str | None = None,
         weaviate_is_local: bool | None = None,
+        weaviate_is_custom: bool | None = None,
         local_weaviate_port: int | None = None,
         local_weaviate_grpc_port: int | None = None,
+        custom_http_host: str | None = None,
+        custom_http_port: int | None = None,
+        custom_http_secure: bool | None = None,
+        custom_grpc_host: str | None = None,
+        custom_grpc_port: int | None = None,
+        custom_grpc_secure: bool | None = None,
         client_timeout: datetime.timedelta | int | None = None,
         logger: Logger | None = None,
         settings: Settings | None = None,
@@ -82,6 +89,13 @@ class ClientManager:
             wcd_url (str): the url of the Weaviate cluster. Defaults to global settings config.
             wcd_api_key (str): the api key for the Weaviate cluster. Defaults to global settings config.
             weaviate_is_local (bool): whether the weaviate cluster is local. Defaults to False.
+            weaviate_is_custom (bool): whether to use custom connection parameters. Defaults to False.
+            custom_http_host (str): HTTP host for custom connection.
+            custom_http_port (int): HTTP port for custom connection. Defaults to 8080.
+            custom_http_secure (bool): Use HTTPS for custom connection. Defaults to False.
+            custom_grpc_host (str): gRPC host for custom connection.
+            custom_grpc_port (int): gRPC port for custom connection. Defaults to 50051.
+            custom_grpc_secure (bool): Use secure gRPC for custom connection. Defaults to False.
             client_timeout (datetime.timedelta | int | None): how long (in minutes) means the client should be restarted. Defaults to 3 minutes.
             logger (Logger | None): a logger object for logging messages. Defaults to None.
             settings (Settings | None): a settings object for the client manager. Defaults to environment settings.
@@ -92,11 +106,30 @@ class ClientManager:
 
         Example:
         ```python
+        # Cloud connection
         client_manager = ClientManager(
             wcd_url="https://my-weaviate-cluster...",
             wcd_api_key="my-api-key...",
             OPENAI_APIKEY="my-openai-api-key...",
-            HUGGINGFACE_APIKEY="my-huggingface-api-key...",
+        )
+        
+        # Local connection
+        client_manager = ClientManager(
+            weaviate_is_local=True,
+            local_weaviate_port=8080,
+            local_weaviate_grpc_port=50051,
+        )
+        
+        # Custom connection
+        client_manager = ClientManager(
+            weaviate_is_custom=True,
+            custom_http_host="custom.weaviate.host",
+            custom_http_port=8080,
+            custom_http_secure=True,
+            custom_grpc_host="custom.weaviate.host",
+            custom_grpc_port=50051,
+            custom_grpc_secure=True,
+            wcd_api_key="optional-api-key",
         )
         ```
         """
@@ -133,6 +166,11 @@ class ClientManager:
         else:
             self.weaviate_is_local = weaviate_is_local
 
+        if weaviate_is_custom is None:
+            self.weaviate_is_custom = self.settings.WEAVIATE_IS_CUSTOM
+        else:
+            self.weaviate_is_custom = weaviate_is_custom
+
         if local_weaviate_port is None:
             self.local_weaviate_port = self.settings.LOCAL_WEAVIATE_PORT
         else:
@@ -142,6 +180,37 @@ class ClientManager:
             self.local_weaviate_grpc_port = self.settings.LOCAL_WEAVIATE_GRPC_PORT
         else:
             self.local_weaviate_grpc_port = local_weaviate_grpc_port
+
+        # Custom connection parameters
+        if custom_http_host is None:
+            self.custom_http_host = self.settings.CUSTOM_HTTP_HOST
+        else:
+            self.custom_http_host = custom_http_host
+
+        if custom_http_port is None:
+            self.custom_http_port = self.settings.CUSTOM_HTTP_PORT
+        else:
+            self.custom_http_port = custom_http_port
+
+        if custom_http_secure is None:
+            self.custom_http_secure = self.settings.CUSTOM_HTTP_SECURE
+        else:
+            self.custom_http_secure = custom_http_secure
+
+        if custom_grpc_host is None:
+            self.custom_grpc_host = self.settings.CUSTOM_GRPC_HOST
+        else:
+            self.custom_grpc_host = custom_grpc_host
+
+        if custom_grpc_port is None:
+            self.custom_grpc_port = self.settings.CUSTOM_GRPC_PORT
+        else:
+            self.custom_grpc_port = custom_grpc_port
+
+        if custom_grpc_secure is None:
+            self.custom_grpc_secure = self.settings.CUSTOM_GRPC_SECURE
+        else:
+            self.custom_grpc_secure = custom_grpc_secure
 
         self.query_timeout = query_timeout
         self.insert_timeout = insert_timeout
@@ -178,12 +247,29 @@ class ClientManager:
 
         self.async_client = None
         self.async_init_completed = False
-        self.is_client = self.wcd_url != "" and (
-            self.wcd_api_key != "" or self.weaviate_is_local
-        )
+        
+        # Determine if client is properly configured
+        if self.weaviate_is_custom:
+            # Custom mode requires http_host and grpc_host
+            self.is_client = (
+                self.custom_http_host is not None and 
+                self.custom_grpc_host is not None
+            )
+        elif self.weaviate_is_local:
+            # Local mode requires wcd_url (or defaults to localhost)
+            self.is_client = self.wcd_url != ""
+        else:
+            # Cloud mode requires both url and api_key
+            self.is_client = self.wcd_url != "" and self.wcd_api_key != ""
 
         if self.logger and not self.is_client:
-            if self.wcd_url == "" and self.weaviate_is_local:
+            if self.weaviate_is_custom:
+                self.logger.warning(
+                    "Custom Weaviate connection parameters not fully configured. "
+                    "CUSTOM_HTTP_HOST and CUSTOM_GRPC_HOST must be set. "
+                    "All Weaviate functionality will be disabled."
+                )
+            elif self.wcd_url == "" and self.weaviate_is_local:
                 self.logger.warning(
                     "WCD_URL not set for local Weaviate (This should probably be localhost). "
                     "All Weaviate functionality will be disabled."
@@ -221,7 +307,7 @@ class ClientManager:
             self.client = self.get_client()
         except Exception as e:
             self.logger.error(
-                "Error initialising Weaviate client. Please check your Weaviate configuration is set correctly (WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, LOCAL_WEAVIATE_PORT, LOCAL_WEAVIATE_GRPC_PORT)."
+                "Error initialising Weaviate client. Please check your Weaviate configuration is set correctly (WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, WEAVIATE_IS_CUSTOM, or custom connection parameters)."
             )
             self.logger.error(f"Full Weaviate connection error message: {e}")
             self.is_client = False
@@ -263,8 +349,15 @@ class ClientManager:
         wcd_api_key: str | None = None,
         api_keys: dict[str, str] = {},
         weaviate_is_local: bool = False,
+        weaviate_is_custom: bool = False,
         local_weaviate_port: int = 8080,
         local_weaviate_grpc_port: int = 50051,
+        custom_http_host: str | None = None,
+        custom_http_port: int = 8080,
+        custom_http_secure: bool = False,
+        custom_grpc_host: str | None = None,
+        custom_grpc_port: int = 50051,
+        custom_grpc_secure: bool = False,
     ) -> None:
         """
         Set the API keys, WCD_URL and WCD_API_KEY from the settings object.
@@ -273,12 +366,31 @@ class ClientManager:
             wcd_url (str): the url of the Weaviate cluster.
             wcd_api_key (str): the api key for the Weaviate cluster.
             api_keys (dict): a dictionary of api keys for third party services.
+            weaviate_is_local (bool): whether the weaviate cluster is local.
+            weaviate_is_custom (bool): whether to use custom connection parameters.
+            local_weaviate_port (int): the port for local Weaviate HTTP.
+            local_weaviate_grpc_port (int): the port for local Weaviate gRPC.
+            custom_http_host (str): HTTP host for custom connection.
+            custom_http_port (int): HTTP port for custom connection.
+            custom_http_secure (bool): Use HTTPS for custom connection.
+            custom_grpc_host (str): gRPC host for custom connection.
+            custom_grpc_port (int): gRPC port for custom connection.
+            custom_grpc_secure (bool): Use secure gRPC for custom connection.
         """
         self.wcd_url = wcd_url
         self.wcd_api_key = wcd_api_key
         self.weaviate_is_local = weaviate_is_local
+        self.weaviate_is_custom = weaviate_is_custom
         self.local_weaviate_port = local_weaviate_port
         self.local_weaviate_grpc_port = local_weaviate_grpc_port
+        
+        # Update custom connection parameters
+        self.custom_http_host = custom_http_host
+        self.custom_http_port = custom_http_port
+        self.custom_http_secure = custom_http_secure
+        self.custom_grpc_host = custom_grpc_host
+        self.custom_grpc_port = custom_grpc_port
+        self.custom_grpc_secure = custom_grpc_secure
 
         # If using a local Weaviate instance and no URL was provided, default to localhost
         if self.weaviate_is_local and (self.wcd_url is None or self.wcd_url == ""):
@@ -290,10 +402,17 @@ class ClientManager:
             if api_key.lower() in [a.lower() for a in api_key_map.keys()]:
                 self.headers[api_key_map[api_key.upper()]] = api_keys[api_key]
 
-        # Local Weaviate can work without an API key
-        self.is_client = self.wcd_url != "" and (
-            self.wcd_api_key != "" or self.weaviate_is_local
-        )
+        # Update is_client check to handle custom mode
+        if self.weaviate_is_custom:
+            self.is_client = (
+                self.custom_http_host is not None and 
+                self.custom_grpc_host is not None
+            )
+        elif self.weaviate_is_local:
+            self.is_client = self.wcd_url != ""
+        else:
+            self.is_client = self.wcd_url != "" and self.wcd_api_key != ""
+            
         if self.is_client:
             await self.restart_client(force=True)
             await self.restart_async_client(force=True)
@@ -331,6 +450,42 @@ class ClientManager:
         self.last_used_async_client = datetime.datetime.now()
 
     def get_client(self) -> WeaviateClient:
+        # Custom connection mode
+        if self.weaviate_is_custom:
+            if self.custom_http_host is None or self.custom_grpc_host is None:
+                raise ValueError("CUSTOM_HTTP_HOST and CUSTOM_GRPC_HOST must be set for custom connections")
+            
+            auth_credentials = (
+                Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
+            )
+            
+            if self.logger:
+                self.logger.debug(
+                    f"Getting custom client with http_host: {self.custom_http_host}, "
+                    f"http_port: {self.custom_http_port}, http_secure: {self.custom_http_secure}, "
+                    f"grpc_host: {self.custom_grpc_host}, grpc_port: {self.custom_grpc_port}, "
+                    f"grpc_secure: {self.custom_grpc_secure}, api_key_set: {self.wcd_api_key != ''}"
+                )
+            
+            return weaviate.connect_to_custom(
+                http_host=self.custom_http_host,
+                http_port=self.custom_http_port,
+                http_secure=self.custom_http_secure,
+                grpc_host=self.custom_grpc_host,
+                grpc_port=self.custom_grpc_port,
+                grpc_secure=self.custom_grpc_secure,
+                auth_credentials=auth_credentials,
+                headers=self.headers,
+                additional_config=AdditionalConfig(
+                    timeout=Timeout(
+                        query=self.query_timeout,
+                        insert=self.insert_timeout,
+                        init=self.init_timeout,
+                    )
+                ),
+            )
+        
+        # Local connection mode
         if self.weaviate_is_local and self.wcd_url != "":
             auth_credentials = (
                 Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
@@ -351,6 +506,7 @@ class ClientManager:
                 skip_init_checks=True,
             )
 
+        # Cloud connection mode
         if self.wcd_url == "" or self.wcd_api_key == "":
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
@@ -369,6 +525,43 @@ class ClientManager:
         )
 
     async def get_async_client(self) -> WeaviateAsyncClient:
+        # Custom connection mode
+        if self.weaviate_is_custom:
+            if self.custom_http_host is None or self.custom_grpc_host is None:
+                raise ValueError("CUSTOM_HTTP_HOST and CUSTOM_GRPC_HOST must be set for custom connections")
+            
+            auth_credentials = (
+                Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
+            )
+            
+            if self.logger:
+                self.logger.debug(
+                    f"Getting async custom client with http_host: {self.custom_http_host}, "
+                    f"http_port: {self.custom_http_port}, http_secure: {self.custom_http_secure}, "
+                    f"grpc_host: {self.custom_grpc_host}, grpc_port: {self.custom_grpc_port}, "
+                    f"grpc_secure: {self.custom_grpc_secure}, api_key_set: {self.wcd_api_key != ''}"
+                )
+            
+            return weaviate.use_async_with_custom(
+                http_host=self.custom_http_host,
+                http_port=self.custom_http_port,
+                http_secure=self.custom_http_secure,
+                grpc_host=self.custom_grpc_host,
+                grpc_port=self.custom_grpc_port,
+                grpc_secure=self.custom_grpc_secure,
+                auth_credentials=auth_credentials,
+                headers=self.headers,
+                skip_init_checks=True,
+                additional_config=AdditionalConfig(
+                    timeout=Timeout(
+                        query=self.query_timeout,
+                        insert=self.insert_timeout,
+                        init=self.init_timeout,
+                    )
+                ),
+            )
+        
+        # Local connection mode
         if self.weaviate_is_local and self.wcd_url != "":
             auth_credentials = (
                 Auth.api_key(self.wcd_api_key) if self.wcd_api_key != "" else None
@@ -389,6 +582,7 @@ class ClientManager:
                 skip_init_checks=True,
             )
 
+        # Cloud connection mode
         if self.wcd_url == "" or self.wcd_api_key == "":
             raise ValueError("WCD_URL and WCD_API_KEY must be set")
 
