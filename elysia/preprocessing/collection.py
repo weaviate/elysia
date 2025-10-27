@@ -455,7 +455,7 @@ async def preprocess_async(
 
         # Randomly sample sample_size objects for the summary
         indices = random.sample(
-            range(min(99_999, len_collection)),
+            range(min(9_999, len_collection)),
             max(min(max_sample_size, len_collection), 1),
         )
 
