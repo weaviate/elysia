@@ -131,10 +131,55 @@ Notes:
 
 The easiest way to set up a local Weaviate instance is via Docker, [see here for detailed instructions.](https://docs.weaviate.io/deploy/installation-guides/docker-installation)
 
+### Custom Weaviate Connections
+
+Alternatively, you can set manually the REST and GRPC endpoint of a Weaviate connection. Simply set in your `.env`:
+
+```
+WEAVIATE_IS_CUSTOM=True
+
+# REST endpoint settings
+CUSTOM_HTTP_HOST=your.weaviate.host
+CUSTOM_HTTP_PORT=443 # 443 = default for Weaviate cloud
+CUSTOM_HTTP_SECURE=True
+
+# GRPC endpoint settings
+CUSTOM_GRPC_HOST=your.weaviate.host
+CUSTOM_GRPC_PORT=443 # 443 = default for Weaviate cloud
+CUSTOM_GRPC_SECURE=True
+
+WCD_API_KEY= # if you require an API key, set it under WCD_API_KEY
+```
+
+Or within Python via:
+
+```python
+from elysia import configure
+configure(
+    weaviate_is_custom=True,
+    custom_http_host="...", # replace with your HTTP host
+    custom_http_port=443,
+    custom_http_secure=True,
+    custom_grpc_host="...", # replace with your GRPC host
+    custom_grpc_port=443,
+    custom_grpc_secure=True,
+    wcd_api_key="..." # replace with your API key (optional, depends on your weaviate config)
+)
+```
+For more information about custom Weaviate connections, [see here.](https://docs.weaviate.io/weaviate/connections/connect-custom).
+
+### Connection Priority
+
+In Elysia, you can technically set `weaviate_is_custom=True`, `weaviate_is_local=True` as well as your Weaviate cloud credentials at the same time. We recommend only using one connection method at once to remove any confusion. But Elysia will prioritise your connection in the following order:
+
+1. Custom Connections
+2. Local Connections
+3. Cloud Connections
+
+So for example, if you specify settings for both local and custom, it will use the custom connection.
+
+
 Additionally, you need to _preprocess_ your collections for Elysia to use the built in Weaviate-based tools, see below for details.
-
-*Note: Using a local Weaviate instance is experimental. If you run into any issues, please open a [Github Issue](https://github.com/weaviate/elysia/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen)!*
-
 
 ## Preprocessing Collections
 
