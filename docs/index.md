@@ -38,6 +38,14 @@ This will use the built-in open source _query_ tool or _aggregate_ tool to inter
 pip install elysia-ai
 ```
 
+Then, either run the app via
+
+```bash
+elysia start
+```
+
+(Additionally you can use `--port XXXX` to run from a different port, default is 8000). Or import Elysia with python and use it directly there.
+
 ## Usage
 
 Elysia is free, open source, and available to anyone.
