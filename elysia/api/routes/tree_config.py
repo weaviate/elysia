@@ -266,15 +266,6 @@ async def load_config_tree(
         ):
             raise Exception("WCD URL or API key not found.")
 
-        if (
-            user["frontend_config"].save_location_wcd_url is None
-            or user["frontend_config"].save_location_wcd_api_key is None
-        ):
-            raise Exception(
-                "No valid destination for config load location found. "
-                "Please update the save location using the /update_save_location API."
-            )
-
         # Retrieve the config from the weaviate database
         async with user[
             "frontend_config"

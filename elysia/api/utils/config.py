@@ -120,32 +120,58 @@ class FrontendConfig:
             "client_timeout": client_timeout,
             "tree_timeout": tree_timeout,
         }
+
+        # Cloud connection settings
         self.save_location_wcd_url: str = os.getenv("WCD_URL", "")
         self.save_location_wcd_api_key: str = os.getenv("WCD_API_KEY", "")
-        self.save_location_weaviate_is_local: bool = os.getenv(
-            "WEAVIATE_IS_LOCAL", "False"
-        ) == "True"
+
+        # Local connection settings
+        self.save_location_weaviate_is_local: bool = (
+            os.getenv("WEAVIATE_IS_LOCAL", "False") == "True"
+        )
         self.save_location_local_weaviate_port: int = int(
             os.getenv("LOCAL_WEAVIATE_PORT", 8080)
         )
-        self.save_location_local_weaviate_grpc_port: int = int(os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
-        )   
+        self.save_location_local_weaviate_grpc_port: int = int(
+            os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
+        )
+
+        # Custom connection settings
+        self.save_location_weaviate_is_custom: bool = (
+            os.getenv("WEAVIATE_IS_CUSTOM", "False") == "True"
+        )
+        self.save_location_custom_http_host: str = os.getenv("CUSTOM_HTTP_HOST", "")
+        self.save_location_custom_http_port: int = int(
+            os.getenv("CUSTOM_HTTP_PORT", 8080)
+        )
+        self.save_location_custom_http_secure: bool = (
+            os.getenv("CUSTOM_HTTP_SECURE", "False") == "True"
+        )
+        self.save_location_custom_grpc_host: str = os.getenv("CUSTOM_GRPC_HOST", "")
+        self.save_location_custom_grpc_port: int = int(
+            os.getenv("CUSTOM_GRPC_PORT", 50051)
+        )
+        self.save_location_custom_grpc_secure: bool = (
+            os.getenv("CUSTOM_GRPC_SECURE", "False") == "True"
+        )
+
+        # Initialise the client manager
         self.save_location_client_manager: ClientManager = ClientManager(
             wcd_url=self.save_location_wcd_url,
             wcd_api_key=self.save_location_wcd_api_key,
             weaviate_is_local=self.save_location_weaviate_is_local,
             local_weaviate_port=self.save_location_local_weaviate_port,
             local_weaviate_grpc_port=self.save_location_local_weaviate_grpc_port,
+            weaviate_is_custom=self.save_location_weaviate_is_custom,
+            custom_http_host=self.save_location_custom_http_host,
+            custom_http_port=self.save_location_custom_http_port,
+            custom_http_secure=self.save_location_custom_http_secure,
+            custom_grpc_host=self.save_location_custom_grpc_host,
+            custom_grpc_port=self.save_location_custom_grpc_port,
+            custom_grpc_secure=self.save_location_custom_grpc_secure,
             logger=logger,
             client_timeout=self.config["client_timeout"],
         )
-
-    def update_save_location(self, wcd_url: str, wcd_api_key: str):
-        self.save_location_wcd_url = wcd_url
-        self.save_location_wcd_api_key = wcd_api_key
-
-    def get_save_location(self):
-        return self.save_location_wcd_url, self.save_location_wcd_api_key
 
     def to_json(self):
         return {
@@ -156,6 +182,13 @@ class FrontendConfig:
             "save_location_weaviate_is_local": self.save_location_weaviate_is_local,
             "save_location_local_weaviate_port": self.save_location_local_weaviate_port,
             "save_location_local_weaviate_grpc_port": self.save_location_local_weaviate_grpc_port,
+            "save_location_weaviate_is_custom": self.save_location_weaviate_is_custom,
+            "save_location_custom_http_host": self.save_location_custom_http_host,
+            "save_location_custom_http_port": self.save_location_custom_http_port,
+            "save_location_custom_http_secure": self.save_location_custom_http_secure,
+            "save_location_custom_grpc_host": self.save_location_custom_grpc_host,
+            "save_location_custom_grpc_port": self.save_location_custom_grpc_port,
+            "save_location_custom_grpc_secure": self.save_location_custom_grpc_secure,
             "client_timeout": self.config["client_timeout"],
             "tree_timeout": self.config["tree_timeout"],
         }
@@ -189,6 +222,27 @@ class FrontendConfig:
                 - save_location_local_weaviate_grpc_port (int): Optional.
                     The gRPC port of the local Weaviate database.
                     Defaults to the value of the LOCAL_WEAVIATE_GRPC_PORT environment variable.
+                - save_location_weaviate_is_custom (bool): Optional.
+                    Whether the Weaviate database is custom.
+                    Defaults to the value of the WEAVIATE_IS_CUSTOM environment variable.
+                - save_location_custom_http_host (str): Optional.
+                    The HTTP host of the custom Weaviate database.
+                    Defaults to the value of the CUSTOM_HTTP_HOST environment variable.
+                - save_location_custom_http_port (int): Optional.
+                    The HTTP port of the custom Weaviate database.
+                    Defaults to the value of the CUSTOM_HTTP_PORT environment variable.
+                - save_location_custom_http_secure (bool): Optional.
+                    Whether the HTTP connection to the custom Weaviate database is secure.
+                    Defaults to the value of the CUSTOM_HTTP_SECURE environment variable.
+                - save_location_custom_grpc_host (str): Optional.
+                    The gRPC host of the custom Weaviate database.
+                    Defaults to the value of the CUSTOM_GRPC_HOST environment variable.
+                - save_location_custom_grpc_port (int): Optional.
+                    The gRPC port of the custom Weaviate database.
+                    Defaults to the value of the CUSTOM_GRPC_PORT environment variable.
+                - save_location_custom_grpc_secure (bool): Optional.
+                    Whether the gRPC connection to the custom Weaviate database is secure.
+                    Defaults to the value of the CUSTOM_GRPC_SECURE environment variable.
         """
 
         reload_client_manager = False
@@ -199,14 +253,57 @@ class FrontendConfig:
             self.save_location_wcd_api_key = kwargs["save_location_wcd_api_key"]
             reload_client_manager = True
         if "save_location_weaviate_is_local" in kwargs:
-            self.save_location_weaviate_is_local = kwargs["save_location_weaviate_is_local"]
+            self.save_location_weaviate_is_local = kwargs[
+                "save_location_weaviate_is_local"
+            ]
             reload_client_manager = True
         if "save_location_local_weaviate_port" in kwargs:
-            self.save_location_local_weaviate_port = kwargs["save_location_local_weaviate_port"]
+            self.save_location_local_weaviate_port = kwargs[
+                "save_location_local_weaviate_port"
+            ]
             reload_client_manager = True
         if "save_location_local_weaviate_grpc_port" in kwargs:
-            self.save_location_local_weaviate_grpc_port = kwargs["save_location_local_weaviate_grpc_port"]
+            self.save_location_local_weaviate_grpc_port = kwargs[
+                "save_location_local_weaviate_grpc_port"
+            ]
             reload_client_manager = True
+
+        if "save_location_weaviate_is_custom" in kwargs:
+            self.save_location_weaviate_is_custom = kwargs[
+                "save_location_weaviate_is_custom"
+            ]
+            reload_client_manager = True
+        if "save_location_custom_http_host" in kwargs:
+            self.save_location_custom_http_host = kwargs[
+                "save_location_custom_http_host"
+            ]
+            reload_client_manager = True
+        if "save_location_custom_http_port" in kwargs:
+            self.save_location_custom_http_port = kwargs[
+                "save_location_custom_http_port"
+            ]
+            reload_client_manager = True
+        if "save_location_custom_http_secure" in kwargs:
+            self.save_location_custom_http_secure = kwargs[
+                "save_location_custom_http_secure"
+            ]
+            reload_client_manager = True
+        if "save_location_custom_grpc_host" in kwargs:
+            self.save_location_custom_grpc_host = kwargs[
+                "save_location_custom_grpc_host"
+            ]
+            reload_client_manager = True
+        if "save_location_custom_grpc_port" in kwargs:
+            self.save_location_custom_grpc_port = kwargs[
+                "save_location_custom_grpc_port"
+            ]
+            reload_client_manager = True
+        if "save_location_custom_grpc_secure" in kwargs:
+            self.save_location_custom_grpc_secure = kwargs[
+                "save_location_custom_grpc_secure"
+            ]
+            reload_client_manager = True
+
         if "save_trees_to_weaviate" in kwargs:
             self.config["save_trees_to_weaviate"] = kwargs["save_trees_to_weaviate"]
         if "save_configs_to_weaviate" in kwargs:
@@ -226,6 +323,13 @@ class FrontendConfig:
                 weaviate_is_local=self.save_location_weaviate_is_local,
                 local_weaviate_port=self.save_location_local_weaviate_port,
                 local_weaviate_grpc_port=self.save_location_local_weaviate_grpc_port,
+                weaviate_is_custom=self.save_location_weaviate_is_custom,
+                custom_http_host=self.save_location_custom_http_host,
+                custom_http_port=self.save_location_custom_http_port,
+                custom_http_secure=self.save_location_custom_http_secure,
+                custom_grpc_host=self.save_location_custom_grpc_host,
+                custom_grpc_port=self.save_location_custom_grpc_port,
+                custom_grpc_secure=self.save_location_custom_grpc_secure,
             )
 
     @classmethod
