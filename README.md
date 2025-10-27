@@ -54,7 +54,7 @@ Run the app via
 ```bash
 elysia start
 ```
-Then navigate to the settings page, add your required API keys, Weaviate cloud cluster details and specify your models.
+Then head to `localhost:8000` in a browser, navigate to the settings page, add your required API keys, Weaviate cloud cluster details and specify your models. Optionally use `--port` to specify which port Elysia will be run on.
 
 Alternatively, we have created a demo version of Elysia (rate-limited, fixed datasets) to experiment with. Find it at: https://elysia.weaviate.io/
 
