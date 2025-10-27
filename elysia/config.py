@@ -160,7 +160,7 @@ class Settings:
         self.WEAVIATE_IS_LOCAL: bool = False
         self.LOCAL_WEAVIATE_PORT: int = 8080
         self.LOCAL_WEAVIATE_GRPC_PORT: int = 50051
-        
+
         # Custom connection settings
         self.WEAVIATE_IS_CUSTOM: bool = False
         self.CUSTOM_HTTP_HOST: str | None = None
@@ -169,7 +169,7 @@ class Settings:
         self.CUSTOM_GRPC_HOST: str | None = None
         self.CUSTOM_GRPC_PORT: int = 50051
         self.CUSTOM_GRPC_SECURE: bool = False
-        
+
         self.MODEL_API_BASE: str | None = None
 
         self.API_KEYS: dict[str, str] = {}
@@ -260,7 +260,7 @@ class Settings:
         self.WEAVIATE_IS_LOCAL = os.getenv("WEAVIATE_IS_LOCAL", "False") == "True"
         self.LOCAL_WEAVIATE_PORT = os.getenv("LOCAL_WEAVIATE_PORT", 8080)
         self.LOCAL_WEAVIATE_GRPC_PORT = os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
-        
+
         # Custom connection settings from environment
         self.WEAVIATE_IS_CUSTOM = os.getenv("WEAVIATE_IS_CUSTOM", "False") == "True"
         self.CUSTOM_HTTP_HOST = os.getenv("CUSTOM_HTTP_HOST", None)
@@ -269,7 +269,7 @@ class Settings:
         self.CUSTOM_GRPC_HOST = os.getenv("CUSTOM_GRPC_HOST", None)
         self.CUSTOM_GRPC_PORT = int(os.getenv("CUSTOM_GRPC_PORT", 50051))
         self.CUSTOM_GRPC_SECURE = os.getenv("CUSTOM_GRPC_SECURE", "False") == "True"
-        
+
         self.set_api_keys_from_env()
 
     def set_api_keys_from_env(self):
@@ -877,6 +877,13 @@ def configure(**kwargs) -> None:
             - weaviate_is_local (bool): Whether the Weaviate cluster is local.
             - local_weaviate_port (int): The port to use for the local Weaviate cluster.
             - local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
+            - weaviate_is_custom (bool): Whether to use custom connection parameters.
+            - custom_http_host (str): HTTP host for custom Weaviate connection.
+            - custom_http_port (int): HTTP port for custom connection. Defaults to 8080.
+            - custom_http_secure (bool): Use HTTPS for custom connection. Defaults to False.
+            - custom_grpc_host (str): gRPC host for custom Weaviate connection.
+            - custom_grpc_port (int): gRPC port for custom connection. Defaults to 50051.
+            - custom_grpc_secure (bool): Use secure gRPC for custom connection. Defaults to False.
             - logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
             - use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
                 If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.
