@@ -133,9 +133,6 @@ class ClientManager:
         )
         ```
         """
-
-        self.logger = logger
-
         if client_timeout is None:
             self.client_timeout = datetime.timedelta(
                 minutes=int(os.getenv("CLIENT_TIMEOUT", 3))
@@ -149,6 +146,11 @@ class ClientManager:
             self.settings = environment_settings
         else:
             self.settings = settings
+
+        if logger is None:
+            self.logger = self.settings.logger
+        else:
+            self.logger = logger
 
         # Set the weaviate url and api key
         if wcd_url is None:
@@ -424,7 +426,10 @@ class ClientManager:
 
         if not self.is_client:
             raise ValueError(
-                "Weaviate is not available. Please set the WCD_URL and WCD_API_KEY in the settings."
+                "Weaviate is not available. "
+                "Please check your Weaviate configuration is set correctly "
+                "(WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, WEAVIATE_IS_CUSTOM, "
+                "or custom connection parameters)."
             )
 
         if self.async_client is None:
