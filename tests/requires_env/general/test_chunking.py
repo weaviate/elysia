@@ -182,7 +182,7 @@ async def test_correct_vectoriser_new():
     # create collection with vectoriser
     full_vectoriser = Configure.Vectors.text2vec_openai(
         model="text-embedding-3-large",
-        dimensions=512,
+        dimensions=256,
     )
     async with client_manager.connect_to_async_client() as client:
         collection_full = await client.collections.create(
