@@ -414,6 +414,26 @@ class ClientManager:
         else:
             self.is_client = self.wcd_url != "" and self.wcd_api_key != ""
 
+        if self.logger:
+            if self.is_client:
+                self.logger.debug("Weaviate client is available.")
+            else:
+                self.logger.warning(
+                    "Weaviate client is not available. "
+                    "Please check your Weaviate configuration is set correctly "
+                    "(WCD_URL, WCD_API_KEY, WEAVIATE_IS_LOCAL, WEAVIATE_IS_CUSTOM, "
+                    "or custom connection parameters)."
+                )
+                self.logger.warning(
+                    f"Custom: http_host: {self.custom_http_host}, http_port: {self.custom_http_port}, http_secure: {self.custom_http_secure}, grpc_host: {self.custom_grpc_host}, grpc_port: {self.custom_grpc_port}, grpc_secure: {self.custom_grpc_secure}"
+                )
+                self.logger.warning(
+                    f"Local: wcd_url: {self.wcd_url}, port: {self.local_weaviate_port}, grpc_port: {self.local_weaviate_grpc_port}"
+                )
+                self.logger.warning(
+                    f"Cloud: wcd_url: {self.wcd_url}, api_key_set: {self.wcd_api_key != ''}"
+                )
+
         if self.is_client:
             await self.restart_client(force=True)
             await self.restart_async_client(force=True)
