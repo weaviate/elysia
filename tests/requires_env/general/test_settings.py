@@ -6,6 +6,7 @@ from elysia.config import settings as global_settings
 from elysia.config import reset_settings
 
 from elysia.tree import Tree
+from elysia.config import APIKeyError
 
 
 def test_smart_setup():
@@ -35,13 +36,13 @@ def test_model_keys():
     )
 
     # should error
-    with pytest.raises(Exception):
+    with pytest.raises(APIKeyError):
         response, objects = tree("hi elly. use text response only")
 
-    with pytest.raises(Exception):
+    with pytest.raises(APIKeyError):
         tree.create_conversation_title()
 
-    with pytest.raises(Exception):
+    with pytest.raises(APIKeyError):
         tree.get_follow_up_suggestions()
 
     # missing keys
@@ -55,13 +56,13 @@ def test_model_keys():
 
     tree = Tree(settings=settings)
 
-    with pytest.raises(Exception):
+    with pytest.raises(APIKeyError):
         response, objects = tree("hi elly. use text response only")
 
-    with pytest.raises(Exception):
+    with pytest.raises(APIKeyError):
         tree.create_conversation_title()
 
-    with pytest.raises(Exception):
+    with pytest.raises(APIKeyError):
         tree.get_follow_up_suggestions()
 
     # now set the keys back to the .env

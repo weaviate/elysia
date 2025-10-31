@@ -17,10 +17,10 @@ def event_loop():
         loop.close()
 
 
-@pytest.fixture(autouse=True, scope="module")
-def use_dummy_adapter():
+# @pytest.fixture(autouse=True, scope="module")
+# def use_dummy_adapter():
 
-    prev_adapter = dspy.settings.adapter
-    configure(adapter=DummyAdapter())
-    yield
-    configure(adapter=prev_adapter)
+#     prev_adapter = dspy.settings.adapter
+#     configure(adapter=DummyAdapter())
+#     yield
+#     configure(adapter=prev_adapter)
