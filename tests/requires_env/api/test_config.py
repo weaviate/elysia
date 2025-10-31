@@ -156,6 +156,77 @@ async def test_set_save_location():
 
 
 @pytest.mark.asyncio
+async def test_set_save_location_custom():
+    """
+    Setting the custom connection parameters in the frontend config should be saved to the user config.
+    """
+    user_manager = get_user_manager()
+    user_id = "test_user_set_save_location_custom"
+    conversation_id = "test_conversation_set_save_location_custom"
+    config_id = "test_config_set_save_location_custom"
+    config_name = "Test set save location custom"
+
+    await initialise_user_and_tree(user_id, conversation_id)
+
+    user = await user_manager.get_user_local(user_id)
+
+    if "WEAVIATE_REST_URL" not in os.environ:
+        pytest.skip("WEAVIATE_REST_URL is not set in the environment")
+    if "WEAVIATE_GRPC_URL" not in os.environ:
+        pytest.skip("WEAVIATE_GRPC_URL is not set in the environment")
+    if "WCD_API_KEY" not in os.environ:
+        pytest.skip("WCD_API_KEY is not set in the environment")
+
+    # update the save location to a custom one (but still points to cloud)
+    response = await save_config_user(
+        user_id=user_id,
+        config_id=config_id,
+        data=SaveConfigUserData(
+            name=config_name,
+            default=True,
+            config={},
+            frontend_config={
+                "save_location_wcd_url": "",
+                "save_location_wcd_api_key": os.getenv("WCD_API_KEY"),
+                "save_location_weaviate_is_local": False,
+                "save_location_weaviate_is_custom": True,
+                "save_location_custom_http_host": os.getenv("WEAVIATE_REST_URL"),
+                "save_location_custom_http_port": 443,
+                "save_location_custom_http_secure": True,
+                "save_location_custom_grpc_host": os.getenv("WEAVIATE_GRPC_URL"),
+                "save_location_custom_grpc_port": 443,
+                "save_location_custom_grpc_secure": True,
+            },
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+
+    assert len(response["warnings"]) == 0
+
+    # but the user should have a new save location
+    user = await user_manager.get_user_local(user_id)
+    assert user["frontend_config"].save_location_weaviate_is_custom
+    assert user["frontend_config"].save_location_custom_http_host == os.getenv(
+        "WEAVIATE_REST_URL"
+    )
+    assert user["frontend_config"].save_location_custom_http_port == 443
+    assert user["frontend_config"].save_location_custom_http_secure == True
+    assert user["frontend_config"].save_location_custom_grpc_host == os.getenv(
+        "WEAVIATE_GRPC_URL"
+    )
+    assert user["frontend_config"].save_location_custom_grpc_port == 443
+    assert user["frontend_config"].save_location_custom_grpc_secure == True
+    assert user["frontend_config"].save_location_wcd_api_key == os.getenv("WCD_API_KEY")
+
+    # and this users client should be able to connect to the custom Weaviate cluster
+    async with user[
+        "frontend_config"
+    ].save_location_client_manager.connect_to_async_client() as client:
+        assert client.is_ready()
+
+
+@pytest.mark.asyncio
 async def test_smart_setup_models_user():
     """
     Test that models are set based on supplied api keys.

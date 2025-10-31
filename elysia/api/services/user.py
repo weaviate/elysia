@@ -131,7 +131,16 @@ class UserManager:
             api_keys=local_user["tree_manager"].settings.API_KEYS,
             weaviate_is_local=local_user["tree_manager"].settings.WEAVIATE_IS_LOCAL,
             local_weaviate_port=local_user["tree_manager"].settings.LOCAL_WEAVIATE_PORT,
-            local_weaviate_grpc_port=local_user["tree_manager"].settings.LOCAL_WEAVIATE_GRPC_PORT,
+            local_weaviate_grpc_port=local_user[
+                "tree_manager"
+            ].settings.LOCAL_WEAVIATE_GRPC_PORT,
+            weaviate_is_custom=local_user["tree_manager"].settings.WEAVIATE_IS_CUSTOM,
+            custom_http_host=local_user["tree_manager"].settings.CUSTOM_HTTP_HOST,
+            custom_http_port=local_user["tree_manager"].settings.CUSTOM_HTTP_PORT,
+            custom_http_secure=local_user["tree_manager"].settings.CUSTOM_HTTP_SECURE,
+            custom_grpc_host=local_user["tree_manager"].settings.CUSTOM_GRPC_HOST,
+            custom_grpc_port=local_user["tree_manager"].settings.CUSTOM_GRPC_PORT,
+            custom_grpc_secure=local_user["tree_manager"].settings.CUSTOM_GRPC_SECURE,
         )
 
     async def update_frontend_config(

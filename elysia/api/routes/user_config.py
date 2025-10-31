@@ -146,19 +146,10 @@ async def load_a_config(
         frontend_config = user["frontend_config"]
 
         # check if the user has a valid save location (allow local without API key)
-        if frontend_config.save_location_wcd_url == "" or (
-            frontend_config.save_location_wcd_api_key == ""
-            and not frontend_config.save_location_weaviate_is_local
-        ):
-            raise Exception("WCD URL or API key not found.")
-
-        if frontend_config.save_location_wcd_url == "" or (
-            frontend_config.save_location_wcd_api_key == ""
-            and not frontend_config.save_location_weaviate_is_local
-        ):
+        if not frontend_config.save_location_client_manager.is_client:
             raise Exception(
-                "No valid destination for config load location found. "
-                "Please update the save location using the /update_save_location API."
+                "No valid Weaviate database destination for config load location found. "
+                "Cannot load config from Weaviate database."
             )
 
         # Retrieve the config from the weaviate database
@@ -326,24 +317,24 @@ async def save_config_user(
         user_id (str): Required. The user ID.
         data (SaveConfigUserData): Required. Containing the following attributes:
             name (str): Optional. The name of the config.
-            settings (dict): Optional. A dictionary of config values to set, follows the same format as the Settings.configure() method.
-            style (str): Optional. The writing style of the agent.
-            agent_description (str): Optional. The description of the agent.
-            end_goal (str): Optional. The end goal of the agent.
-            branch_initialisation (str): Optional. The branch initialisation of the agent.
+            config (dict): Optional. A dictionary of config values to set, follows the same format as the Settings.configure() method.
+            frontend_config (dict): Optional. A dictionary of frontend config values to set, follows the same format as the FrontendConfig.configure() method.
+            default (bool): Optional. Whether the config is the one currently set for that user (future requests will use these values).
         user_manager (UserManager): The user manager instance.
 
     Returns:
         JSONResponse: A JSON response with the following attributes:
             error (str): An error message. Empty if no error.
             config (dict): A dictionary of the updated config values.
+            frontend_config (dict): A dictionary of the updated frontend config values.
+            warnings (list): A list of warning messages.
     """
     logger.debug(f"/save_config_user API request received")
     logger.debug(f"User ID: {user_id}")
     logger.debug(f"Config ID: {config_id}")
     logger.debug(f"Name: {data.name}")
     logger.debug(f"Backend Config: {data.config}")
-    logger.debug(f"Frontend config: {data.frontend_config}")
+    logger.debug(f"Frontend Config: {data.frontend_config}")
     logger.debug(f"Default: {data.default}")
 
     warnings = []
@@ -445,14 +436,10 @@ async def save_config_user(
         # storage cluster for configs/conversations is controlled via frontend payload
 
         # Check if the user has a valid save location (allow local without API key)
-        if user["frontend_config"].save_location_wcd_url == "" or (
-            user["frontend_config"].save_location_wcd_api_key == ""
-            and not user["frontend_config"].save_location_weaviate_is_local
-        ):
+        if not user["frontend_config"].save_location_client_manager.is_client:
             warnings.append(
-                "No valid destination for config save location found. "
-                "Config has not been saved to Weaviate. "
-                "Saving to Weaviate requires a Config Storage WCD_URL and WCD_API_KEY."
+                "No valid Weaviate database destination for config save location found. "
+                "Config has not been saved to Weaviate database."
             )
         else:
 
@@ -772,14 +759,7 @@ async def list_configs(
 
         if (
             "frontend_config" not in user
-            or "save_location_wcd_url" not in user["frontend_config"].__dict__
-            or "save_location_wcd_api_key" not in user["frontend_config"].__dict__
-            or user["frontend_config"].save_location_wcd_url is None
-            or user["frontend_config"].save_location_wcd_url == ""
-            or (
-                user["frontend_config"].save_location_wcd_api_key in [None, ""]
-                and not user["frontend_config"].save_location_weaviate_is_local
-            )
+            or not user["frontend_config"].save_location_client_manager.is_client
         ):
             logger.warning(
                 "In /list_configs API, "
@@ -789,20 +769,6 @@ async def list_configs(
             warnings.append(
                 "No valid destination for config location found. "
                 "Cannot show saved configs."
-            )
-            return JSONResponse(
-                content={"error": "", "configs": [], "warnings": warnings},
-                headers=headers,
-            )
-
-        if not user["frontend_config"].save_location_client_manager.is_client:
-            logger.warning(
-                "In /list_configs API, "
-                "Client manager is not connected to a client. "
-                "Returning no error but an empty list of configs."
-            )
-            warnings.append(
-                "Weaviate client is not connected. Cannot show saved configs."
             )
             return JSONResponse(
                 content={"error": "", "configs": [], "warnings": warnings},
