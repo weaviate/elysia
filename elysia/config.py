@@ -115,6 +115,7 @@ def is_api_key(key: str) -> bool:
         or key.lower().endswith("_access_key_id")
         or key.lower().endswith("_secret_access_key")
         or key.lower().endswith("_region_name")
+        or key.lower().endswith("_token")
     )
 
 
@@ -346,6 +347,7 @@ class Settings:
                 - local_weaviate_port (int): The port to use for the local Weaviate cluster.
                 - local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
                 - logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+                - api_keys (dict): A dictionary of API keys to set. E.g. `{"openai_apikey": "..."}`.
                 - use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
                     If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.
                     These are implemented via few-shot examples for the decision node.
@@ -627,19 +629,58 @@ class ElysiaKeyManager:
         # save existing env
         self.existing_env = deepcopy(os.environ)
 
-        # blank out the environ except for certain values
-        os.environ = {
-            "MODEL_API_BASE": self.settings.MODEL_API_BASE,
-            "WCD_URL": self.settings.WCD_URL,
-            "WCD_API_KEY": self.settings.WCD_API_KEY,
-            "WEAVIATE_IS_LOCAL": str(self.settings.WEAVIATE_IS_LOCAL),
-            "LOCAL_WEAVIATE_PORT": str(self.settings.LOCAL_WEAVIATE_PORT),
-            "LOCAL_WEAVIATE_GRPC_PORT": str(self.settings.LOCAL_WEAVIATE_GRPC_PORT),
-        }
+        items_to_remove = []
+        for key in os.environ:
+            if is_api_key(key):
+                items_to_remove.append(key)
+
+        for key in items_to_remove:
+            del os.environ[key]
+
+        if (
+            "MODEL_API_BASE" in dir(self.settings)
+            and self.settings.MODEL_API_BASE is not None
+        ):
+            os.environ["MODEL_API_BASE"] = self.settings.MODEL_API_BASE
+
+        if "WCD_URL" in dir(self.settings) and self.settings.WCD_URL is not None:
+            os.environ["WCD_URL"] = self.settings.WCD_URL
+        if (
+            "WCD_API_KEY" in dir(self.settings)
+            and self.settings.WCD_API_KEY is not None
+        ):
+            os.environ["WCD_API_KEY"] = self.settings.WCD_API_KEY
+        if (
+            "WEAVIATE_IS_LOCAL" in dir(self.settings)
+            and self.settings.WEAVIATE_IS_LOCAL is not None
+        ):
+            os.environ["WEAVIATE_IS_LOCAL"] = str(self.settings.WEAVIATE_IS_LOCAL)
+        if (
+            "LOCAL_WEAVIATE_PORT" in dir(self.settings)
+            and self.settings.LOCAL_WEAVIATE_PORT is not None
+        ):
+            os.environ["LOCAL_WEAVIATE_PORT"] = str(self.settings.LOCAL_WEAVIATE_PORT)
+        if (
+            "LOCAL_WEAVIATE_GRPC_PORT" in dir(self.settings)
+            and self.settings.LOCAL_WEAVIATE_GRPC_PORT is not None
+        ):
+            os.environ["LOCAL_WEAVIATE_GRPC_PORT"] = str(
+                self.settings.LOCAL_WEAVIATE_GRPC_PORT
+            )
 
         # update all api keys in env
+        warning_api_keys = []
         for api_key, value in self.settings.API_KEYS.items():
-            os.environ[api_key.upper()] = value
+            if isinstance(value, str):
+                os.environ[api_key.upper()] = value
+            else:
+                warning_api_keys.append(api_key)
+
+        if len(warning_api_keys) > 0:
+            self.settings.logger.warning(
+                f"The following API keys are either not found or not strings: {', '.join(warning_api_keys)}. "
+                "These have been ignored. Please ensure the API keys in the settings are available and strings."
+            )
 
         pass
 

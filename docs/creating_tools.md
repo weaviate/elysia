@@ -136,3 +136,33 @@ All optional arguments you can pass to the `@tool` decorator are:
 - `branch_id` (`str`): the ID of the branch on the tree to add the tool to.
 - `status` (`str`): a custom message to display whilst the tool is running.
 - `end` (`bool`): when `True`, this tool can be the end of the conversation if the decision agent decides it should end after the completion of this tool.
+
+## Environment Variables
+
+Environment variables (stored in `.env` and accessed via `os.getenv(...)` or `os.environ`) are passed down to tools - with some exceptions. Any environment variables whose keys end with the following strings:
+
+- `"api_key"`
+- `"apikey"`
+- `"api_version"`
+- `"api_base"`
+- `"_account_id"`
+- `"_jwt"`
+- `"_access_key_id"`
+- `"_secret_access_key"`
+- `"_region_name"`
+- `"_token"`
+
+Will **NOT** be passed down to tools. This is to ensure that API keys are differentiated between the `Settings` object and the actual `.env` file. For example, if these *were* included in all tool calls, then any LLM calls would use what is in the `.env`, instead of what has been configured in the tree. This is due to the way LiteLLM processes LLM requests via API keys in the environment.
+
+**If you need environment variables like this, or notice your environment variables are going missing**, then consider renaming them (e.g. `my_api_key` -> `my_api_key_`) or including them in the `api_keys` variable in the `Settings` object, via
+
+```python
+from elysia import settings
+settings = Settings()
+settings.configure(
+    api_keys = {
+        "MY_API_KEY": "..."
+    }
+)
+```
+The `MY_API_KEY` will then accessible from `os.environ`. Or, in the Elysia web app, within your API keys section of the config.
