@@ -1,15 +1,15 @@
 name: Publish to PyPI
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   build-and-publish:
     name: Build and publish to PyPI
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'weaviate'
+    if: |
+      github.repository_owner == 'weaviate' && startsWith(github.event.release.tag_name, 'v')
     permissions:
       id-token: write
       contents: write
