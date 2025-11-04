@@ -8,8 +8,7 @@ jobs:
   build-and-publish:
     name: Build and publish to PyPI
     runs-on: ubuntu-latest
-    if: |
-      github.repository_owner == 'weaviate' && startsWith(github.event.release.tag_name, 'v')
+    if: github.repository_owner == 'weaviate'
     permissions:
       id-token: write
       contents: write
@@ -18,6 +17,14 @@ jobs:
       name: pypi
 
     steps:
+      - name: Verify tag name starts with 'v'
+        run: |
+          if [[ ! "${{ github.event.release.tag_name }}" =~ ^v ]]; then
+            echo "Release tag name '${{ github.event.release.tag_name }}' does not start with 'v'. Exiting."
+            exit 1
+          fi
+          echo "Tag name '${{ github.event.release.tag_name }}' is valid."
+      
       - name: Check out repository
         uses: actions/checkout@v4
         with:
