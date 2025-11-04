@@ -4,6 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elysia-ai"
+#replace_package_version_marker
 version = "0.3.dev1"
 description = "Elysia is an open-source agentic platform for searching data. It is built with customisation in mind, allowing you to build agents and tools that are tailored to your specific use case. It uses Weaviate as the default retrieval tools, and can interface with your data stored in a Weaviate cluster."
 readme = "README.md"
