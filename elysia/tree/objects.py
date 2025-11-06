@@ -12,6 +12,18 @@ from copy import deepcopy
 from weaviate.classes.query import Filter
 
 
+class EnvironmentItem(BaseModel):
+    metadata: dict
+    objects: list[dict]
+
+    def to_json(self):
+        return self.model_dump()
+
+    @classmethod
+    def from_json(cls, json_data: dict):
+        return cls(**json_data)
+
+
 class Environment:
     """
     Store of all objects across different types of queries and responses.
@@ -24,8 +36,8 @@ class Environment:
     The environment is formatted and keyed as follows:
     ```python
     {
-        "tool_name": {
-            "result_name": [
+        <tool_name>: {
+            list[dict] = [
                 {
                     "metadata": dict,
                     "objects": list[dict],
@@ -36,24 +48,18 @@ class Environment:
     }
     ```
 
-    Where `"tool_name"` is the name of the function that the result belongs to,
-    e.g. if the result came from a tool called `"query"`, then `"tool_name"` is `"query"`.
-
-    `"result_name"` is the name of the Result object, which can be customised,
-    e.g. if the result comes from a specific collection, then `"result_name"` is the name of the collection.
+    Where each <tool_name> is a string denoting the name of the tool that the result belongs to,
+    e.g. if the result came from a tool called `"query"`, then <tool_name> is `"query"`.
+    Each list under <tool_name> is a dictionary with both `metadata` and `objects` keys.
+    Each separate item in the list is a separate result from the tool (i.e. called at different times or multiple yields from the same tool).
 
     `"metadata"` is the metadata of the result,
     e.g. the time taken to retrieve the result, the query used, etc.
+    This is customisable by the tool result itself.
 
     `"objects"` is the list of objects retrieved from the result. This is a list of dictionaries, where each dictionary is an object.
-    It is important that `objects` should have be list of dictionaries.
+    It is important that `objects` should be list of dictionaries.
     e.g. each object that was returned from a retrieval, where the fields of each dictionary are the fields of the object returned.
-
-    Each list under `result_name` is a dictionary with both `metadata` and `objects` keys.
-    This is if, for example, you retrieve multiple objects from the same collection, each one is stored with different metadata.
-    Because, for example, the query used to retrieve each object may be different (and stored differently in the metadata).
-
-    The environment is initialised with a default "SelfInfo.generic" key, which is a list of one object, containing information about Elysia itself.
 
     You can use various methods to add, remove, replace, and find objects in the environment. See the methods below for more information.
 
@@ -63,64 +69,55 @@ class Environment:
 
     def __init__(
         self,
-        environment: dict[str, dict[str, Any]] | None = None,
-        self_info: bool = True,
+        environment: dict[str, list[EnvironmentItem]] | None = None,
         hidden_environment: dict[str, Any] = {},
     ):
         if environment is None:
             environment = {}
         self.environment = environment
         self.hidden_environment = hidden_environment
-        self.self_info = self_info
-        if self_info:
-            self.environment["SelfInfo"] = {}
-            self.environment["SelfInfo"]["info"] = [
-                {
-                    "name": "Elysia",
-                    "description": "An agentic RAG service in Weaviate.",
-                    "purpose": remove_whitespace(
-                        """Elysia is an agentic retrieval augmented generation (RAG) service, where users can query from Weaviate collections,
-                    and the assistant will retrieve the most relevant information and answer the user's question. This includes a variety
-                    of different ways to query, such as by filtering, sorting, querying multiple collections, and providing summaries
-                    and textual responses.
 
-                    Elysia will dynamically display retrieved objects from the collections in the frontend.
-                    Elysia works via a tree-based approach, where the user's question is used to generate a tree of potential
-                    queries to retrieve the most relevant information.
-                    Each end of the tree connects to a separate agent that will perform a specific task, such as retrieval, aggregation, or generation, or more.
+    def clear(self, include_hidden: bool = False):
+        """
+        Clears the environment.
+        """
+        self.environment = {}
+        if include_hidden:
+            self.hidden_environment = {}
 
-                    The tree itself has decision nodes that determine the next step in the query.
-                    The decision nodes are decided via a decision-agent, which decides the task.
-
-                    The agents communicate via a series of different prompts, which are stored in the prompt-library.
-                    The decision-agent prompts are designed to be as general as possible, so that they can be used for a variety of different tasks.
-                    Some of these variables include conversation history, retrieved objects, the user's original question, train of thought via model reasoning, and more.
-
-                    The backend of Elysia is built with a range of libraries. Elysia is built with a lot of base python, and was constructed from the ground up to keep it as modular as possible.
-                    The LLM components are built with DSPy, a library for training and running LLMs.
-                    """
-                    ),
-                }
-            ]
-
-    def is_empty(self):
+    def is_empty(self, tool_name: str | None = None):
         """
         Check if the environment is empty.
 
-        The "SelfInfo" key is not counted towards the empty environment.
-
         If the `.remove` method has been used, this is accounted for (e.g. empty lists count towards an empty environment).
-        """
-        empty = True
-        for tool_key in self.environment.keys():
-            if tool_key == "SelfInfo":
-                continue
 
-            for result_key in self.environment[tool_key].keys():
-                if len(self.environment[tool_key][result_key]) > 0:
-                    empty = False
+        Args:
+            tool_name (str | None): Optional. The name of the tool to check if it is empty.
+                If provided, only the tool with the given name is checked.
+                If `None`, the entire environment is checked.
+                Defaults to `None`.
+        """
+
+        if tool_name:
+            if tool_name not in self.environment:
+                return True
+            else:
+                empty = True
+                for item in self.environment[tool_name]:
+                    if len(item.objects) > 0:
+                        empty = False
+                        break
+                return empty
+        else:
+            empty = True
+            for tool_name in self.environment.keys():
+                for item in self.environment[tool_name]:
+                    if len(item.objects) > 0:
+                        empty = False
+                        break
+                if not empty:
                     break
-        return empty
+            return empty
 
     def add(self, tool_name: str, result: Result, include_duplicates: bool = False):
         """
@@ -143,17 +140,12 @@ class Environment:
                 If `True`, the duplicate object is added with a new `_REF_ID` entry, and the repeated properties are added to the object.
         """
         objects = result.to_json()
-        name = result.name
         metadata = result.metadata
-        if tool_name not in self.environment:
-            self.environment[tool_name] = {}
-
-        self.add_objects(tool_name, name, objects, metadata, include_duplicates)
+        self.add_objects(tool_name, objects, metadata, include_duplicates)
 
     def add_objects(
         self,
         tool_name: str,
-        name: str,
         objects: list[dict],
         metadata: dict = {},
         include_duplicates: bool = False,
@@ -169,7 +161,6 @@ class Environment:
 
         Args:
             tool_name (str): The name of the tool called that the result belongs to.
-            name (str): The name of the result.
             objects (list[dict]): The objects to add to the environment.
             metadata (dict): Optional. The metadata of the objects to add to the environment.
                 Defaults to an empty dictionary.
@@ -179,166 +170,346 @@ class Environment:
 
         """
         if tool_name not in self.environment:
-            self.environment[tool_name] = {}
-
-        if name not in self.environment[tool_name]:
-            self.environment[tool_name][name] = []
-
-        if len(objects) > 0:
-            self.environment[tool_name][name].append(
-                {
-                    "metadata": metadata,
-                    "objects": [],
-                }
-            )
-
-            for i, obj in enumerate(objects):
-                # check if the object is already in the environment
-                obj_found = False
-                where_obj = None
-                for env_item in self.environment[tool_name][name]:
-                    if obj in env_item["objects"]:
-                        obj_found = True
-                        where_obj = env_item["objects"].index(obj)
-                        _REF_ID = env_item["objects"][where_obj]["_REF_ID"]
-                        break
-
-                if obj_found and not include_duplicates:
-                    self.environment[tool_name][name][-1]["objects"].append(
-                        {
-                            "object_info": f"[repeat]",
-                            "_REF_ID": _REF_ID,
-                        }
+            self.environment[tool_name] = [
+                EnvironmentItem(
+                    metadata=metadata,
+                    objects=objects,
+                )
+            ]
+        else:
+            found_item = False
+            for item in self.environment[tool_name]:
+                if item.metadata == metadata:
+                    item.objects.extend(objects)
+                    found_item = True
+                    break
+            if not found_item:
+                self.environment[tool_name].append(
+                    EnvironmentItem(
+                        metadata=metadata,
+                        objects=objects,
                     )
-                elif "_REF_ID" not in obj:
-                    _REF_ID = f"{tool_name}_{name}_{len(self.environment[tool_name][name])}_{i}"
-                    self.environment[tool_name][name][-1]["objects"].append(
-                        {
-                            "_REF_ID": _REF_ID,
-                            **obj,
-                        }
-                    )
-                else:
-                    self.environment[tool_name][name][-1]["objects"].append(obj)
+                )
 
-    def remove(self, tool_name: str, name: str, index: int | None = None):
+    def append(
+        self,
+        tool_name: str,
+        objects: list[dict],
+        metadata: dict | None = None,
+        metadata_key: str | None = None,
+        metadata_value: Any | None = None,
+    ):
         """
-        Replaces the list of objects for the given `tool_name` and `name` with an empty list.
+        Appends an object to a list of objects in the environment.
+        Appends under the `"objects"` key of a given item in the environment.
+        The item is specified by the metadata of the object. If no metadata is provided, the item is specified by the metadata key and value.
 
+        If no item is found, an error is raised.
         Args:
             tool_name (str): The name of the tool called that the result belongs to.
-            name (str): The name of the result.
-            index (int | None): The index of the object to remove.
-                If `None`, the entire list corresponding to `tool_name`/`name` is deleted.
-                If an integer, the object at the given index is removed.
-                Defaults to `None`.
-                If `index=-1`, the last object is removed.
+            metadata (dict | None): The metadata of the objects to append to the environment.
+            metadata_key (str | None): The key of the metadata to append to the environment.
+            metadata_value (Any | None): The value of the metadata to append to the environment.
+            objects (list[dict]): The objects to append to the environment.
+
+        For example, if you have
+        ```python
+        {
+            "query": [
+                {
+                    "metadata": {"collection_name": "pet_food", "query_search_term": "animals"},
+                    "objects": [{"animal": "frog"}]
+                }
+                ...
+            ]
+        }
+        ```
+        and you want to append an object that matches the same `"collection_name"` of `"pet_food"`, you can do:
+
+        ```python
+        environment.append(tool_name="query", objects=[{"animal": "reindeer"}], metadata_key="collection_name", metadata_value="pet_food")
+        ```
+        Then the environment would be updated to:
+        ```python
+        {
+            "query": [
+                {
+                    "metadata": {"collection_name": "pet_food", "query_search_term": "animals"},
+                    "objects": [{"animal": "frog"}, {"animal": "reindeer"}]
+                }
+                ...
+            ]
+        }
+        ```
         """
-        if tool_name in self.environment:
-            if name in self.environment[tool_name]:
-                if index is None:
-                    self.environment[tool_name][name] = []
-                else:
-                    self.environment[tool_name][name].pop(index)
+        if (
+            metadata is not None
+            and metadata_key is not None
+            and metadata_value is not None
+        ):
+            raise ValueError(
+                "Cannot provide both metadata and metadata_key/metadata_value"
+            )
+        elif metadata is None and (metadata_key is None or metadata_value is None):
+            raise ValueError(
+                "Must provide either metadata or metadata_key/metadata_value"
+            )
+        elif metadata_key is not None and metadata_value is None:
+            raise ValueError("Must provide metadata_value if metadata_key is provided")
+        elif metadata_key is None and metadata_value is not None:
+            raise ValueError("Must provide metadata_key if metadata_value is provided")
+
+        if metadata:
+            for item in self.environment[tool_name]:
+                if item.metadata == metadata:
+                    item.objects.extend(objects)
+                    return
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata}"
+            )
+
+        elif metadata_key:
+            for item in self.environment[tool_name]:
+                if (
+                    metadata_key in item.metadata
+                    and item.metadata[metadata_key] == metadata_value
+                ):
+                    item.objects.extend(objects)
+                    return
+
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
+            )
+
+    def remove(
+        self,
+        tool_name: str,
+        metadata: dict | None = None,
+        metadata_key: str | None = None,
+        metadata_value: Any | None = None,
+    ):
+        """
+        Replaces the list of objects for the given `tool_name` with an empty list.
+        Specifying either `metadata` or the `metadata_key` and `metadata_value` parameters will specify the item to remove.
+        If no item is found, all items under the given `tool_name` are removed.
+        Args:
+            tool_name (str): The name of the tool called that the result belongs to.
+            metadata (dict | None): The metadata of the object to remove.
+            metadata_key (str | None): The key of the metadata to remove.
+            metadata_value (Any | None): The value of the metadata to remove.
+        """
+        if (
+            metadata is not None
+            and metadata_key is not None
+            and metadata_value is not None
+        ):
+            raise ValueError(
+                "Cannot provide both metadata and metadata_key/metadata_value"
+            )
+        elif metadata_key is not None and metadata_value is None:
+            raise ValueError("Must provide metadata_value if metadata_key is provided")
+        elif metadata_key is None and metadata_value is not None:
+            raise ValueError("Must provide metadata_key if metadata_value is provided")
+
+        if metadata:
+            for item in self.environment[tool_name]:
+                if item.metadata == metadata:
+                    item.objects = []
+                    return
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata}"
+            )
+        elif metadata_key:
+            for item in self.environment[tool_name]:
+                if (
+                    metadata_key in item.metadata
+                    and item.metadata[metadata_key] == metadata_value
+                ):
+                    item.objects = []
+                    return
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
+            )
+        else:
+            self.environment[tool_name] = []
 
     def replace(
         self,
         tool_name: str,
-        name: str,
         objects: list[dict],
-        metadata: dict = {},
-        index: int | None = None,
+        metadata: dict | None = None,
+        metadata_key: str | None = None,
+        metadata_value: Any | None = None,
     ):
         """
-        Replaces the list of objects for the given `tool_name` and `name` with the given list of objects.
-
+        Replaces the list of objects for the given `tool_name` with the given list of objects.
+        Specifying either `metadata` or the `metadata_key` and `metadata_value` parameters will specify the item to replace.
         Args:
             tool_name (str): The name of the tool called that the result belongs to.
-            name (str): The name of the result.
             objects (list[dict]): The objects to replace the existing objects with.
-            metadata (dict): The metadata of the objects to replace the existing objects with.
-            index (int | None): The index of the object to replace.
-                If `None`, the entire list corresponding to `tool_name`/`name` is deleted and replaced with the new objects.
-                If an integer, the object at the given index is replaced with the new objects.
-                Defaults to `None`.
+            metadata (dict | None): The metadata of the objects to replace the existing objects with.
+            metadata_key (str | None): The key of the metadata to replace the existing objects with.
+            metadata_value (Any | None): The value of the metadata to replace the existing objects with.
         """
-        if tool_name in self.environment:
-            if name in self.environment[tool_name]:
-                if index is None:
-                    self.environment[tool_name][name] = [
-                        {
-                            "metadata": metadata,
-                            "objects": objects,
-                        }
-                    ]
-                else:
-                    self.environment[tool_name][name][index] = {
-                        "metadata": metadata,
-                        "objects": objects,
-                    }
 
-    def find(self, tool_name: str, name: str, index: int | None = None):
+        if (
+            metadata is not None
+            and metadata_key is not None
+            and metadata_value is not None
+        ):
+            raise ValueError(
+                "Cannot provide both metadata and metadata_key/metadata_value"
+            )
+        elif metadata_key is not None and metadata_value is None:
+            raise ValueError("Must provide metadata_value if metadata_key is provided")
+        elif metadata_key is None and metadata_value is not None:
+            raise ValueError("Must provide metadata_key if metadata_value is provided")
+        elif metadata is None and (metadata_key is None or metadata_value is None):
+            raise ValueError(
+                "Must provide either metadata or metadata_key/metadata_value"
+            )
+        elif tool_name and tool_name not in self.environment:
+            raise ValueError(f"Tool name {tool_name} not found in environment")
+
+        if metadata:
+            for item in self.environment[tool_name]:
+                if item.metadata == metadata:
+                    item.objects = objects
+                    return
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata}"
+            )
+        elif metadata_key:
+            for item in self.environment[tool_name]:
+                if (
+                    metadata_key in item.metadata
+                    and item.metadata[metadata_key] == metadata_value
+                ):
+                    item.objects = objects
+                    return
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
+            )
+
+    def get_objects(
+        self,
+        tool_name: str,
+        metadata: dict | None = None,
+        metadata_key: str | None = None,
+        metadata_value: Any | None = None,
+    ) -> list[dict] | None:
         """
-        Finds a corresponding list of objects in the environment.
-        Keyed via `tool_name` and `name`. See the base class description for more information on how the environment is keyed.
+        Get the objects for the given `tool_name` associated with the given `metadata` or `metadata_key` and `metadata_value`.
+        Args:
+            tool_name (str): The name of the tool called that the result belongs to.
+            metadata (dict | None): The metadata of the object to get.
+            metadata_key (str | None): The key of the metadata to get.
+            metadata_value (Any | None): The value of the metadata to get.
+        Returns:
+            list[dict] | None: The list of objects for the given `tool_name`. `None` if the `tool_name` is not found in the environment.
+        """
+        if (
+            metadata is not None
+            and metadata_key is not None
+            and metadata_value is not None
+        ):
+            raise ValueError(
+                "Cannot provide both metadata and metadata_key/metadata_value"
+            )
+        elif metadata_key is not None and metadata_value is None:
+            raise ValueError("Must provide metadata_value if metadata_key is provided")
+        elif metadata_key is None and metadata_value is not None:
+            raise ValueError("Must provide metadata_key if metadata_value is provided")
+        elif metadata is None and (metadata_key is None or metadata_value is None):
+            raise ValueError(
+                "Must provide either metadata or metadata_key/metadata_value"
+            )
+
+        if tool_name not in self.environment:
+            return None
+
+        if metadata:
+            for item in self.environment[tool_name]:
+                if item.metadata == metadata:
+                    return item.objects
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {metadata}"
+            )
+
+        elif metadata_key:
+            objects = []
+            for item in self.environment[tool_name]:
+                if (
+                    metadata_key in item.metadata
+                    and item.metadata[metadata_key] == metadata_value
+                ):
+                    objects.extend(item.objects)
+            if not objects:
+                raise ValueError(
+                    f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
+                )
+            return objects
+
+    def get(self, tool_name: str) -> list[EnvironmentItem] | None:
+        """
+        Get the objects for the given `tool_name`.
 
         Args:
             tool_name (str): The name of the tool called that the result belongs to.
-            name (str): The name of the result.
-            index (int | None): The index of the object to find.
-                If `None`, the entire list corresponding to `tool_name`/`name` is returned.
-                If an integer, the object at the given index is returned.
 
         Returns:
-            (list[dict]): if `index` is `None` - The list of objects for the given `tool_name` and `name`.
-            (dict): if `index` is an integer - The object at the given `index` for the given `tool_name` and `name`.
-            (None): If the `tool_name` or `name` is not found in the environment.
+            list[EnvironmentItem] | None: The list of items for the given `tool_name`. `None` if the `tool_name` is not found in the environment.
         """
 
         if tool_name not in self.environment:
             return None
-        if name not in self.environment[tool_name]:
-            return None
 
-        if index is None:
-            return self.environment[tool_name][name]
-        else:
-            return self.environment[tool_name][name][index]
+        return self.environment[tool_name]
+
+    def output_llm_metadata(self):
+        out = ""
+        for tool_name, items in self.environment.items():
+            out += f"{tool_name}: {len(items)} results\n\t---\n"
+            for item in items:
+                out += f"\t{len(item.objects)} object{'s' if len(item.objects) != 1 else ''} with metadata:\n"
+                for metadata_key, metadata_value in item.metadata.items():
+                    out += f"\t\t{metadata_key}: {metadata_value}\n"
+                out += "\t---\n"
+        return out
 
     def to_json(self, remove_unserialisable: bool = False):
         """
         Converts the environment to a JSON serialisable format.
         Used to access specific objects from the environment.
         """
-
         env_copy = deepcopy(self.environment)
         hidden_env_copy = deepcopy(self.hidden_environment)
 
-        # Check if environment and hidden_environment are JSON serialisable
         for tool_name in env_copy:
-            if tool_name != "SelfInfo":
-                for name in self.environment[tool_name]:
-                    for obj_metadata in self.environment[tool_name][name]:
-                        format_dict_to_serialisable(
-                            obj_metadata["metadata"], remove_unserialisable
-                        )
-                        for obj in obj_metadata["objects"]:
-                            format_dict_to_serialisable(obj, remove_unserialisable)
+            for item in env_copy[tool_name]:
+                format_dict_to_serialisable(item.metadata, remove_unserialisable)
+                for obj in item.objects:
+                    format_dict_to_serialisable(obj, remove_unserialisable)
 
-        format_dict_to_serialisable(hidden_env_copy, remove_unserialisable)
+        format_dict_to_serialisable(hidden_env_copy)
 
         return {
-            "environment": env_copy,
+            "environment": {
+                tool_name: [item.to_json() for item in items]
+                for tool_name, items in env_copy.items()
+            },
             "hidden_environment": hidden_env_copy,
-            "self_info": self.self_info,
         }
 
     @classmethod
     def from_json(cls, json_data: dict):
+        environment = {
+            tool_name: [EnvironmentItem.from_json(item) for item in items]
+            for tool_name, items in json_data.get("environment", {}).items()
+        }
         return cls(
-            environment=json_data["environment"],
-            hidden_environment=json_data["hidden_environment"],
-            self_info=json_data["self_info"],
+            environment=environment,
+            hidden_environment=json_data.get("hidden_environment", {}),
         )
 
 

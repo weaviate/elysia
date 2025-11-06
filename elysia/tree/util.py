@@ -29,6 +29,8 @@ from elysia.tree.prompt_templates import (
     FollowUpSuggestionsPrompt,
     TitleCreatorPrompt,
     DecisionPrompt,
+    SuccessiveDecisionPrompt,
+    EnvironmentDecisionPrompt,
 )
 from elysia.tools.text.prompt_templates import TextResponsePrompt
 from elysia.util.retrieve_feedback import retrieve_feedback
@@ -358,6 +360,26 @@ class DecisionNode:
             "/".join(route),
         )
 
+    def _get_function_inputs(self, llm_inputs: dict, real_inputs: dict) -> dict:
+        # any non-provided inputs are set to the default
+        default_inputs = {
+            key: value["default"] if "default" in value else None
+            for key, value in real_inputs.items()
+        }
+        for default_input_name in default_inputs:
+            if default_input_name not in llm_inputs:
+                llm_inputs[default_input_name] = default_inputs[default_input_name]
+
+        # if the inputs match the 'schema' of keys: description, type, default, value, then take the value
+        for input_name in llm_inputs:
+            if (
+                isinstance(llm_inputs[input_name], dict)
+                and "value" in llm_inputs[input_name]
+            ):
+                llm_inputs[input_name] = llm_inputs[input_name]["value"]
+
+        return llm_inputs
+
     async def load_model_from_examples(
         self,
         decision_executor: dspy.Module,
@@ -374,11 +396,11 @@ class DecisionNode:
         compiled_executor = optimizer.compile(decision_executor, trainset=examples)
         return compiled_executor
 
-    def _tool_assertion(self, kwargs, pred):
+    def _tool_assertion(self, kwargs: dict, pred: dspy.Prediction) -> tuple[bool, str]:
         return (
-            pred.function_name in self.options,
+            pred.function_name in kwargs["available_actions"],
             f"You picked the action `{pred.function_name}` - that is not in `available_actions`! "
-            f"Your output MUST be one of the following: {list(self.options.keys())}",
+            f"Your output MUST be one of the following: {list(kwargs['available_actions'].keys())}",
         )
 
     async def __call__(
@@ -392,6 +414,14 @@ class DecisionNode:
         client_manager: ClientManager,
         **kwargs,
     ) -> tuple[Decision, list[TrainingUpdate | Status | Response | FewShotExamples]]:
+        """
+        Make a decision from the current node.
+        If only one option is available, and there are no function inputs, that is the decision.
+        Otherwise, use the decision executor to make a decision:
+        1. Picks a tool from the available options
+        2. (Optional) If an incorrect decision is made, add feedback in conversation history and try again. Errors on reaching max attempts.
+        3. (Optional) If the decision needs to look at the environment, use the environment executor to make a decision.
+        """
 
         available_options = self._options_to_json(available_tools)
         unavailable_options = self._unavailable_options_to_json(unavailable_tools)
@@ -413,96 +443,58 @@ class DecisionNode:
             and len(available_options) == 1
         )
 
-        if not one_choice:
-            decision_module = ElysiaChainOfThought(
-                DecisionPrompt,
-                tree_data=tree_data,
-                environment=True,
-                collection_schemas=self.use_elysia_collections,
-                tasks_completed=True,
-                message_update=True,
-                reasoning=tree_data.settings.BASE_USE_REASONING,
-            )
+        # add environment view to tools
+        available_options["view_environment"] = {
+            "function_name": "view_environment",
+            "description": (
+                "View the current environment, which is a dictionary of all the objects in the current session. "
+                "This is where all information is stored. "
+                "If you need to look up information, you can use this tool to view the environment. "
+                "Retrieved objects are stored here. "
+                "Do not display or show any information unless it comes from the environment. "
+                "Optionally input tool_name to only view objects for that tool. "
+                "Optionally input metadata_key and metadata_value to only view objects for that tool with the given metadata. "
+                "E.g. if you want to view the objects for the 'query' tool with the metadata key 'collection_name' and value 'products', input: "
+                "```json"
+                "{'tool_name': 'query', 'metadata_key': 'collection_name', 'metadata_value': 'products'}"
+                "```"
+            ),
+            "inputs": {
+                "tool_name": {
+                    "description": (
+                        "The name of the tool to view the environment for. Top level key for the environment. "
+                        "If not provided or None, view the entire environment."
+                    ),
+                    "default": None,
+                    "type": str,
+                },
+                "metadata_key": {
+                    "description": (
+                        "A key of the metadata to view the environment for. Subkey for the environment. "
+                        "If not provided or None, view all objects for the given tool_name. "
+                        "If provided metadata_key, must provide metadata_value. "
+                    ),
+                    "default": None,
+                    "type": str,
+                },
+                "metadata_value": {
+                    "description": (
+                        "A value of the metadata to view the environment for. Subkey for the environment. "
+                        "If not provided or None, view all objects for the given tool_name."
+                        "If provided metadata_value, must provide metadata_key. "
+                    ),
+                    "default": None,
+                    "type": str,
+                },
+            },
+        }
 
-            decision_executor = AssertedModule(
-                decision_module,
-                assertion=self._tool_assertion,
-                max_tries=2,
-            )
+        if one_choice:
 
-            if tree_data.settings.USE_FEEDBACK:
-                if not client_manager.is_client:
-                    raise ValueError(
-                        "A Weaviate conneciton is required for the experimental `use_feedback` method. "
-                        "Please set the WCD_URL and WCD_API_KEY in the settings. "
-                        "Or, set `use_feedback` to False."
-                    )
-
-                output, uuids = await decision_executor.aforward_with_feedback_examples(
-                    feedback_model="decision",
-                    client_manager=client_manager,
-                    base_lm=base_lm,
-                    complex_lm=complex_lm,
-                    instruction=self.instruction,
-                    tree_count=tree_data.tree_count_string(),
-                    available_actions=available_options,
-                    unavailable_actions=unavailable_options,
-                    successive_actions=successive_actions,
-                    num_base_lm_examples=3,
-                    return_example_uuids=True,
+            if self.logger:
+                self.logger.debug(
+                    f"Only one option available: {list(available_options.keys())[0]} (and no function inputs are needed)."
                 )
-            else:
-                output = await decision_executor.aforward(
-                    instruction=self.instruction,
-                    tree_count=tree_data.tree_count_string(),
-                    available_actions=available_options,
-                    unavailable_actions=unavailable_options,
-                    successive_actions=successive_actions,
-                    lm=base_lm,
-                )
-
-            if output.function_name.startswith("'") and output.function_name.endswith(
-                "'"
-            ):
-                output.function_name = output.function_name[1:-1]
-            elif output.function_name.startswith('"') and output.function_name.endswith(
-                '"'
-            ):
-                output.function_name = output.function_name[1:-1]
-            elif output.function_name.startswith("`") and output.function_name.endswith(
-                "`"
-            ):
-                output.function_name = output.function_name[1:-1]
-
-            if output.function_name not in available_tools:
-                raise Exception(
-                    f"Model picked an action `{output.function_name}` that is not in the available tools: {available_tools}"
-                )
-
-            decision = Decision(
-                output.function_name,
-                output.function_inputs,
-                output.reasoning if tree_data.settings.BASE_USE_REASONING else "",
-                output.impossible,
-                output.end_actions and bool(self.options[output.function_name]["end"]),
-            )
-
-            results = [
-                TrainingUpdate(
-                    module_name="decision",
-                    inputs=tree_data.to_json(),
-                    outputs={k: v for k, v in output.__dict__["_store"].items()},
-                ),
-                Status(str(self.options[output.function_name]["status"])),
-            ]
-
-            if output.function_name != "text_response":
-                results.append(Response(output.message_update))
-
-            if tree_data.settings.USE_FEEDBACK and len(uuids) > 0:
-                results.append(FewShotExamples(uuids))
-
-        else:
             decision = Decision(
                 function_name=list(available_options.keys())[0],
                 reasoning=f"Only one option available: {list(available_options.keys())[0]} (and no function inputs are needed).",
@@ -517,6 +509,193 @@ class DecisionNode:
             results: list[TrainingUpdate | Status | Response | FewShotExamples] = [
                 Status(str(self.options[list(available_options.keys())[0]]["status"])),
             ]
+
+            return decision, results
+
+        decision_executor = ElysiaChainOfThought(
+            DecisionPrompt,
+            tree_data=tree_data,
+            environment=False,
+            collection_schemas=self.use_elysia_collections,
+            tasks_completed=True,
+            message_update=True,
+            reasoning=tree_data.settings.BASE_USE_REASONING,
+        )
+
+        if tree_data.settings.USE_FEEDBACK:
+            if not client_manager.is_client:
+                raise ValueError(
+                    "A Weaviate conneciton is required for the experimental `use_feedback` method. "
+                    "Please set the WCD_URL and WCD_API_KEY in the settings. "
+                    "Or, set `use_feedback` to False."
+                )
+
+            if self.logger:
+                self.logger.debug(f"Using feedback examples for decision executor.")
+
+            pred, uuids = await decision_executor.aforward_with_feedback_examples(
+                feedback_model="decision",
+                client_manager=client_manager,
+                base_lm=base_lm,
+                complex_lm=complex_lm,
+                instruction=self.instruction,
+                tree_count=tree_data.tree_count_string(),
+                environment_metadata=tree_data.environment.output_llm_metadata(),
+                available_actions=available_options,
+                unavailable_actions=unavailable_options,
+                successive_actions=successive_actions,
+                num_base_lm_examples=3,
+                return_example_uuids=True,
+            )
+        else:
+            if self.logger:
+                self.logger.debug(f"Using base LM for decision executor.")
+            pred = await decision_executor.aforward(
+                instruction=self.instruction,
+                tree_count=tree_data.tree_count_string(),
+                environment_metadata=tree_data.environment.output_llm_metadata(),
+                available_actions=available_options,
+                unavailable_actions=unavailable_options,
+                successive_actions=successive_actions,
+                lm=base_lm,
+            )
+
+        history = dspy.History(messages=[])
+        history.messages.append(
+            {
+                "instruction": self.instruction,
+                "tree_count": tree_data.tree_count_string(),
+                "available_actions": available_options,
+                "unavailable_actions": unavailable_options,
+                "successive_actions": successive_actions,
+                **pred,
+            }
+        )
+
+        success, feedback = self._tool_assertion(
+            {"available_actions": available_options}, pred=pred
+        )
+        num_attempts = 1
+        successive_decision_executor = ElysiaChainOfThought(
+            SuccessiveDecisionPrompt,
+            tree_data=tree_data,
+            reasoning=tree_data.settings.BASE_USE_REASONING,
+        )
+        while not success and num_attempts < 2:
+            if self.logger:
+                self.logger.debug(
+                    f"Incorrect decision made, adding feedback and trying again."
+                )
+            pred = await successive_decision_executor.predict.aforward(
+                history=history,
+                feedback=feedback,
+                lm=base_lm,
+            )
+            history.messages.append(
+                {
+                    "feedback": feedback,
+                    **pred,
+                }
+            )
+            success, feedback = self._tool_assertion({}, pred=pred)
+            num_attempts += 1
+
+        if pred.function_name.startswith("'") and pred.function_name.endswith("'"):
+            pred.function_name = pred.function_name[1:-1]
+        elif pred.function_name.startswith('"') and pred.function_name.endswith('"'):
+            pred.function_name = pred.function_name[1:-1]
+        elif pred.function_name.startswith("`") and pred.function_name.endswith("`"):
+            pred.function_name = pred.function_name[1:-1]
+
+        if pred.function_name not in available_options:
+            raise Exception(
+                f"Model picked an action `{pred.function_name}` that is not in the available tools: {available_tools}"
+            )
+
+        if pred.function_name == "view_environment":
+            if self.logger:
+                self.logger.debug(
+                    f"Model picked view_environment, using environment decision executor."
+                )
+
+            function_inputs = self._get_function_inputs(
+                llm_inputs=pred.function_inputs,
+                real_inputs=available_options["view_environment"]["inputs"],
+            )
+            print(
+                "\n\nFunction inputs for view_environment:\n", function_inputs, "\n\n"
+            )
+            tool_name = function_inputs["tool_name"]
+            metadata_key = function_inputs["metadata_key"]
+            metadata_value = function_inputs["metadata_value"]
+
+            if (
+                (tool_name and tool_name not in tree_data.environment.environment)
+                or (
+                    tool_name is None
+                    and (metadata_key is not None or metadata_value is not None)
+                )
+                or (metadata_key is None and metadata_value is not None)
+                or (metadata_key is not None and metadata_value is None)
+            ):
+                environment = tree_data.environment.to_json()["environment"]
+            elif metadata_key or metadata_value:
+                environment = (
+                    tree_data.environment.get_objects(
+                        tool_name=tool_name,
+                        metadata_key=metadata_key,
+                        metadata_value=metadata_value,
+                    )
+                    or []
+                )
+            elif tool_name:
+                environment = [
+                    {
+                        "metadata": item.metadata,
+                        "objects": item.objects,
+                    }
+                    for item in tree_data.environment.get(tool_name) or []
+                ]
+            else:
+                raise Exception("Something missed")
+
+            environment_decision_executor = ElysiaChainOfThought(
+                EnvironmentDecisionPrompt,
+                tree_data=tree_data,
+                reasoning=tree_data.settings.BASE_USE_REASONING,
+            )
+            pred = await environment_decision_executor.predict.aforward(
+                environment=environment,
+                available_actions=available_options,
+                history=history,
+                lm=base_lm,
+            )
+
+        decision = Decision(
+            pred.function_name,
+            self._get_function_inputs(
+                llm_inputs=pred.function_inputs,
+                real_inputs=available_options[pred.function_name]["inputs"],
+            ),
+            pred.reasoning if tree_data.settings.BASE_USE_REASONING else "",
+            pred.impossible,
+            pred.end_actions and bool(self.options[pred.function_name]["end"]),
+        )
+
+        results = [
+            TrainingUpdate(
+                module_name="decision",
+                inputs=tree_data.to_json(),
+                outputs={k: v for k, v in pred.__dict__["_store"].items()},
+            ),
+            Status(str(self.options[pred.function_name]["status"])),
+        ]
+
+        if pred.function_name != "text_response":
+            results.append(Response(pred.message_update))
+
+        if tree_data.settings.USE_FEEDBACK and len(uuids) > 0:
+            results.append(FewShotExamples(uuids))
 
         return decision, results
 

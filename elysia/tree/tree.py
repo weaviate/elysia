@@ -458,26 +458,6 @@ class Tree:
 
         return empty_branches
 
-    def _get_function_inputs(self, tool_name: str, inputs: dict) -> dict:
-        if tool_name in self.tools:
-            # any non-provided inputs are set to the default
-            default_inputs = self.tools[tool_name].get_default_inputs()
-            for default_input_name in default_inputs:
-                if default_input_name not in inputs:
-                    inputs[default_input_name] = default_inputs[default_input_name]
-
-            # if the inputs match the 'schema' of keys: description, type, default, value, then take the value
-            for input_name in inputs:
-                if (
-                    isinstance(inputs[input_name], dict)
-                    and "value" in inputs[input_name]
-                ):
-                    inputs[input_name] = inputs[input_name]["value"]
-
-            return inputs
-        else:
-            return {}
-
     async def _check_rules(
         self, branch_id: str, client_manager: ClientManager
     ) -> tuple[list[str], dict]:
@@ -1218,19 +1198,16 @@ class Tree:
         else:
             self.actions_called[self.user_prompt][-1]["output"] = []
 
-    def _add_refs(self, objects: list[dict], tool_name: str, name: str) -> None:
+    def _add_refs(self, objects: list[dict], tool_name: str) -> None:
 
-        if (
-            tool_name not in self.tree_data.environment.environment
-            or name not in self.tree_data.environment.environment[tool_name]
-        ):
-            len_objects = 0
+        if tool_name not in self.environment.environment:
+            len_results = 0
         else:
-            len_objects = len(self.tree_data.environment.environment[tool_name][name])
+            len_results = len(self.environment.environment[tool_name])
 
         for i, obj in enumerate(objects):
             if "_REF_ID" not in obj:
-                _REF_ID = f"{tool_name}_{name}_{len_objects}_{i}"
+                _REF_ID = f"{tool_name}_{len_results}_{i}"
                 obj["_REF_ID"] = _REF_ID
 
     def _update_environment(self, result: Result, decision: Decision) -> None:
@@ -1304,7 +1281,7 @@ class Tree:
         error = False
 
         if isinstance(result, Result):
-            self._add_refs(result.objects, decision.function_name, result.name)
+            self._add_refs(result.objects, decision.function_name)
             self._update_environment(result, decision)
 
         if isinstance(result, TrainingUpdate):
@@ -1614,12 +1591,6 @@ class Tree:
                     ]["end"]
                     and self.current_decision.end_actions
                 )
-
-            # Set default values for the function inputs for current call
-            self.current_decision.function_inputs = self._get_function_inputs(
-                self.current_decision.function_name,
-                self.current_decision.function_inputs,
-            )
 
             # end criteria, task picked is "text_response" or model chooses to end conversation
             completed = (

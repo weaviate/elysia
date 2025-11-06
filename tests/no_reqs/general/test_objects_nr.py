@@ -85,135 +85,106 @@ async def test_result_with_mapping():
             assert mapping_key in frontend_result["payload"]["objects"][i]
 
 
-def test_environment():
+def test_environment_nr():
     environment = Environment()
-
     assert environment.is_empty()
+    assert environment.is_empty(tool_name="any_Tool_Name")
 
-    res = Result(
-        objects=[{"a": 1, "b": 2}],
-        metadata={"metadata_a": "hello", "metadata_b": 10},
-        name="test_result",
+    result_a = Result(
+        objects=[{"a": 1, "b": 2}], metadata={"metadata_a": "hello", "metadata_b": 10}
     )
-    environment.add("test_tool", res)
+    result_b = Result(
+        objects=[{"c": 3, "d": 4}], metadata={"metadata_c": "world", "metadata_d": 20}
+    )
+
+    environment.add("test_tool", result_a)
+    environment.add("test_tool", result_b)
 
     assert not environment.is_empty()
-    assert (
-        environment.environment["test_tool"]["test_result"][0]["objects"][0]["a"] == 1
+
+    get = environment.get("test_tool")
+    assert get is not None
+    assert len(get) == 2
+    assert get[0].objects == [{"a": 1, "b": 2}]
+    assert get[0].metadata == {"metadata_a": "hello", "metadata_b": 10}
+    assert get[1].objects == [{"c": 3, "d": 4}]
+    assert get[1].metadata == {"metadata_c": "world", "metadata_d": 20}
+
+    objects = environment.get_objects(
+        "test_tool", metadata_key="metadata_a", metadata_value="hello"
     )
-    assert (
-        environment.environment["test_tool"]["test_result"][0]["objects"][0]["b"] == 2
+    assert objects is not None
+    assert len(objects) == 1
+    assert objects[0]["a"] == 1
+    assert objects[0]["b"] == 2
+
+    objects = environment.get_objects(
+        "test_tool", metadata={"metadata_a": "hello", "metadata_b": 10}
+    )
+    assert objects is not None
+    assert len(objects) == 1
+    assert objects[0]["a"] == 1
+    assert objects[0]["b"] == 2
+
+    environment.remove("test_tool", metadata={"metadata_a": "hello", "metadata_b": 10})
+    assert not environment.is_empty()
+
+    get = environment.get("test_tool")
+    assert get is not None
+    assert len(get) == 2  # not empty, but the list is empty
+
+    objects = environment.get_objects(
+        "test_tool", metadata_key="metadata_a", metadata_value="hello"
+    )
+    assert objects is not None
+    assert len(objects) == 0
+
+    # other objects are unaffected
+    objects = environment.get_objects(
+        "test_tool", metadata_key="metadata_c", metadata_value="world"
+    )
+    assert objects is not None
+    assert len(objects) == 1
+    assert objects[0]["c"] == 3
+    assert objects[0]["d"] == 4
+
+    environment.replace(
+        "test_tool",
+        [{"other": "object", "e": 1234}],
+        metadata_key="metadata_c",
+        metadata_value="world",
     )
 
-    assert environment.environment["test_tool"]["test_result"][0]["metadata"] == {
-        "metadata_a": "hello",
-        "metadata_b": 10,
-    }
-
-    found_item = environment.find("test_tool", "test_result")
-    assert found_item[0]["objects"][0]["a"] == 1
-    assert found_item[0]["objects"][0]["b"] == 2
-    assert found_item[0]["metadata"] == {
-        "metadata_a": "hello",
-        "metadata_b": 10,
-    }
-
-    found_item_index = environment.find("test_tool", "test_result", 0)
-    assert found_item_index["objects"][0]["a"] == 1
-    assert found_item_index["objects"][0]["b"] == 2
-    assert found_item_index["metadata"] == {
-        "metadata_a": "hello",
-        "metadata_b": 10,
-    }
-
-    environment.replace("test_tool", "test_result", [{"c": 3, "d": 4}])
-    assert (
-        environment.environment["test_tool"]["test_result"][0]["objects"][0]["c"] == 3
+    objects = environment.get_objects(
+        "test_tool", metadata_key="metadata_c", metadata_value="world"
     )
-    assert (
-        environment.environment["test_tool"]["test_result"][0]["objects"][0]["d"] == 4
-    )
+    assert objects is not None
+    assert len(objects) == 1
+    assert objects[0]["other"] == "object"
+    assert objects[0]["e"] == 1234
+    assert "c" not in objects[0]
+    assert "d" not in objects[0]
 
-    environment.replace("test_tool", "test_result", [{"e": 5, "f": "hello"}], index=0)
-    assert (
-        environment.environment["test_tool"]["test_result"][0]["objects"][0]["e"] == 5
+    environment.replace(
+        "test_tool",
+        [{"another": "object", "f": 12345}],
+        metadata={"metadata_c": "world", "metadata_d": 20},
     )
-    assert (
-        environment.environment["test_tool"]["test_result"][0]["objects"][0]["f"]
-        == "hello"
+    objects = environment.get_objects(
+        "test_tool", metadata={"metadata_c": "world", "metadata_d": 20}
     )
+    assert objects is not None
+    assert len(objects) == 1
+    assert objects[0]["another"] == "object"
+    assert objects[0]["f"] == 12345
+    assert "c" not in objects[0]
+    assert "d" not in objects[0]
 
-    json_obj = environment.environment
-    assert "test_tool" in json_obj
-    assert "test_result" in json_obj["test_tool"]
-    assert json_obj["test_tool"]["test_result"][0]["objects"][0]["e"] == 5
-    assert json_obj["test_tool"]["test_result"][0]["objects"][0]["f"] == "hello"
-
-    environment.remove("test_tool", "test_result")
+    environment.remove("test_tool", metadata_key="metadata_c", metadata_value="world")
     assert environment.is_empty()
 
-    environment.add_objects(
-        "test_tool2",
-        "test_result2",
-        [{"a": 1, "b": 2}],
-        metadata={"item_number": "first"},
-    )
-    assert "test_tool2" in environment.environment
-    assert "test_result2" in environment.environment["test_tool2"]
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["objects"][0]["a"] == 1
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["objects"][0]["b"] == 2
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["metadata"][
-            "item_number"
-        ]
-        == "first"
-    )
-
-    environment.add_objects(
-        "test_tool2",
-        "test_result2",
-        [{"c": 1, "d": 2}],
-        metadata={"item_number": "second"},
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][1]["objects"][0]["c"] == 1
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][1]["objects"][0]["d"] == 2
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][1]["metadata"][
-            "item_number"
-        ]
-        == "second"
-    )
-
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["objects"][0]["a"] == 1
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["objects"][0]["b"] == 2
-    )
-
-    environment.remove("test_tool2", "test_result2", 1)
-    assert environment.environment["test_tool2"]["test_result2"] != []
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["objects"][0]["a"] == 1
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["objects"][0]["b"] == 2
-    )
-    assert (
-        environment.environment["test_tool2"]["test_result2"][0]["metadata"][
-            "item_number"
-        ]
-        == "first"
-    )
-    assert len(environment.environment["test_tool2"]["test_result2"]) == 1
+    environment.clear()
+    assert environment.is_empty()
 
 
 @pytest.mark.asyncio

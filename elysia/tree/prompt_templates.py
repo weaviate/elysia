@@ -1,6 +1,9 @@
 from typing import Any
 import dspy
 
+from copy import deepcopy
+from pydantic.fields import FieldInfo
+
 
 class DecisionPrompt(dspy.Signature):
     """
@@ -20,8 +23,17 @@ class DecisionPrompt(dspy.Signature):
     - Prefer tasks that directly progress toward answering the input prompt
     - Consider tree_count to avoid repetitive decisions
 
+    Internal environment and context:
+    - You are operating within a 'session' of Elysia. Within this session an environment is maintained, containing data from actions.
+    - The environment is a collection of JSON objects. Due to context limitations, you cannot see the environment directly.
+    - If you need data from the environment to make your decision, or for function inputs, use the view_environment tool.
+    - Never create information, if you need to repeat information, you should use the view_environment tool to get the data you need.
+    - The user can see the environment in a separate section independently of your responses, so no need to repeat information.
+    - If providing text responses about items, you can use the view_environment tool to get the data you need, or just provide a generic statement indicating to the user that the item now exists.
+    - However, you may be required to _look_ at the environment to judge if a task is successful, or if more information is required.
+
     Judge the task's possibility based on the user's prompt, the available actions, the previous errors and future possible actions (successive_actions).
-    You are not designed with completing the prompt now, just choosing actions and later further actions from successive_actions which will complete the request.
+    You are not designed with completing the full request now, just choosing actions and later further actions from successive_actions which will complete the request.
     But you should judge the possibility of the request based on the available actions, previous errors and future possible actions.
     As you have access the descriptions of the available actions, you should use this to make your judgement.
     """
@@ -92,6 +104,18 @@ class DecisionPrompt(dspy.Signature):
         """.strip()
     )
 
+    environment_metadata: str = dspy.InputField(
+        description="""
+        Metadata about the environment, which is a store of all objects in the current session.
+        Use to determine if a task is completed, or you need to view the objects in detail.
+        Interpret as follows:
+        Top level is the tool name, showing the tool that added these objects to the environment.
+        Each tool has X results, each result has Y objects with associated metadata.    
+        Use view_environment tool with inputs on tool name, and metadata keys to view the specific objects.
+        """.strip(),
+        format=str,
+    )
+
     previous_errors: list[dict] = dspy.InputField(
         description="""
         A list of errors from previous actions, organized by the function_name where each error occurred.
@@ -142,6 +166,59 @@ class DecisionPrompt(dspy.Signature):
         Even if not all actions can be completed, you should stop if you have done everything possible.
         """.strip()
     )
+
+
+SuccessiveDecisionPrompt = deepcopy(DecisionPrompt)
+for field_name, field_info in SuccessiveDecisionPrompt.model_fields.items():
+    new_field = FieldInfo(
+        annotation=field_info.annotation,
+        default=None,
+        description=field_info.description,
+        json_schema_extra=field_info.json_schema_extra,
+    )
+    SuccessiveDecisionPrompt.model_fields[field_name] = new_field
+SuccessiveDecisionPrompt.model_rebuild(force=True)
+
+SuccessiveDecisionPrompt = SuccessiveDecisionPrompt.prepend(
+    name="feedback",
+    field=dspy.InputField(description="Feedback from the previous attempt."),
+)
+SuccessiveDecisionPrompt = SuccessiveDecisionPrompt.prepend(
+    name="history",
+    field=dspy.InputField(description=""),
+    type_=dspy.History,
+)
+
+EnvironmentDecisionPrompt = deepcopy(DecisionPrompt)
+for field_name, field_info in EnvironmentDecisionPrompt.model_fields.items():
+    new_field = FieldInfo(
+        annotation=field_info.annotation,
+        default=None,
+        description=field_info.description,
+        json_schema_extra=field_info.json_schema_extra,
+    )
+    EnvironmentDecisionPrompt.model_fields[field_name] = new_field
+EnvironmentDecisionPrompt.model_rebuild(force=True)
+
+EnvironmentDecisionPrompt = EnvironmentDecisionPrompt.prepend(
+    name="environment",
+    field=dspy.InputField(
+        description=(
+            "List of objects from the current session. "
+            "Output from the view_environment tool with optional inputs. "
+            "Empty if no data has been retrieved yet. "
+            "Use to determine if more information is needed. "
+            "Additionally, use this as a reference to determine if you have already completed a task/what items are already available, to avoid repeating actions. "
+            "All items here are already shown to the user, so do not repeat information from these fields unless summarising, providing extra information or otherwise. "
+        )
+    ),
+    type_=dict,
+)
+EnvironmentDecisionPrompt = EnvironmentDecisionPrompt.prepend(
+    name="history",
+    field=dspy.InputField(description=""),
+    type_=dspy.History,
+)
 
 
 class FollowUpSuggestionsPrompt(dspy.Signature):
