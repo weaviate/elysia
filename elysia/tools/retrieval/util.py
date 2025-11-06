@@ -480,7 +480,7 @@ def _reformat_incorrect_filters(
         for i, filter in enumerate(filter_bucket.filters):
             if isinstance(filter, FilterBucket):
                 _reformat_incorrect_filters(
-                    filter, collection_property_types, collection_name
+                    [filter], collection_property_types, collection_name
                 )
             else:
 
