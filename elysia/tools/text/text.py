@@ -167,29 +167,21 @@ class FakeTextResponse(Tool):
         super().__init__(
             name="text_response",
             description="""
-            End the conversation. This should be used when the user has finished their query, or you have nothing more to do except reply.
-            You should use this to answer conversational questions not related to other tools. But do not use this as a source of information.
-            All information should be from the environment if answering a complex question or an explanation.
-            If there is an error and you could not complete a task, use this tool to suggest a brief reason why.
-            If, for example, there is a missing API key, then the user needs to add it to the settings (which you should inform them of).
-            Or you cannot connect to weaviate, then the user needs to input their API keys in the settings.
-            If there are no collections available, the user needs to analyze this in the 'data' tab.
-            If there are other problems, and it looks like the user can fix it, then provide a suggestion.
+            End the conversation. Use when finished or to answer conversational questions. 
+            Or use if you have relevant items in the environment to discuss.
             """,
             status="Writing response...",
             inputs={
                 "text": {
                     "type": str,
                     "description": (
-                        "The text to display to the user. Speak directly to them, do not say 'the user' or similar. "
-                        "If you have achieved the goal, give a satisfying answer to their original prompt (user_prompt). "
-                        "If you have not achieved the goal, explain. "
-                        "If you know why, explain any shortcomings, maybe it was a limitation, a misunderstanding, a problem with the data. "
-                        "Your suggestions should be useful to the user so they know if there is something possible to fix or do as a follow up. "
-                        "Sometimes you can ask for clarification. "
-                        "Be polite, professional, apologetic if necessary but above all - helpful! "
-                        "Only provide a response in text, not using any variables or otherwise. "
-                        "The text in this field is the DIRECT response to the user that will be displayed to them, and ending the conversation afterwards."
+                        "The direct text response displayed to the user. "
+                        "If successful, provide a satisfying answer to their original prompt. "
+                        "If unsuccessful, explain why (limitations, misunderstandings, data issues) with actionable suggestions or ask for clarification. "
+                        "If an error occurred, explain why and suggest fixes (e.g., add API keys in settings, analyze collections in 'data' tab). "
+                        "Do not display or show any information unless it comes from the environment. "
+                        "No repeating of any information in this step unless explicitly asked to do so."
+                        "Plain text only. "
                     ),
                     "default": "",
                 }
