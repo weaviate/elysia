@@ -203,3 +203,47 @@ async def test_impossible_query():
     res = evaluate(test_cases=[test_case], metrics=[metric])
     for test_case in res.test_results:
         assert test_case.success, test_case.metrics_data[0].reason
+
+
+def test_view_environment_incorrect_items():
+
+    tree = Tree()
+
+    if "cited_summarize" in tree.tools:
+        tree.remove_tool("cited_summarize", branch_id="base")
+    if "query_postprocessing" in tree.tools:
+        tree.remove_tool(
+            "query_postprocessing", branch_id="base", from_tool_ids=["query"]
+        )
+
+    # add random items to the environment
+    tree.tree_data.environment.add_objects(
+        "yap", [{"message": "Hello, world!"}] * 2000, {"id": "pure yap"}
+    )
+
+    # add a fake message to the environment
+    tree.tree_data.environment.add_objects(
+        "query_results",
+        [
+            {
+                "message": "Hey Eddie, this is Bernard here. How are you doing?",
+                "author": "Bernard",
+            }
+        ],
+        {
+            "search_parameters": "limit=1, sort=desc(timestamp), collection=Communications,author=eddie"
+        },
+    )
+
+    prompt = "What is the most recent message sent by Edward?"
+    response, objects = tree(
+        prompt,
+        collection_names=["Communications"],
+    )
+
+    query_found = False
+    for action in tree.actions_called[prompt]:
+        if action["name"] == "query":
+            query_found = True
+            break
+    assert query_found, "Query was not found in the actions called"
