@@ -6,7 +6,7 @@ from rich.panel import Panel
 
 import dspy
 
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought
 from elysia.objects import Response, Status, Tool, Error
 from elysia.tools.retrieval.objects import Aggregation
 from elysia.tools.retrieval.prompt_templates import (

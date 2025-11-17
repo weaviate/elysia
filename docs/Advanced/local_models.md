@@ -76,7 +76,7 @@ configure(
 )
 ```
 
-You can choose to disable just for the base model (e.g. the decision agent) or just the complex model (which some tools will use). Custom tools can also make use of the base/complex models also via the custom DSPy Module [`ElysiaChainOfThought`](https://weaviate.github.io/elysia/Reference/Util/#elysia.util.elysia_chain_of_thought.ElysiaChainOfThought).
+You can choose to disable just for the base model (e.g. the decision agent) or just the complex model (which some tools will use). Custom tools can also make use of the base/complex models also via the custom DSPy Module [`ElysiaChainOfThought`](https://weaviate.github.io/elysia/Reference/Util/#elysia.util.elysia_modules.ElysiaChainOfThought).
 
 *Use this with caution* - it will degrade accuracy significantly. 
 

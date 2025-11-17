@@ -142,7 +142,7 @@ An easy way to access attributes from the tree (if you are calling an LLM within
 
 To call this, you can do, for example
 ```python
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought
 my_module = ElysiaChainOfThought(
     MyCustomSignature, # a dspy signature needing to be defined
     tree_data=tree_data, # tree_data input from the tool
@@ -161,7 +161,7 @@ my_module.aforward(input1=..., input2=..., lm=...)
 ```
 The `lm` parameter can be inherited from the tool inputs, i.e. `base_lm` or `complex_lm`. Or you can define your own LMs via `dspy.LM`.
 
-[See the description for more details](../Reference/Util.md#elysia.util.elysia_chain_of_thought)
+[See the description for more details](../Reference/Util.md#elysia.util.elysia_modules)
 
 ## Adding Tools to the Tree
 
@@ -263,7 +263,7 @@ from elysia.objects import Response, Tool
 from elysia.tree.objects import TreeData
 from elysia.util.client import ClientManager
 from elysia.tools.text.prompt_templates import TextResponsePrompt
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought
 
 class TextResponse(Tool):
     def __init__(self, **kwargs):

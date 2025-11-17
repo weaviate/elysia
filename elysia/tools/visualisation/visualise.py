@@ -1,6 +1,6 @@
 from logging import Logger
 from elysia.objects import Tool, Error
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought
 from elysia.tools.visualisation.objects import (
     ChartResult,
     BarChart,

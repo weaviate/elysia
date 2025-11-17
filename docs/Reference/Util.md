@@ -1,1 +1,1 @@
-::: elysia.util.elysia_chain_of_thought
+::: elysia.util.elysia_modules

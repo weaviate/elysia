@@ -406,7 +406,7 @@ class Environment:
             metadata_key (str | None): The key of the metadata to get.
             metadata_value (Any | None): The value of the metadata to get.
         Returns:
-            list[dict] | None: The list of objects for the given `tool_name`. `None` if the `tool_name` is not found in the environment.
+            list[dict] | None: The list of objects for the given `tool_name`. `None` if the `tool_name` is not found in the environment, or no objects are found for the given metadata.
         """
         if (
             metadata is not None
@@ -432,9 +432,7 @@ class Environment:
             for item in self.environment[tool_name]:
                 if item.metadata == metadata:
                     return item.objects
-            raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata}"
-            )
+            return None
 
         elif metadata_key:
             objects = []
@@ -445,9 +443,7 @@ class Environment:
                 ):
                     objects.extend(item.objects)
             if not objects:
-                raise ValueError(
-                    f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
-                )
+                return None
             return objects
 
     def get(self, tool_name: str) -> list[EnvironmentItem] | None:
@@ -810,6 +806,9 @@ class TreeData:
         self.errors: dict[str, list[str]] = {}
         self.current_task = None
 
+        # -- Other --
+        self.env_token_limit = self.settings.ENV_TOKEN_LIMIT
+
     def set_property(self, property: str, value: Any):
         self.__dict__[property] = value
 
@@ -936,36 +935,62 @@ class TreeData:
         Returns:
             (str): A separated and formatted string of the tasks completed so far in an LLM-parseable format.
         """
+        # out = ""
+        # for j, task_prompt in enumerate(self.tasks_completed):
+        #     out += f"<prompt_{j+1}>\n"
+        #     out += f"Prompt: {task_prompt['prompt']}\n"
+
+        #     for i, task in enumerate(task_prompt["task"]):
+        #         out += f"<task_{i+1}>\n"
+
+        #         if "action" in task and task["action"]:
+        #             out += (
+        #                 f"Chosen action: {task['task']} (this does not mean it has been completed, "
+        #                 "only that it was chosen, use the environment to judge if a task is completed)\n"
+        #             )
+        #         else:
+        #             out += f"Chosen subcategory: {task['task']} (this action has not been completed, this is only a subcategory)"
+
+        #         if "error" in task and task["error"]:
+        #             out += (
+        #                 f" (UNSUCCESSFUL) There was an error during this tool call. "
+        #                 "See the error messages for details. This action did not complete.\n"
+        #             )
+        #         else:
+        #             out += f" (SUCCESSFUL)\n"
+        #             for key in task:
+        #                 if key != "task" and key != "action":
+        #                     out += f"{key.capitalize()}: {task[key]}\n"
+
+        #         out += f"</task_{i+1}>\n"
+        #     out += f"</prompt_{j+1}>\n"
+
+        # return out
         out = ""
-        for j, task_prompt in enumerate(self.tasks_completed):
-            out += f"<prompt_{j+1}>\n"
-            out += f"Prompt: {task_prompt['prompt']}\n"
-
-            for i, task in enumerate(task_prompt["task"]):
-                out += f"<task_{i+1}>\n"
-
-                if "action" in task and task["action"]:
-                    out += (
-                        f"Chosen action: {task['task']} (this does not mean it has been completed, "
-                        "only that it was chosen, use the environment to judge if a task is completed)\n"
+        for prompt in self.tasks_completed:
+            if prompt["prompt"] == self.user_prompt:
+                out += "Actions called for this current user prompt:\n"
+            else:
+                out += f"Actions called for the previous prompt ({prompt['prompt']}):\n"
+            for task in prompt["task"]:
+                if "inputs" in task:
+                    inputs = ", ".join(
+                        [f"{key}={str(value)}" for key, value in task["inputs"].items()]
                     )
                 else:
-                    out += f"Chosen subcategory: {task['task']} (this action has not been completed, this is only a subcategory)"
-
+                    inputs = ""
                 if "error" in task and task["error"]:
-                    out += (
-                        f" (UNSUCCESSFUL) There was an error during this tool call. "
-                        "See the error messages for details. This action did not complete.\n"
-                    )
+                    error = " [ERRORED] "
                 else:
-                    out += f" (SUCCESSFUL)\n"
-                    for key in task:
-                        if key != "task" and key != "action":
-                            out += f"{key.capitalize()}: {task[key]}\n"
+                    error = ""
+                out += f"\t- {task['task']}({inputs}){error}\n"
 
-                out += f"</task_{i+1}>\n"
-            out += f"</prompt_{j+1}>\n"
-
+                if prompt["prompt"] == self.user_prompt:
+                    if "reasoning" in task:
+                        reasoning = task["reasoning"]
+                    else:
+                        reasoning = ""
+                    out += f"\t  Reasoning: {reasoning}\n"
         return out
 
     async def set_collection_names(

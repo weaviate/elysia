@@ -1,4 +1,5 @@
 import uuid
+import json
 
 # dspy requires a 'base' LM but this should not be used
 import dspy
@@ -22,15 +23,15 @@ from elysia.objects import (
 
 from elysia.tree.objects import TreeData
 from elysia.util.objects import TrainingUpdate, TreeUpdate, FewShotExamples
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought, AssertedModule
 from elysia.util.parsing import format_datetime
 from elysia.util.client import ClientManager
 from elysia.tree.prompt_templates import (
     FollowUpSuggestionsPrompt,
     TitleCreatorPrompt,
-    DecisionPrompt,
-    SuccessiveDecisionPrompt,
-    EnvironmentDecisionPrompt,
+    DPWithEnv,
+    DPWithEnvMetadata,
+    DPWithEnvMetadataResponse,
 )
 from elysia.tools.text.prompt_templates import TextResponsePrompt
 from elysia.util.retrieve_feedback import retrieve_feedback
@@ -74,147 +75,6 @@ class ForcedTextResponse(Tool):
         )
 
         yield Response(text=output.response)
-
-
-class CopiedModule(dspy.Module):
-    """
-    A module that copies another module and adds a previous_feedbacks field to the signature.
-    This is used to store the previous errored decision attempts for the decision node.
-    This is one part of the feedback loop for the decision node, the other part is in the AssertedModule class.
-    """
-
-    def __init__(
-        self,
-        module: ElysiaChainOfThought,
-        **kwargs,
-    ):
-        self.module = module
-
-        feedback_desc = (
-            "Pairs of INCORRECT previous attempts at this action, and the feedback received for each attempt. "
-            "Judge what was incorrect in the previous attempts. "
-            "Follow the feedback to improve your next attempt."
-        )
-        feedback_prefix = "${previous_feedback}"
-        feedback_field: str = dspy.InputField(
-            prefix=feedback_prefix, desc=feedback_desc
-        )
-
-        signature = self.module.predict.signature
-        signature = signature.prepend(
-            name="previous_feedbacks",
-            field=feedback_field,
-            type_=str,
-        )
-
-        self.module.predict.signature = signature  # type: ignore
-
-    def _format_feedbacks(
-        self, previous_feedbacks: list[str], previous_attempts: list[dict]
-    ):
-        feedbacks: list[str] = [
-            f"ATTEMPT {i+1}:\n"
-            + f"PREVIOUS INPUT: {str(attempt)}\n"
-            + f"PREVIOUS FEEDBACK FOR THIS INPUT: {feedback}\n"
-            for i, (attempt, feedback) in enumerate(
-                zip(previous_attempts, previous_feedbacks)
-            )
-        ]
-        return "\n".join(feedbacks)
-
-    async def aforward(
-        self,
-        previous_feedbacks: list[str],
-        previous_attempts: list[dict],
-        **kwargs,
-    ):
-        pred = await self.module.acall(
-            previous_feedbacks=self._format_feedbacks(
-                previous_feedbacks, previous_attempts
-            ),
-            **kwargs,
-        )
-        return pred
-
-    async def aforward_with_feedback_examples(
-        self,
-        previous_feedbacks: list[str],
-        previous_attempts: list[dict],
-        **kwargs,
-    ):
-        pred, uuids = await self.module.aforward_with_feedback_examples(
-            previous_feedbacks=self._format_feedbacks(
-                previous_feedbacks, previous_attempts
-            ),
-            **kwargs,
-        )
-        return pred, uuids
-
-
-class AssertedModule(dspy.Module):
-    """
-    A module that calls another module until it passes an assertion function.
-    This function returns a tuple of (asserted, feedback).
-    If the assertion is false, the module is called again with the previous feedbacks and attempts.
-    This is used to improve the module's performance and iteratively trying to get it to pass the assertion.
-    """
-
-    def __init__(
-        self,
-        module: ElysiaChainOfThought,
-        assertion: Callable[[dict, dspy.Prediction], tuple[bool, str]],
-        max_tries: int = 3,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.assertion = assertion
-        self.module = module
-        self.max_tries = max_tries
-
-        self.previous_feedbacks = []
-        self.previous_attempts = []
-
-    def modify_signature_on_feedback(self, pred, feedback, **kwargs):
-        self.previous_feedbacks.append(feedback)
-        self.previous_attempts.append(pred.toDict())
-        return CopiedModule(self.module.deepcopy(), **kwargs)
-
-    async def aforward(self, **kwargs):
-
-        pred = await self.module.acall(**kwargs)
-        num_tries = 0
-
-        asserted, feedback = self.assertion(kwargs, pred)
-
-        while not asserted and num_tries <= self.max_tries:
-            asserted_module = self.modify_signature_on_feedback(pred, feedback)
-            pred = await asserted_module.aforward(
-                previous_feedbacks=self.previous_feedbacks,
-                previous_attempts=self.previous_attempts,
-                **kwargs,
-            )
-            asserted, feedback = self.assertion(kwargs, pred)
-            num_tries += 1
-
-        return pred
-
-    async def aforward_with_feedback_examples(self, **kwargs):
-        pred, uuids = await self.module.aforward_with_feedback_examples(**kwargs)
-        num_tries = 0
-
-        asserted, feedback = self.assertion(kwargs, pred)
-
-        while not asserted and num_tries <= self.max_tries:
-            asserted_module = self.modify_signature_on_feedback(pred, feedback)
-            pred, uuids = await asserted_module.aforward_with_feedback_examples(
-                previous_feedbacks=self.previous_feedbacks,
-                previous_attempts=self.previous_attempts,
-                **kwargs,
-            )
-            asserted, feedback = self.assertion(kwargs, pred)
-            num_tries += 1
-
-        return pred, uuids
 
 
 class Decision:
@@ -396,12 +256,115 @@ class DecisionNode:
         compiled_executor = optimizer.compile(decision_executor, trainset=examples)
         return compiled_executor
 
-    def _tool_assertion(self, kwargs: dict, pred: dspy.Prediction) -> tuple[bool, str]:
+    def _tool_assertion(self, pred: dspy.Prediction, kwargs: dict) -> tuple[bool, str]:
         return (
             pred.function_name in kwargs["available_actions"],
             f"You picked the action `{pred.function_name}` - that is not in `available_actions`! "
             f"Your output MUST be one of the following: {list(kwargs['available_actions'].keys())}",
         )
+
+    def _get_view_environment(self):
+        return {
+            "function_name": "view_environment",
+            "description": (
+                "An auxiliary tool to inspect the current environment containing all objects from this session. "
+                "Use this tool when you need to reference existing data before making decisions or selecting other actions. "
+                "This tool does NOT complete the user's request immediately, it only helps you gather information to inform your next action choice or inputs. "
+                "After viewing the environment, you can select another tool after selecting this tool from available_actions. "
+                "Retrieved objects from previous tool calls are stored here. "
+                "Optionally input tool_name to filter by a specific tool's results. "
+                "Optionally input metadata_key and metadata_value to filter by specific metadata criteria. "
+            ),
+            "inputs": {
+                "tool_name": {
+                    "description": (
+                        "The name of the tool to view the environment for. Top level key for the environment. "
+                        "If not provided or None, view the entire environment."
+                    ),
+                    "default": None,
+                    "type": str,
+                },
+                "metadata_key": {
+                    "description": (
+                        "A key of the metadata to view the environment for. Subkey for the environment. "
+                        "If not provided or None, view all objects for the given tool_name. "
+                        "If provided metadata_key, must provide metadata_value. "
+                    ),
+                    "default": None,
+                    "type": str,
+                },
+                "metadata_value": {
+                    "description": (
+                        "A value of the metadata to view the environment for. Subkey for the environment. "
+                        "If not provided or None, view all objects for the given tool_name."
+                        "If provided metadata_value, must provide metadata_key. "
+                    ),
+                    "default": None,
+                    "type": str,
+                },
+            },
+        }
+
+    async def _execute_view_environment(
+        self, kwargs: dict, tree_data: TreeData, inputs: dict, lm: dspy.LM
+    ):
+
+        history = dspy.History(messages=[])
+        history.messages.append({**kwargs})
+
+        if self.logger:
+            self.logger.debug(
+                f"Model picked view_environment, using environment decision executor."
+            )
+
+        function_inputs = self._get_function_inputs(
+            llm_inputs=inputs,
+            real_inputs=self._get_view_environment()["inputs"],
+        )
+        tool_name = function_inputs["tool_name"]
+        metadata_key = function_inputs["metadata_key"]
+        metadata_value = function_inputs["metadata_value"]
+
+        if (
+            metadata_key
+            and metadata_value
+            and tool_name
+            and tool_name in tree_data.environment.environment
+        ):
+            environment = (
+                tree_data.environment.get_objects(
+                    tool_name=tool_name,
+                    metadata_key=metadata_key,
+                    metadata_value=metadata_value,
+                )
+                or tree_data.environment.to_json()["environment"]
+            )
+        elif tool_name and tool_name in tree_data.environment.environment:
+            environment = [
+                {
+                    "metadata": item.metadata,
+                    "objects": item.objects,
+                }
+                for item in tree_data.environment.get(tool_name) or []
+            ]
+        else:
+            environment = tree_data.environment.to_json()["environment"]
+
+        environment_decision_executor = ElysiaChainOfThought(
+            DPWithEnvMetadataResponse,
+            tree_data=tree_data,
+            reasoning=tree_data.settings.BASE_USE_REASONING,
+        )
+        available_actions = kwargs["available_actions"]
+        available_actions.pop("view_environment")
+        pred = await environment_decision_executor.predict.aforward(
+            environment=environment,
+            available_actions=available_actions,
+            history=history,
+            lm=lm,
+        )
+
+        return pred
 
     async def __call__(
         self,
@@ -444,50 +407,15 @@ class DecisionNode:
         )
 
         # add environment view to tools
-        available_options["view_environment"] = {
-            "function_name": "view_environment",
-            "description": (
-                "View the current environment, which is a dictionary of all the objects in the current session. "
-                "This is where all information is stored. "
-                "If you need to look up information, you can use this tool to view the environment. "
-                "Retrieved objects are stored here. "
-                "Do not display or show any information unless it comes from the environment. "
-                "Optionally input tool_name to only view objects for that tool. "
-                "Optionally input metadata_key and metadata_value to only view objects for that tool with the given metadata. "
-                "E.g. if you want to view the objects for the 'query' tool with the metadata key 'collection_name' and value 'products', input: "
-                "```json"
-                "{'tool_name': 'query', 'metadata_key': 'collection_name', 'metadata_value': 'products'}"
-                "```"
-            ),
-            "inputs": {
-                "tool_name": {
-                    "description": (
-                        "The name of the tool to view the environment for. Top level key for the environment. "
-                        "If not provided or None, view the entire environment."
-                    ),
-                    "default": None,
-                    "type": str,
-                },
-                "metadata_key": {
-                    "description": (
-                        "A key of the metadata to view the environment for. Subkey for the environment. "
-                        "If not provided or None, view all objects for the given tool_name. "
-                        "If provided metadata_key, must provide metadata_value. "
-                    ),
-                    "default": None,
-                    "type": str,
-                },
-                "metadata_value": {
-                    "description": (
-                        "A value of the metadata to view the environment for. Subkey for the environment. "
-                        "If not provided or None, view all objects for the given tool_name."
-                        "If provided metadata_value, must provide metadata_key. "
-                    ),
-                    "default": None,
-                    "type": str,
-                },
-            },
-        }
+        # TODO: replace this with actual token counting
+        env_token_limit_reached = (
+            len(json.dumps(tree_data.environment.to_json())) > tree_data.env_token_limit
+        )
+        if env_token_limit_reached:
+            available_options["view_environment"] = self._get_view_environment()
+            signature = DPWithEnvMetadata
+        else:
+            signature = DPWithEnv
 
         if one_choice:
 
@@ -495,6 +423,7 @@ class DecisionNode:
                 self.logger.debug(
                     f"Only one option available: {list(available_options.keys())[0]} (and no function inputs are needed)."
                 )
+
             decision = Decision(
                 function_name=list(available_options.keys())[0],
                 reasoning=f"Only one option available: {list(available_options.keys())[0]} (and no function inputs are needed).",
@@ -513,92 +442,59 @@ class DecisionNode:
             return decision, results
 
         decision_executor = ElysiaChainOfThought(
-            DecisionPrompt,
+            signature,
             tree_data=tree_data,
-            environment=False,
+            environment=not env_token_limit_reached,
             collection_schemas=self.use_elysia_collections,
             tasks_completed=True,
             message_update=True,
             reasoning=tree_data.settings.BASE_USE_REASONING,
         )
-
-        if tree_data.settings.USE_FEEDBACK:
-            if not client_manager.is_client:
-                raise ValueError(
-                    "A Weaviate conneciton is required for the experimental `use_feedback` method. "
-                    "Please set the WCD_URL and WCD_API_KEY in the settings. "
-                    "Or, set `use_feedback` to False."
-                )
-
-            if self.logger:
-                self.logger.debug(f"Using feedback examples for decision executor.")
-
-            pred, uuids = await decision_executor.aforward_with_feedback_examples(
-                feedback_model="decision",
-                client_manager=client_manager,
-                base_lm=base_lm,
-                complex_lm=complex_lm,
-                instruction=self.instruction,
-                tree_count=tree_data.tree_count_string(),
-                environment_metadata=tree_data.environment.output_llm_metadata(),
-                available_actions=available_options,
-                unavailable_actions=unavailable_options,
-                successive_actions=successive_actions,
-                num_base_lm_examples=3,
-                return_example_uuids=True,
-            )
-        else:
-            if self.logger:
-                self.logger.debug(f"Using base LM for decision executor.")
-            pred = await decision_executor.aforward(
-                instruction=self.instruction,
-                tree_count=tree_data.tree_count_string(),
-                environment_metadata=tree_data.environment.output_llm_metadata(),
-                available_actions=available_options,
-                unavailable_actions=unavailable_options,
-                successive_actions=successive_actions,
-                lm=base_lm,
-            )
-
-        history = dspy.History(messages=[])
-        history.messages.append(
-            {
-                "instruction": self.instruction,
-                "tree_count": tree_data.tree_count_string(),
-                "available_actions": available_options,
-                "unavailable_actions": unavailable_options,
-                "successive_actions": successive_actions,
-                **pred,
-            }
+        decision_executor = AssertedModule(
+            decision_executor,
+            self._tool_assertion,
         )
 
-        success, feedback = self._tool_assertion(
-            {"available_actions": available_options}, pred=pred
+        # TODO: do feedback thing
+        # if tree_data.settings.USE_FEEDBACK:
+        #     if not client_manager.is_client:
+        #         raise ValueError(
+        #             "A Weaviate connection is required for the experimental `use_feedback` method. "
+        #             "Please set the WCD_URL and WCD_API_KEY in the settings. "
+        #             "Or, set `use_feedback` to False."
+        #         )
+
+        #     if self.logger:
+        #         self.logger.debug(f"Using feedback examples for decision executor.")
+
+        #     pred, uuids = await decision_executor.aforward_with_feedback_examples(
+        #         feedback_model="decision",
+        #         client_manager=client_manager,
+        #         base_lm=base_lm,
+        #         complex_lm=complex_lm,
+        #         instruction=self.instruction,
+        #         tree_count=tree_data.tree_count_string(),
+        #         environment_metadata=tree_data.environment.output_llm_metadata(),
+        #         available_actions=available_options,
+        #         unavailable_actions=unavailable_options,
+        #         successive_actions=successive_actions,
+        #         num_base_lm_examples=3,
+        #         return_example_uuids=True,
+        #     )
+        # else:
+
+        if self.logger:
+            self.logger.debug(f"Using base LM for decision executor.")
+
+        pred = await decision_executor.aforward(
+            instruction=self.instruction,
+            tree_count=tree_data.tree_count_string(),
+            environment_metadata=tree_data.environment.output_llm_metadata(),
+            available_actions=available_options,
+            unavailable_actions=unavailable_options,
+            successive_actions=successive_actions,
+            lm=base_lm,
         )
-        num_attempts = 1
-        successive_decision_executor = ElysiaChainOfThought(
-            SuccessiveDecisionPrompt,
-            tree_data=tree_data,
-            reasoning=tree_data.settings.BASE_USE_REASONING,
-        )
-        while not success and num_attempts < 2:
-            if self.logger:
-                self.logger.debug(
-                    f"Incorrect decision made, adding feedback and trying again."
-                )
-            pred = await successive_decision_executor.predict.aforward(
-                history=history,
-                feedback=feedback,
-                lm=base_lm,
-            )
-            history.messages.append(
-                {
-                    "feedback": feedback,
-                    **pred,
-                }
-            )
-            success, feedback = self._tool_assertion({}, pred=pred)
-            num_attempts += 1
 
         if pred.function_name.startswith("'") and pred.function_name.endswith("'"):
             pred.function_name = pred.function_name[1:-1]
@@ -613,61 +509,20 @@ class DecisionNode:
             )
 
         if pred.function_name == "view_environment":
-            if self.logger:
-                self.logger.debug(
-                    f"Model picked view_environment, using environment decision executor."
-                )
-
-            function_inputs = self._get_function_inputs(
-                llm_inputs=pred.function_inputs,
-                real_inputs=available_options["view_environment"]["inputs"],
-            )
-            print(
-                "\n\nFunction inputs for view_environment:\n", function_inputs, "\n\n"
-            )
-            tool_name = function_inputs["tool_name"]
-            metadata_key = function_inputs["metadata_key"]
-            metadata_value = function_inputs["metadata_value"]
-
-            if (
-                (tool_name and tool_name not in tree_data.environment.environment)
-                or (
-                    tool_name is None
-                    and (metadata_key is not None or metadata_value is not None)
-                )
-                or (metadata_key is None and metadata_value is not None)
-                or (metadata_key is not None and metadata_value is None)
-            ):
-                environment = tree_data.environment.to_json()["environment"]
-            elif metadata_key or metadata_value:
-                environment = (
-                    tree_data.environment.get_objects(
-                        tool_name=tool_name,
-                        metadata_key=metadata_key,
-                        metadata_value=metadata_value,
-                    )
-                    or []
-                )
-            elif tool_name:
-                environment = [
-                    {
-                        "metadata": item.metadata,
-                        "objects": item.objects,
-                    }
-                    for item in tree_data.environment.get(tool_name) or []
-                ]
-            else:
-                raise Exception("Something missed")
-
-            environment_decision_executor = ElysiaChainOfThought(
-                EnvironmentDecisionPrompt,
+            pred = await self._execute_view_environment(
+                kwargs={
+                    "user_prompt": tree_data.user_prompt,
+                    "instruction": self.instruction,
+                    "tree_count": tree_data.tree_count_string(),
+                    "environment_metadata": tree_data.environment.output_llm_metadata(),
+                    "available_actions": available_options,
+                    "unavailable_actions": unavailable_options,
+                    "successive_actions": successive_actions,
+                    **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
+                    **pred,
+                },
                 tree_data=tree_data,
-                reasoning=tree_data.settings.BASE_USE_REASONING,
-            )
-            pred = await environment_decision_executor.predict.aforward(
-                environment=environment,
-                available_actions=available_options,
-                history=history,
+                inputs=pred.function_inputs,
                 lm=base_lm,
             )
 
@@ -694,59 +549,11 @@ class DecisionNode:
         if pred.function_name != "text_response":
             results.append(Response(pred.message_update))
 
-        if tree_data.settings.USE_FEEDBACK and len(uuids) > 0:
-            results.append(FewShotExamples(uuids))
+        # TODO: do feedback thing
+        # if tree_data.settings.USE_FEEDBACK and len(uuids) > 0:
+        #     results.append(FewShotExamples(uuids))
 
         return decision, results
-
-    def detailed_memory_usage(self) -> dict:
-        """
-        Returns a detailed breakdown of memory usage for all objects in the DecisionNode.
-
-        Returns:
-            dict: Dictionary containing memory sizes (in bytes) for each component
-        """
-        memory_usage = {}
-
-        # Core attributes
-        memory_usage["id"] = asizeof.asizeof(self.id)
-        memory_usage["instruction"] = asizeof.asizeof(self.instruction)
-        memory_usage["root"] = asizeof.asizeof(self.root)
-
-        # Decision-related data - break down each option
-        memory_usage["options"] = {}
-        for option_id, option in self.options.items():
-            memory_usage["options"][option_id] = {
-                "description": asizeof.asizeof(option["description"]),
-                "inputs": asizeof.asizeof(option["inputs"]),
-                "action": asizeof.asizeof(option["action"]),
-                "end": asizeof.asizeof(option["end"]),
-                "status": asizeof.asizeof(option["status"]),
-                "next": asizeof.asizeof(option["next"]),
-            }
-
-        # Calculate total
-        memory_usage["total"] = sum(
-            (
-                v
-                if isinstance(v, int)
-                else (
-                    sum(
-                        (
-                            sv
-                            if isinstance(sv, int)
-                            else sum(sv.values()) if isinstance(sv, dict) else 0
-                        )
-                        for sv in v.values()
-                    )
-                    if isinstance(v, dict)
-                    else 0
-                )
-            )
-            for v in memory_usage.values()
-        )
-
-        return memory_usage
 
 
 class TreeReturner:

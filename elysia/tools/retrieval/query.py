@@ -7,7 +7,7 @@ from rich.panel import Panel
 
 import dspy
 
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought
 from elysia.objects import Response, Status, Tool, Error, Result, Return, Retrieval
 from elysia.tools.retrieval.chunk import AsyncCollectionChunker
 from elysia.tools.retrieval.objects import (

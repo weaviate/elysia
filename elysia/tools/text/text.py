@@ -3,7 +3,7 @@
 import dspy
 import dspy.predict
 
-from elysia.util.elysia_chain_of_thought import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaChainOfThought
 
 # LLM
 from elysia.objects import Response, Tool

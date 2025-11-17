@@ -191,6 +191,7 @@ class Settings:
         self.USE_FEEDBACK = False
         self.BASE_USE_REASONING = True
         self.COMPLEX_USE_REASONING = True
+        self.ENV_TOKEN_LIMIT = 10_000
 
     def setup_app_logger(self, logger: logging.Logger):
         """
@@ -259,8 +260,10 @@ class Settings:
         self.MODEL_API_BASE = os.getenv("MODEL_API_BASE", None)
         self.LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "NOTSET")
         self.WEAVIATE_IS_LOCAL = os.getenv("WEAVIATE_IS_LOCAL", "False") == "True"
-        self.LOCAL_WEAVIATE_PORT = os.getenv("LOCAL_WEAVIATE_PORT", 8080)
-        self.LOCAL_WEAVIATE_GRPC_PORT = os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
+        self.LOCAL_WEAVIATE_PORT = int(os.getenv("LOCAL_WEAVIATE_PORT", 8080))
+        self.LOCAL_WEAVIATE_GRPC_PORT = int(
+            os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
+        )
 
         # Custom connection settings from environment
         self.WEAVIATE_IS_CUSTOM = os.getenv("WEAVIATE_IS_CUSTOM", "False") == "True"
@@ -283,8 +286,10 @@ class Settings:
             "WEAVIATE_API_KEY",
             os.getenv("WCD_API_KEY", ""),
         )
-        self.LOCAL_WEAVIATE_PORT = os.getenv("LOCAL_WEAVIATE_PORT", 8080)
-        self.LOCAL_WEAVIATE_GRPC_PORT = os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
+        self.LOCAL_WEAVIATE_PORT = int(os.getenv("LOCAL_WEAVIATE_PORT", 8080))
+        self.LOCAL_WEAVIATE_GRPC_PORT = int(
+            os.getenv("LOCAL_WEAVIATE_GRPC_PORT", 50051)
+        )
 
         self.API_KEYS = {
             env_var.lower(): os.getenv(env_var, "")
@@ -384,6 +389,7 @@ class Settings:
                     If True, the model will generate reasoning before coming to its solution.
                 - complex_use_reasoning (bool): Whether to use reasoning output for the complex model.
                     If True, the model will generate reasoning before coming to its solution.
+                - env_token_limit (int): The token limit for the environment. Defaults to 10_000.
                 - Additional API keys to set. E.g. `openai_apikey="..."`, if this argument ends with `apikey` or `api_key`,
                     it will be added to the `API_KEYS` dictionary.
 
@@ -548,6 +554,10 @@ class Settings:
         if "complex_use_reasoning" in kwargs:
             self.COMPLEX_USE_REASONING = kwargs["complex_use_reasoning"]
             kwargs.pop("complex_use_reasoning")
+
+        if "env_token_limit" in kwargs:
+            self.ENV_TOKEN_LIMIT = kwargs["env_token_limit"]
+            kwargs.pop("env_token_limit")
 
         if "api_keys" in kwargs and isinstance(kwargs["api_keys"], dict):
             for key, value in kwargs["api_keys"].items():

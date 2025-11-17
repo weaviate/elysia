@@ -1,5 +1,5 @@
-from typing import Type
-from copy import copy
+from typing import Type, Callable
+from copy import copy, deepcopy
 
 import dspy
 from dspy.primitives.module import Module
@@ -19,6 +19,92 @@ Your job is not to answer the entire task, but to complete your part of the task
 Therefore the `user_prompt` should not be judged in its entirety, analyse what you can complete based on the prompt.
 Complete this task only, remember that other agents will complete other parts of the task.
 """
+
+
+class AssertionError(Exception):
+    pass
+
+
+class AssertedModule(dspy.Module):
+
+    def __init__(
+        self,
+        module_or_signature: dspy.Module | type[dspy.Signature],
+        assertion_function: Callable[[dspy.Prediction, dict], tuple[bool, str]],
+        num_tries: int = 3,
+    ):
+        if isinstance(module_or_signature, dspy.Module):
+            self.module = module_or_signature
+        else:
+            self.module = dspy.Predict(module_or_signature)
+        self.assertion_function = assertion_function
+        self.asserted_module = self._assert_module(self.module)
+        self.num_tries = num_tries
+
+    def _assert_module(self, module: dspy.Module) -> dspy.Module:
+        FeedbackModule = deepcopy(module)
+
+        if hasattr(module, "signature"):
+            signature = FeedbackModule.signature
+        elif hasattr(module, "predict"):
+            signature = FeedbackModule.predict.signature
+
+        signature = signature.prepend(  # type: ignore
+            name="feedback",
+            field=dspy.InputField(
+                description=(
+                    "Feedback from the previous attempt. "
+                    "Reasoning why the previous outputs were incorrect. "
+                    "Take this feedback into account and re-attempt the previous task."
+                ),
+            ),
+        )
+
+        signature = signature.prepend(  # type: ignore
+            name="history",
+            field=dspy.InputField(description=""),
+            type_=dspy.History,
+        )
+
+        return FeedbackModule
+
+    def forward(self, **kwargs) -> dspy.Prediction:
+        prediction: dspy.Prediction = self.module.forward(**kwargs)  # type: ignore
+        success, feedback = self.assertion_function(prediction, kwargs)
+        history = dspy.History(messages=[])
+        if not success:
+            history.messages.append({**kwargs, **prediction})
+            for attempt in range(self.num_tries):
+                prediction: dspy.Prediction = self.asserted_module.forward(feedback=feedback, history=history, lm=kwargs["lm"])  # type: ignore
+                success, feedback = self.assertion_function(prediction, kwargs)
+                if success:
+                    break
+                else:
+                    history.messages.append(
+                        {**kwargs, "feedback": feedback, **prediction}
+                    )
+            if not success:
+                raise AssertionError(feedback)
+        return prediction
+
+    async def aforward(self, **kwargs) -> dspy.Prediction:
+        prediction: dspy.Prediction = await self.module.aforward(**kwargs)  # type: ignore
+        success, feedback = self.assertion_function(prediction, kwargs)
+        history = dspy.History(messages=[])
+        if not success:
+            history.messages.append({**kwargs, **prediction})
+            for attempt in range(self.num_tries):
+                prediction: dspy.Prediction = await self.asserted_module.aforward(feedback=feedback, history=history, lm=kwargs["lm"])  # type: ignore
+                success, feedback = self.assertion_function(prediction, kwargs)
+                if success:
+                    break
+                else:
+                    history.messages.append(
+                        {**kwargs, "feedback": feedback, **prediction}
+                    )
+            if not success:
+                raise AssertionError(feedback)
+        return prediction
 
 
 class ElysiaChainOfThought(Module):
@@ -46,6 +132,7 @@ class ElysiaChainOfThought(Module):
     You do not need to include keyword arguments for the other inputs, like the `environment`.
 
     Example:
+
     ```python
     my_module = ElysiaChainOfThought(
         signature=...,
@@ -193,8 +280,6 @@ class ElysiaChainOfThought(Module):
                 "Empty if no data has been retrieved yet. "
                 "Use to determine if more information is needed. "
                 "Additionally, use this as a reference to determine if you have already completed a task/what items are already available, to avoid repeating actions. "
-                "All items here are already shown to the user, so do not repeat information from these fields unless summarising, providing extra information or otherwise. "
-                "E.g., do not list out anything from here, only provide new content to the user."
             )
             environment_prefix = "${environment}"
             environment_field: dict = dspy.InputField(
@@ -313,7 +398,7 @@ class ElysiaChainOfThought(Module):
         self.predict = dspy.Predict(extended_signature, **config)
         self.predict.signature.instructions += elysia_meta_prompt  # type: ignore
 
-    def _add_tree_data_inputs(self, kwargs: dict):
+    def _add_tree_data_inputs(self, kwargs: dict) -> dict:
 
         # Add the tree data inputs to the kwargs
         kwargs["user_prompt"] = self.tree_data.user_prompt
