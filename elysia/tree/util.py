@@ -353,6 +353,9 @@ class DecisionNode:
         environment_decision_executor = ElysiaChainOfThought(
             DPWithEnvMetadataResponse,
             tree_data=tree_data,
+            collection_schemas=self.use_elysia_collections,
+            tasks_completed=True,
+            message_update=True,
             reasoning=tree_data.settings.BASE_USE_REASONING,
         )
         available_actions = kwargs["available_actions"]
