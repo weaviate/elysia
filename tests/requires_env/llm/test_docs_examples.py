@@ -48,13 +48,12 @@ def test_create_tools_simple():
 
     env = tree.tree_data.environment.environment
     assert "calculate_two_numbers" in env
-    assert "default" in env["calculate_two_numbers"]
 
-    result = env["calculate_two_numbers"]["default"][0]
-    assert "sum" in result["objects"][0]
-    assert result["objects"][0]["sum"] == 1123 + 48332
-    assert result["objects"][0]["product"] == 1123 * 48332
-    assert result["objects"][0]["difference"] == 1123 - 48332
+    result = env["calculate_two_numbers"][0].objects[0]
+    assert "sum" in result
+    assert result["sum"] == 1123 + 48332
+    assert result["product"] == 1123 * 48332
+    assert result["difference"] == 1123 - 48332
 
     from math import prod
     from elysia import Error
@@ -73,7 +72,7 @@ def test_create_tools_simple():
             yield sum(numbers)
         elif operation == "product":
             yield prod(numbers)
-            # This will return an error back to the decision tree
+        else:
             yield Error(
                 f"You picked the input {operation}, but it was not in the available operations: 'sum' or 'product'"
             )
@@ -87,8 +86,8 @@ def test_create_tools_simple():
     tree("What is 2379 x 234 x 213 x 3?")
 
     env = tree.tree_data.environment.environment
-    result = env["perform_mathematical_operations"]["default"][0]
-    assert result["objects"][0]["tool_result"] == 2379 * 234 * 213 * 3
+    result = env["perform_mathematical_operations"][0].objects[0]
+    assert result["tool_result"] == 2379 * 234 * 213 * 3
 
 
 def test_query_weaviate():
@@ -229,20 +228,19 @@ def test_data_analysis():
             env_key: The key of the environment to use (e.g. 'query').
             x_var: Independent variable field name in environment under the key.
             y_var: Dependent variable field name in environment under the key.
+            collection_name: The name of the collection to use.
         """
-        objs = tree_data.environment.find(env_key, collection_name, 0)["objects"]
+        objs = tree_data.environment.get_objects(
+            env_key, metadata_key="collection_name", metadata_value=collection_name
+        )
         X = [[datum.get(x_var)] for datum in objs]
         Y = [datum.get(y_var) for datum in objs]
 
         model = LinearRegression().fit(X, Y)
 
-        # plt.scatter(X, Y)
-        # plt.plot(X, model.predict(X), color="red")
-        # plt.show()
-
         return {
-            "intercept": model.intercept_,
-            "coef": model.coef_,
+            "intercept": float(model.intercept_),
+            "coef": model.coef_.tolist(),
             "collection_name": collection_name,
         }
 

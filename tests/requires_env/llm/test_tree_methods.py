@@ -122,12 +122,8 @@ def test_various_methods(create_and_process_collection):
 
     # this should have returned something in the environment
     assert "query" in tree.tree_data.environment.environment
-    for env_name in tree.tree_data.environment.environment["query"]:
-        for returned_object in tree.tree_data.environment.environment["query"][
-            env_name
-        ]:
-            assert "metadata" in returned_object
-            assert len(returned_object["objects"]) > 0
+    for env_item in tree.tree_data.environment.environment["query"]:
+        assert len(env_item.objects) > 0
 
     # this should have updated tasks_completed
     assert len(tree.tree_data.tasks_completed) > 0

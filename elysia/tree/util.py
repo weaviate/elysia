@@ -177,7 +177,7 @@ class DecisionNode:
                             type_overwrite += f"\nWhere the values are: {input_dict['type'].model_json_schema()['$defs']}"
                         input_dict["type"] = type_overwrite
             else:
-                out[node]["inputs"] = "No inputs are needed for this function."
+                out[node]["inputs"] = {}
 
         return out
 
@@ -402,17 +402,15 @@ class DecisionNode:
             self.logger.debug(f"Available options: {list(available_options.keys())}")
 
         one_choice = (
-            all(
-                option["inputs"] == "No inputs are needed for this function."
-                for option in available_options.values()
-            )
+            all(option["inputs"] == {} for option in available_options.values())
             and len(available_options) == 1
         )
 
         # add environment view to tools
         # TODO: replace this with actual token counting
         env_token_limit_reached = (
-            len(json.dumps(tree_data.environment.to_json())) > tree_data.env_token_limit
+            len(json.dumps(tree_data.environment._unhidden_to_json()))
+            > tree_data.env_token_limit
         )
         if env_token_limit_reached:
             available_options["view_environment"] = self._get_view_environment()

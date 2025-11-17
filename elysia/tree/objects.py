@@ -2,6 +2,7 @@ from typing import Any
 from logging import Logger
 from datetime import datetime
 from pydantic import BaseModel, Field
+import json
 
 from elysia.config import Settings
 from elysia.config import settings as environment_settings
@@ -473,13 +474,8 @@ class Environment:
                 out += "\t---\n"
         return out
 
-    def to_json(self, remove_unserialisable: bool = False):
-        """
-        Converts the environment to a JSON serialisable format.
-        Used to access specific objects from the environment.
-        """
+    def _unhidden_to_json(self, remove_unserialisable: bool = False):
         env_copy = deepcopy(self.environment)
-        hidden_env_copy = deepcopy(self.hidden_environment)
 
         for tool_name in env_copy:
             for item in env_copy[tool_name]:
@@ -487,13 +483,26 @@ class Environment:
                 for obj in item.objects:
                     format_dict_to_serialisable(obj, remove_unserialisable)
 
-        format_dict_to_serialisable(hidden_env_copy)
+        return {
+            tool_name: [item.to_json() for item in items]
+            for tool_name, items in env_copy.items()
+        }
+
+    def _hidden_to_json(self, remove_unserialisable: bool = False):
+        hidden_env_copy = deepcopy(self.hidden_environment)
+        format_dict_to_serialisable(hidden_env_copy, remove_unserialisable)
+        return hidden_env_copy
+
+    def to_json(self, remove_unserialisable: bool = False):
+        """
+        Converts the environment to a JSON serialisable format.
+        Used to access specific objects from the environment.
+        """
+        env_copy = self._unhidden_to_json(remove_unserialisable)
+        hidden_env_copy = self._hidden_to_json(remove_unserialisable)
 
         return {
-            "environment": {
-                tool_name: [item.to_json() for item in items]
-                for tool_name, items in env_copy.items()
-            },
+            "environment": env_copy,
             "hidden_environment": hidden_env_copy,
         }
 
@@ -974,9 +983,19 @@ class TreeData:
                 out += f"Actions called for the previous prompt ({prompt['prompt']}):\n"
             for task in prompt["task"]:
                 if "inputs" in task:
-                    inputs = ", ".join(
-                        [f"{key}={str(value)}" for key, value in task["inputs"].items()]
-                    )
+                    input_list = []
+                    for key, value in task["inputs"].items():
+                        if isinstance(value, str):
+                            input_list.append(f"{key}='{value}'")
+                        elif isinstance(value, int) or isinstance(value, float):
+                            input_list.append(f"{key}={value}")
+                        elif isinstance(value, list):
+                            input_list.append(f"{key}={value}")
+                        elif isinstance(value, dict):
+                            input_list.append(f"{key}={json.dumps(value)}")
+                        else:
+                            input_list.append(f"{key}={str(value)}")
+                    inputs = ", ".join(input_list)
                 else:
                     inputs = ""
                 if "error" in task and task["error"]:

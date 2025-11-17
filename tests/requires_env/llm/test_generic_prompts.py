@@ -207,9 +207,12 @@ async def test_summarising_output():
         else "query"
     )
 
-    assert (
-        "Example_verba_github_issues" in tree.tree_data.environment.environment[env_key]
-    )
+    collection_found = False
+    for item in tree.tree_data.environment.environment[env_key]:
+        if item.metadata["collection_name"] == "Example_verba_github_issues":
+            collection_found = True
+            break
+    assert collection_found
     assert (
         "cited_summarize" in all_decision_history
         or all_decision_history[-1] == "text_response"
@@ -231,12 +234,14 @@ async def test_summarising_output():
     for test_case in res.test_results:
         assert test_case.success
 
-    environment = [
-        json.dumps(obj)
-        for obj in tree.tree_data.environment.environment[env_key][
-            "Example_verba_github_issues"
-        ][0]["objects"]
-    ]
+    objs = tree.tree_data.environment.get_objects(
+        env_key,
+        metadata_key="collection_name",
+        metadata_value="Example_verba_github_issues",
+    )
+    assert objs is not None
+    assert len(objs) > 0
+    environment = [json.dumps(obj) for obj in objs]
 
     summarisation_metric = metrics.AnswerRelevancyMetric(
         threshold=0.5, model="gpt-4o", include_reason=True
@@ -278,11 +283,12 @@ async def test_itemised_summaries():
     for iteration in tree.decision_history:
         all_decision_history.extend(iteration)
     assert "query" in all_decision_history
-    assert (
-        "Example_verba_slack_conversations"
-        in tree.tree_data.environment.environment["query_postprocessing"]
+    objs = tree.tree_data.environment.get_objects(
+        "query_postprocessing",
+        metadata_key="collection_name",
+        metadata_value="Example_verba_slack_conversations",
     )
-    for item in tree.tree_data.environment.environment["query_postprocessing"][
-        "Example_verba_slack_conversations"
-    ][0]["objects"]:
+    assert objs is not None
+    assert len(objs) > 0
+    for item in objs:
         assert "ELYSIA_SUMMARY" in item.keys() and len(item["ELYSIA_SUMMARY"]) > 0

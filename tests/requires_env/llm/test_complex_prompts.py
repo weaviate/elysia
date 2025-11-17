@@ -124,16 +124,14 @@ async def test_query_with_chunking():
         )
         assert env_key in tree.tree_data.environment.environment
 
-        collections_queried = list(
-            tree.tree_data.environment.environment[env_key].keys()
-        )
+        collections_queried = [
+            item.metadata["collection_name"]
+            for item in tree.tree_data.environment.environment[env_key]
+        ]
 
-        for collection in collections_queried:
-            assert collection in tree.tree_data.environment.environment[env_key]
-            assert len(tree.tree_data.environment.environment[env_key][collection]) > 0
-            for item in tree.tree_data.environment.environment[env_key][collection][0][
-                "objects"
-            ]:
+        for env_item in tree.tree_data.environment.environment[env_key]:
+            assert len(env_item.objects) > 0
+            for item in env_item.objects:
                 assert "chunk_spans" in item and item["chunk_spans"] is not []
 
         # -- DeepEval tests --

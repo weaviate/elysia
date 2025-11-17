@@ -79,73 +79,73 @@ class SendEmail(Tool):
         yield Response(f"Email sent to {inputs['email_address']}!")
 
 
-class TestMultiBranch:
+@pytest.mark.asyncio
+async def test_incorrect_branch_id():
+    tree = Tree(
+        low_memory=False,
+        branch_initialisation="empty",
+        settings=Settings.from_smart_setup(),
+    )
 
-    @pytest.mark.asyncio
-    async def test_incorrect_branch_id(self):
-        tree = Tree(
-            low_memory=False,
-            branch_initialisation="empty",
-            settings=Settings.from_smart_setup(),
-        )
+    # error if branch_id is not found
+    with pytest.raises(ValueError):
+        tree.add_tool(CitedSummarizer, branch_id="incorrect_branch_id")
 
-        # error if branch_id is not found
-        with pytest.raises(ValueError):
-            tree.add_tool(CitedSummarizer, branch_id="incorrect_branch_id")
+    # no error if root is True
+    tree.add_tool(CitedSummarizer, root=True)
 
-        # no error if root is True
-        tree.add_tool(CitedSummarizer, root=True)
 
-    @pytest.mark.asyncio
-    async def test_default_multi_branch(self):
+@pytest.mark.asyncio
+async def test_default_multi_branch():
 
-        tree = Tree(
-            low_memory=False,
-            branch_initialisation="multi_branch",
-            settings=Settings.from_smart_setup(),
-        )
+    tree = Tree(
+        low_memory=False,
+        branch_initialisation="multi_branch",
+        settings=Settings.from_smart_setup(),
+    )
 
-        assert len(tree.decision_nodes) > 1
+    assert len(tree.decision_nodes) > 1
 
-        async for result in tree.async_run(
-            user_prompt="Hello",
-            collection_names=[],
-        ):
-            pass
+    async for result in tree.async_run(
+        user_prompt="Hello",
+        collection_names=[],
+    ):
+        pass
 
-    @pytest.mark.asyncio
-    async def test_new_multi_branch(self):
-        tree = Tree(
-            low_memory=False,
-            branch_initialisation="empty",
-            settings=Settings.from_smart_setup(),
-        )
 
-        tree.add_branch(
-            "respond_to_user",
-            "choose between citing objects from the environment, or not citing any objects",
-            "choose when responding to user",
-            from_branch_id="base",
-        )
-        tree.add_branch(
-            "search_for_objects",
-            "choose between searching for objects from the environment, or aggregating objects from the environment",
-            "choose when searching for objects",
-            from_branch_id="base",
-        )
+@pytest.mark.asyncio
+async def test_new_multi_branch():
+    tree = Tree(
+        low_memory=False,
+        branch_initialisation="empty",
+        settings=Settings.from_smart_setup(),
+    )
 
-        tree.add_tool(CitedSummarizer, branch_id="respond_to_user")
-        tree.add_tool(TextResponse, branch_id="respond_to_user")
-        tree.add_tool(Query, branch_id="search_for_objects")
-        tree.add_tool(Aggregate, branch_id="search_for_objects")
+    tree.add_branch(
+        "respond_to_user",
+        "choose between citing objects from the environment, or not citing any objects",
+        "choose when responding to user",
+        from_branch_id="base",
+    )
+    tree.add_branch(
+        "search_for_objects",
+        "choose between searching for objects from the environment, or aggregating objects from the environment",
+        "choose when searching for objects",
+        from_branch_id="base",
+    )
 
-        assert len(tree.decision_nodes) == 3
+    tree.add_tool(CitedSummarizer, branch_id="respond_to_user")
+    tree.add_tool(TextResponse, branch_id="respond_to_user")
+    tree.add_tool(Query, branch_id="search_for_objects")
+    tree.add_tool(Aggregate, branch_id="search_for_objects")
 
-        async for result in tree.async_run(
-            user_prompt="What was the most recent github issue?",
-            collection_names=[],
-        ):
-            pass
+    assert len(tree.decision_nodes) == 3
+
+    async for result in tree.async_run(
+        user_prompt="What was the most recent github issue?",
+        collection_names=[],
+    ):
+        pass
 
 
 def test_add_tool_with_stem_tool():
