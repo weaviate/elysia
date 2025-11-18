@@ -279,12 +279,13 @@ async def example_async_decorator_tool():
 async def run_tree(
     user_prompt: str,
     collection_names: list[str],
-    tools: list[Tool],
+    tools: list[type[Tool]],
     remove_tools: bool = False,
     **kwargs,
 ):
 
     settings = Settings()
+    settings.smart_setup()
     settings.configure(
         base_model="gpt-4o-mini",
         base_provider="openai",
@@ -338,13 +339,10 @@ async def test_run_if_true_true_with_default_inputs_tool():
         use_default_inputs=True,
     )
 
-    assert "rule_tool" in tree.tree_data.environment.environment
-    assert (
-        tree.tree_data.environment.environment["rule_tool"]["rule_tool"][0]["objects"][
-            0
-        ]["message"]
-        == "This is the default input"
-    )
+    get = tree.tree_data.environment.get("rule_tool")
+    assert get is not None
+    assert len(get) == 1
+    assert get[0].objects[0]["message"] == "This is the default input"
 
 
 @pytest.mark.asyncio
@@ -356,13 +354,10 @@ async def test_run_if_true_true_with_non_default_inputs_tool():
         use_default_inputs=False,
     )
 
-    assert "rule_tool" in tree.tree_data.environment.environment
-    assert (
-        tree.tree_data.environment.environment["rule_tool"]["rule_tool"][0]["objects"][
-            0
-        ]["message"]
-        == "This is not the default input"
-    )
+    get = tree.tree_data.environment.get("rule_tool")
+    assert get is not None
+    assert len(get) == 1
+    assert get[0].objects[0]["message"] == "This is not the default input"
 
 
 @pytest.mark.asyncio

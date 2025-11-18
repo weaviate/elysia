@@ -136,8 +136,7 @@ def test_environment_nr():
     objects = environment.get_objects(
         "test_tool", metadata_key="metadata_a", metadata_value="hello"
     )
-    assert objects is not None
-    assert len(objects) == 0
+    assert objects is None
 
     # other objects are unaffected
     objects = environment.get_objects(
