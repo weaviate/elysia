@@ -125,31 +125,26 @@ class UpdateFrontendConfigData(BaseModel):
     config: dict[str, Any]
 
 
-class AddToolToTreeData(BaseModel):
-    tool_name: str
-    branch_id: str
-    from_tool_ids: list[str]
-
-
-class RemoveToolFromTreeData(BaseModel):
-    tool_name: str
-    branch_id: str
-    from_tool_ids: list[str]
-
-
-class AddBranchToTreeData(BaseModel):
-    id: str
-    description: str
-    instruction: str
-    from_branch_id: str
-    from_tool_ids: list[str]
-    status: str
-    root: bool
-
-
-class RemoveBranchFromTreeData(BaseModel):
-    id: str
-
-
 class AvailableModelsData(BaseModel):
     user_id: str
+
+
+class ToolItem(BaseModel):
+    name: str
+    from_branch: str
+    from_tools: list[str]
+    is_branch: bool
+
+
+class BranchInfo(BaseModel):
+    name: str
+    description: str
+    instruction: str
+
+
+class ToolPreset(BaseModel):
+    preset_id: str
+    name: str
+    order: list[ToolItem]
+    branches: list[BranchInfo]
+    default: bool

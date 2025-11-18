@@ -6,8 +6,60 @@ from uuid import uuid4
 
 from elysia.config import Settings
 from elysia.util.client import ClientManager
+from elysia.api.api_types import ToolItem, BranchInfo, ToolPreset
+from pydantic import BaseModel
 
 BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
+
+from elysia.api.utils.tools import get_presets_weaviate
+
+
+class ToolPresetManager:
+    def __init__(self):
+        self.tool_presets = []
+
+    def add(
+        self,
+        preset_id: str,
+        name: str,
+        order: list[ToolItem],
+        branches: list[BranchInfo],
+        default: bool,
+    ):
+
+        self.remove(preset_id)
+        if default:
+            for preset in self.tool_presets:
+                preset.default = False
+
+        self.tool_presets.append(
+            ToolPreset(
+                preset_id=preset_id,
+                name=name,
+                order=order,
+                branches=branches,
+                default=default,
+            )
+        )
+
+    def remove(self, preset_id: str):
+        self.tool_presets = [
+            preset for preset in self.tool_presets if preset.preset_id != preset_id
+        ]
+
+    def get(self, preset_id: str):
+        return next(
+            (preset for preset in self.tool_presets if preset.preset_id == preset_id),
+            None,
+        )
+
+    async def retrieve(self, user_id: str, client_manager: ClientManager):
+        self.tool_presets = await get_presets_weaviate(user_id, client_manager)
+
+    def to_json(self):
+        if self.tool_presets is None:
+            return None
+        return [preset.model_dump() for preset in self.tool_presets]
 
 
 class Config:

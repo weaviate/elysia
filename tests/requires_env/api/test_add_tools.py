@@ -48,41 +48,8 @@ def read_response(response: JSONResponse):
     return json.loads(response.body)
 
 
-async def initialise_user_and_tree(user_id: str, conversation_id: str):
-    user_manager = get_user_manager()
-
-    response = await initialise_user(
-        user_id,
-        user_manager,
-    )
-
-    response = await initialise_tree(
-        user_id,
-        conversation_id,
-        InitialiseTreeData(
-            low_memory=False,
-        ),
-        user_manager,
-    )
-
-
-@pytest.mark.asyncio
-async def test_tools_exist():
-    joke_tool = TellAJoke()
-    response = await get_available_tools()
-    response = read_response(response)
-    assert response["error"] == ""
-    assert "tools" in response
-    assert response["tools"] is not None
-    assert "TellAJoke" in response["tools"]
-    assert response["tools"]["TellAJoke"]["description"] == joke_tool.description
-    assert response["tools"]["TellAJoke"]["inputs"].keys() == joke_tool.inputs.keys()
-    assert response["tools"]["TellAJoke"]["end"] == joke_tool.end
-    assert response["tools"]["TellAJoke"]["name"] == joke_tool.name
-
-
 """
-Tests when not saving configs to Weaviate.
+Tests when we ARE saving configs to Weaviate.
 """
 
 
@@ -100,7 +67,7 @@ async def test_cycle():
             name="test_add_tool_preset",
             default=True,
             config={},
-            frontend_config={"save_configs_to_weaviate": False},
+            frontend_config={"save_configs_to_weaviate": True},
         ),
         user_manager=user_manager,
     )

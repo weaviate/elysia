@@ -14,8 +14,7 @@ from elysia.api.services.tree import TreeManager
 from elysia.objects import Update
 from elysia.util.client import ClientManager
 from elysia.api.core.log import logger
-from elysia.api.utils.config import Config
-from elysia.api.utils.config import FrontendConfig
+from elysia.api.utils.config import Config, ToolPresetManager, FrontendConfig
 from elysia.tree.util import get_saved_trees_weaviate
 
 
@@ -151,6 +150,9 @@ class UserManager:
         local_user = await self.get_user_local(user_id)
         frontend_config: FrontendConfig = local_user["frontend_config"]
         await frontend_config.configure(**config)
+        await local_user["tool_preset_manager"].retrieve(
+            user_id, frontend_config.save_location_client_manager
+        )
 
     async def add_user_local(
         self,
@@ -178,6 +180,11 @@ class UserManager:
                 config=config,
                 tree_timeout=fe_config.config["tree_timeout"],
             )
+            self.users[user_id]["tool_preset_manager"] = ToolPresetManager()
+            if fe_config.config["save_configs_to_weaviate"]:
+                await self.users[user_id]["tool_preset_manager"].retrieve(
+                    user_id, fe_config.save_location_client_manager
+                )
 
             # client manager starts with env variables, when config is updated, api keys are updated
             self.users[user_id]["client_manager"] = ClientManager(
@@ -305,7 +312,7 @@ class UserManager:
                 Controls the LM history being saved in the tree, and some other variables.
                 Defaults to False.
         """
-        # self.add_user_local(user_id)
+
         local_user = await self.get_user_local(user_id)
         tree_manager: TreeManager = local_user["tree_manager"]
         if not tree_manager.tree_exists(conversation_id):
