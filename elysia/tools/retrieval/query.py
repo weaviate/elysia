@@ -149,6 +149,7 @@ class Query(Tool):
 
         return (
             content_field is not None
+            and content_len is not None
             and content_len > threshold
             and query_type != "filter_only"
             and display_type
@@ -608,7 +609,6 @@ class Query(Tool):
                         objects,
                         metadata,
                         payload_type=display_type,
-                        name=collection_name,
                         mapping=(
                             schemas[collection_name]["mappings"][display_type]
                             if display_type != "table"

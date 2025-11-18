@@ -630,7 +630,6 @@ class Result(Return):
         objects: list[dict],
         metadata: dict = {},
         payload_type: str = "default",
-        name: str = "default",
         mapping: dict | None = None,
         llm_message: str | None = None,
         unmapped_keys: list[str] = ["_REF_ID"],
@@ -642,8 +641,6 @@ class Result(Return):
             payload_type: (str): Identifier for the type of result.
             metadata (dict): The metadata attached to this result,
                 for example, query used, time taken, any other information not directly within the objects
-            name (str): The name of the result, e.g. this could be the name of the collection queried.
-                Used to index the result in the environment.
             mapping (dict | None): A mapping of the objects to the frontend.
                 Essentially, if the objects are going to be displayed on the frontend, the frontend has specific keys that it wants the objects to have.
                 This is a dictionary that maps from frontend keys to the object keys.
@@ -661,7 +658,6 @@ class Result(Return):
         Return.__init__(self, "result", payload_type)
         self.objects = objects
         self.metadata = metadata
-        self.name = name
         self.mapping = mapping
         self.llm_message = llm_message
         self.unmapped_keys = unmapped_keys
@@ -688,7 +684,6 @@ class Result(Return):
         return self.llm_message.format_map(
             {
                 "payload_type": self.payload_type,
-                "name": self.name,
                 "num_objects": len(self),
                 **self.metadata,
             }
@@ -831,7 +826,6 @@ class Retrieval(Result):
         objects: list[dict],
         metadata: dict = {},
         payload_type: str = "default",
-        name: str | None = None,
         mapping: dict | None = None,
         unmapped_keys: list[str] = [
             "uuid",
@@ -841,19 +835,12 @@ class Retrieval(Result):
         ],
         display: bool = True,
     ) -> None:
-        if name is None and "collection_name" in metadata:
-            result_name = metadata["collection_name"]
-        elif name is None:
-            result_name = "default"
-        else:
-            result_name = name
 
         Result.__init__(
             self,
             objects=objects,
             payload_type=payload_type,
             metadata=metadata,
-            name=result_name,
             mapping=mapping,
             unmapped_keys=unmapped_keys,
             display=display,

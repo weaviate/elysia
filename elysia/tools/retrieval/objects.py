@@ -366,20 +366,14 @@ class Aggregation(Retrieval):
         self,
         objects: list[dict],
         metadata: dict = {},
-        name: str | None = None,
         **kwargs,
     ) -> None:
-        if name is None and "collection_name" in metadata:
-            name = metadata["collection_name"]
-        elif name is None:
-            name = "default"
 
         Retrieval.__init__(
             self,
             objects=objects,
             payload_type="aggregation",
             metadata=metadata,
-            name=name,
             **kwargs,
         )
 

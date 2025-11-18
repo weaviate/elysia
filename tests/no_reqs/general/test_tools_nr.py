@@ -87,7 +87,6 @@ class RunIfTrueFalseTool(Tool):
             Result(
                 objects=[{"message": "Rule tool called!!!"}],
                 payload_type="text",
-                name="rule_tool",
             ),
         )
         yield False
@@ -127,7 +126,6 @@ class RunIfTrueTrueTool(Tool):
             Result(
                 objects=[{"message": "Rule tool called!!!"}],
                 payload_type="text",
-                name="rule_tool",
             ),
         )
         yield True
@@ -178,7 +176,6 @@ class RunIfTrueTrueWithInputsTool(Tool):
             Result(
                 objects=[{"message": inputs["message"]}],
                 payload_type="text",
-                name="rule_tool",
             ),
         )
         yield True
