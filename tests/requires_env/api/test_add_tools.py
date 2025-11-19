@@ -127,10 +127,10 @@ async def test_cycle():
 
     user_local = await user_manager.get_user_local(user_id)
     tool_preset_manager = user_local["tool_preset_manager"]
-    assert len(tool_preset_manager.tool_presets) == 1
-    assert tool_preset_manager.tool_presets[0].preset_id == tool_preset_id
-    assert tool_preset_manager.tool_presets[0].name == "Test Add Tool Preset"
-    assert len(tool_preset_manager.tool_presets[0].order) == 5
+    assert len(tool_preset_manager.tool_presets) == 2
+    assert tool_preset_manager.tool_presets[-1].preset_id == tool_preset_id
+    assert tool_preset_manager.tool_presets[-1].name == "Test Add Tool Preset"
+    assert len(tool_preset_manager.tool_presets[-1].order) == 5
 
     # get tool presets
     response = await get_tool_presets(user_id=user_id, user_manager=user_manager)
@@ -138,10 +138,10 @@ async def test_cycle():
     assert response["error"] == ""
     assert "presets" in response
     assert response["presets"] is not None
-    assert len(response["presets"]) == 1
-    assert response["presets"][0]["preset_id"] == tool_preset_id
-    assert response["presets"][0]["name"] == "Test Add Tool Preset"
-    assert len(response["presets"][0]["order"]) == 5
+    assert len(response["presets"]) == 2
+    assert response["presets"][-1]["preset_id"] == tool_preset_id
+    assert response["presets"][-1]["name"] == "Test Add Tool Preset"
+    assert len(response["presets"][-1]["order"]) == 5
 
     # remove tool preset
     response = await delete_tool_preset(
@@ -156,4 +156,4 @@ async def test_cycle():
     assert response["error"] == ""
     assert "presets" in response
     assert response["presets"] is not None
-    assert len(response["presets"]) == 0
+    assert len(response["presets"]) == 1

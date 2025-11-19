@@ -73,12 +73,6 @@ async def process(data: dict, websocket: WebSocket, user_manager: UserManager):
     user = await user_manager.get_user_local(user_id=data["user_id"])
 
     try:
-        # optional arguments
-        if "route" in data:
-            route = data["route"]
-        else:
-            route = ""
-
         # send ner response in advance
         await websocket.send_json(
             format_ner_response(
@@ -90,12 +84,13 @@ async def process(data: dict, websocket: WebSocket, user_manager: UserManager):
         )
 
         async for yielded_result in user_manager.process_tree(
+            query=data["query"],
             user_id=data["user_id"],
             conversation_id=data["conversation_id"],
-            query=data["query"],
             query_id=data["query_id"],
-            training_route=route,
-            collection_names=data["collection_names"],
+            preset_id=data.get("preset_id", None),
+            training_route=data.get("training_route", ""),
+            collection_names=data.get("collection_names", []),
         ):
             if asyncio.iscoroutine(yielded_result):
                 yielded_result = await yielded_result

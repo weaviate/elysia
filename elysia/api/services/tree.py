@@ -12,8 +12,10 @@ load_dotenv(override=True)
 from elysia.tree.tree import Tree
 from elysia.util.client import ClientManager
 from elysia.tree.util import delete_tree_from_weaviate
-from elysia.api.utils.config import Config, BranchInitType
-from elysia.config import Settings
+from elysia.api.utils.config import Config, BranchInitType, ToolPreset
+from elysia.api.utils.tools import find_tool_classes
+
+tool_classes = find_tool_classes()
 
 
 class TreeManager:
@@ -163,8 +165,11 @@ class TreeManager:
                 return False
 
             collection = client.collections.get("ELYSIA_TREES__")
+            if not await collection.tenants.exists(self.user_id):
+                return False
+            user_collection = collection.with_tenant(self.user_id)
             uuid = generate_uuid5(conversation_id)
-            return await collection.data.exists(uuid)
+            return await user_collection.data.exists(uuid)
 
     async def load_tree_weaviate(
         self, conversation_id: str, client_manager: ClientManager
@@ -185,17 +190,17 @@ class TreeManager:
                 The list is ordered by the time the payload was originally sent to the frontend (at the time it was saved).
         """
         tree = await Tree.import_from_weaviate(
-            "ELYSIA_TREES__", conversation_id, client_manager
+            "ELYSIA_TREES__",
+            user_id=self.user_id,
+            conversation_id=conversation_id,
+            client_manager=client_manager,
         )
-        if conversation_id not in self.trees:
-            self.trees[conversation_id] = {
-                "tree": None,
-                "event": asyncio.Event(),
-                "last_request": datetime.datetime.now(),
-            }
-        self.trees[conversation_id]["tree"] = tree
+        self.trees[conversation_id] = {
+            "tree": tree,
+            "event": asyncio.Event(),
+            "last_request": datetime.datetime.now(),
+        }
         self.trees[conversation_id]["event"].set()
-        self.update_tree_last_request(conversation_id)
         return tree.returner.store
 
     async def delete_tree_weaviate(
@@ -209,7 +214,10 @@ class TreeManager:
             client_manager (ClientManager): The client manager pointing to the Weaviate instance containing the tree.
         """
         await delete_tree_from_weaviate(
-            conversation_id, "ELYSIA_TREES__", client_manager
+            user_id=self.user_id,
+            conversation_id=conversation_id,
+            collection_name="ELYSIA_TREES__",
+            client_manager=client_manager,
         )
 
     def delete_tree_local(self, conversation_id: str):
@@ -388,6 +396,71 @@ class TreeManager:
             self.trees[conversation_id]["tree"].set_branch_initialisation(
                 branch_initialisation
             )
+
+    def load_tool_preset(self, conversation_id: str, preset: ToolPreset):
+        tree: Tree = self.get_tree(conversation_id)
+        tree.clear_tree()
+
+        if not preset.order[0].is_branch:
+            raise ValueError(
+                "The first tool in the preset must be a (root) branch. Please add a branch to the preset."
+            )
+
+        root_branch_info = next(
+            (
+                branch
+                for branch in preset.branches
+                if branch.name == preset.order[0].name
+            ),
+            None,
+        )
+        if root_branch_info is None:
+            raise ValueError(f"Root branch {preset.order[0].name} not found in preset")
+
+        tree.add_branch(
+            branch_id=preset.order[0].name,
+            instruction=root_branch_info.instruction,
+            description=root_branch_info.description,
+            root=True,
+            status=f"Making an initial decision...",
+        )
+
+        for tool_item in preset.order[1:]:
+            if tool_item.is_branch:
+
+                branch_info = next(
+                    (
+                        branch
+                        for branch in preset.branches
+                        if branch.name == tool_item.name
+                    ),
+                    None,
+                )
+                if branch_info is None:
+                    raise ValueError(f"Branch {tool_item.name} not found in preset")
+
+                tree.add_branch(
+                    branch_id=tool_item.name,
+                    instruction=branch_info.instruction,
+                    description=branch_info.description,
+                    from_branch_id=tool_item.from_branch,
+                    from_tool_ids=tool_item.from_tools,
+                    root=False,
+                    status=f"Running {tool_item.name}...",
+                )
+
+            else:
+                if tool_item.name not in tool_classes:
+                    raise ValueError(
+                        f"Tool {tool_item.name} not found in custom_tools.py file. Please add the tool to the file."
+                    )
+                tree.add_tool(
+                    tool=tool_classes[tool_item.name],
+                    branch_id=tool_item.from_branch,
+                    from_tool_ids=tool_item.from_tools,
+                    root=False,
+                    status=f"Running {tool_item.name}...",
+                )
 
     async def process_tree(
         self,

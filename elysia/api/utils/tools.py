@@ -1,9 +1,54 @@
 from elysia.util.client import ClientManager
 from elysia.api.api_types import ToolItem, BranchInfo, ToolPreset
+import elysia.api.custom_tools as custom_tools
+from elysia import Tool
 
 from weaviate.classes.config import Configure, Property, DataType
 from weaviate.util import generate_uuid5
 from weaviate.classes.query import Filter
+
+from typing import Dict, Type
+
+
+def find_tool_classes() -> Dict[str, Type[Tool]]:
+    """
+    Find all Tool subclasses in the custom_tools module.
+
+    Returns:
+        (dict): Dictionary mapping class names to Tool subclass types
+    """
+    tool_classes = {}
+
+    # Get all objects from the custom_tools module
+    module_objects = dict[str, type[Tool]](
+        [
+            (name, cls)
+            for name, cls in custom_tools.__dict__.items()
+            if isinstance(cls, type)
+        ]
+    )
+
+    # Filter for Tool subclasses (excluding the base Tool class)
+    for cls in module_objects.values():
+        if issubclass(cls, Tool) and cls.__name__ != "Tool":
+            name = cls.get_metadata()["name"]
+            tool_classes[name] = cls
+
+    return tool_classes
+
+
+def find_tool_metadata() -> Dict[str, Dict[str, str]]:
+    """
+    Find all tool metadata in the custom_tools module.
+
+    Returns:
+        (dict): Dictionary mapping tool names to tool metadata
+    """
+    tools = find_tool_classes()
+    metadata = {}
+    for name, cls in tools.items():
+        metadata[name] = cls.get_metadata()
+    return metadata
 
 
 async def add_preset_weaviate(
@@ -64,12 +109,7 @@ async def add_preset_weaviate(
         # if setting default, need to update all other default presets to False
         if default:
             default_presets = await preset_collection.query.fetch_objects(
-                filters=Filter.all_of(
-                    [
-                        Filter.by_property("default").equal(True),
-                        Filter.by_property("user_id").equal(user_id),
-                    ]
-                ),
+                filters=Filter.by_property("default").equal(True),
                 limit=9999,
             )
             for default_preset in default_presets.objects:

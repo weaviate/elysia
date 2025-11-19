@@ -90,6 +90,7 @@ async def test_query():
         QueryData(
             user_id=user_id,
             conversation_id=conversation_id,
+            preset_id=None,
             query="hi!",
             query_id=query_id,
             collection_names=[

@@ -7,6 +7,7 @@ class QueryData(BaseModel):
     user_id: str
     conversation_id: str
     query_id: str
+    preset_id: Optional[str] = None
     query: str
     collection_names: list[str]
     route: Optional[str] = ""

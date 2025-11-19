@@ -13,10 +13,38 @@ BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
 
 from elysia.api.utils.tools import get_presets_weaviate
 
+default_preset = ToolPreset(
+    preset_id="default",
+    name="Default",
+    order=[
+        ToolItem(name="base", from_branch="", from_tools=[], is_branch=True),
+        ToolItem(name="query", from_branch="base", from_tools=[], is_branch=False),
+        ToolItem(name="aggregate", from_branch="base", from_tools=[], is_branch=False),
+        ToolItem(
+            name="cited_summarize", from_branch="base", from_tools=[], is_branch=False
+        ),
+        ToolItem(
+            name="text_response", from_branch="base", from_tools=[], is_branch=False
+        ),
+    ],
+    branches=[
+        BranchInfo(
+            name="base",
+            description="",
+            instruction=(
+                "Choose a base-level task based on the user's prompt and available information. "
+                "Decide based on the tools you have available as well as their descriptions. "
+                "Read them thoroughly and match the actions to the user prompt."
+            ),
+        ),
+    ],
+    default=True,
+)
+
 
 class ToolPresetManager:
     def __init__(self):
-        self.tool_presets = []
+        self.tool_presets = [default_preset]
 
     def add(
         self,
@@ -25,7 +53,7 @@ class ToolPresetManager:
         order: list[ToolItem],
         branches: list[BranchInfo],
         default: bool,
-    ):
+    ) -> None:
 
         self.remove(preset_id)
         if default:
@@ -42,23 +70,35 @@ class ToolPresetManager:
             )
         )
 
-    def remove(self, preset_id: str):
+    def remove(self, preset_id: str) -> None:
         self.tool_presets = [
             preset for preset in self.tool_presets if preset.preset_id != preset_id
         ]
 
-    def get(self, preset_id: str):
+    def get(self, preset_id: str) -> ToolPreset | None:
         return next(
             (preset for preset in self.tool_presets if preset.preset_id == preset_id),
             None,
         )
 
-    async def retrieve(self, user_id: str, client_manager: ClientManager):
-        self.tool_presets = await get_presets_weaviate(user_id, client_manager)
+    def get_default(self) -> ToolPreset | None:
+        return next(
+            (preset for preset in self.tool_presets if preset.default),
+            None,
+        )
 
-    def to_json(self):
-        if self.tool_presets is None:
-            return None
+    async def retrieve(self, user_id: str, client_manager: ClientManager) -> None:
+        retrieved_tool_presets = await get_presets_weaviate(user_id, client_manager)
+
+        retrieved_ids = {preset.preset_id for preset in retrieved_tool_presets}
+        self.tool_presets = [
+            preset
+            for preset in self.tool_presets
+            if preset.preset_id not in retrieved_ids
+        ]
+        self.tool_presets.extend(retrieved_tool_presets)
+
+    def to_json(self) -> list[dict]:
         return [preset.model_dump() for preset in self.tool_presets]
 
 
