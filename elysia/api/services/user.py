@@ -181,7 +181,10 @@ class UserManager:
                 tree_timeout=fe_config.config["tree_timeout"],
             )
             self.users[user_id]["tool_preset_manager"] = ToolPresetManager()
-            if fe_config.config["save_configs_to_weaviate"]:
+            if (
+                fe_config.config["save_configs_to_weaviate"]
+                and fe_config.save_location_client_manager.is_client
+            ):
                 await self.users[user_id]["tool_preset_manager"].retrieve(
                     user_id, fe_config.save_location_client_manager
                 )
