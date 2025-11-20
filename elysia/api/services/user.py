@@ -150,9 +150,14 @@ class UserManager:
         local_user = await self.get_user_local(user_id)
         frontend_config: FrontendConfig = local_user["frontend_config"]
         await frontend_config.configure(**config)
-        await local_user["tool_preset_manager"].retrieve(
-            user_id, frontend_config.save_location_client_manager
-        )
+
+        if (
+            frontend_config.config["save_configs_to_weaviate"]
+            and frontend_config.save_location_client_manager.is_client
+        ):
+            await local_user["tool_preset_manager"].retrieve(
+                user_id, frontend_config.save_location_client_manager
+            )
 
     async def add_user_local(
         self,

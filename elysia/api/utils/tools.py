@@ -148,7 +148,11 @@ async def get_presets_weaviate(
     user_id: str,
     client_manager: ClientManager,
 ):
+
     async with client_manager.connect_to_async_client() as client:
+
+        if not await client.collections.exists(f"ELYSIA_TOOL_PRESETS__"):
+            return []
 
         preset_collection = client.collections.get(f"ELYSIA_TOOL_PRESETS__")
         if await preset_collection.tenants.exists(user_id):
@@ -173,6 +177,10 @@ async def delete_preset_weaviate(
     client_manager: ClientManager,
 ):
     async with client_manager.connect_to_async_client() as client:
+
+        if not await client.collections.exists(f"ELYSIA_TOOL_PRESETS__"):
+            return []
+
         preset_collection = client.collections.get(
             f"ELYSIA_TOOL_PRESETS__"
         ).with_tenant(user_id)
