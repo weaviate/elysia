@@ -49,7 +49,10 @@ async def add_tool_preset(
     user = await user_manager.get_user_local(user_id)
     fe_config: FrontendConfig = user["frontend_config"]
 
-    if fe_config.config["save_configs_to_weaviate"]:
+    if (
+        fe_config.config["save_configs_to_weaviate"]
+        and fe_config.save_location_client_manager.is_client
+    ):
         client_manager: ClientManager = fe_config.save_location_client_manager
         await add_preset_weaviate(
             user_id,
@@ -93,7 +96,10 @@ async def delete_tool_preset(
     user = await user_manager.get_user_local(user_id)
     fe_config: FrontendConfig = user["frontend_config"]
 
-    if fe_config.config["save_configs_to_weaviate"]:
+    if (
+        fe_config.config["save_configs_to_weaviate"]
+        and fe_config.save_location_client_manager.is_client
+    ):
         client_manager: ClientManager = fe_config.save_location_client_manager
         await delete_preset_weaviate(user_id, preset_id, client_manager)
     user["tool_preset_manager"].remove(preset_id)
