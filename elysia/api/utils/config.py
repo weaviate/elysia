@@ -41,10 +41,184 @@ default_preset = ToolPreset(
     default=True,
 )
 
+# some example presets for edward that are a bit crazy
+edward_presets = [
+    ToolPreset(
+        preset_id="edward_preset_1",
+        name="Edward Preset 1",
+        order=[
+            ToolItem(name="base", from_branch="", from_tools=[], is_branch=True),
+            ToolItem(
+                name="epic_secondary_branch",
+                from_branch="base",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="query",
+                from_branch="epic_secondary_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="aggregate",
+                from_branch="epic_secondary_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="cited_summarize",
+                from_branch="base",
+                from_tools=["query"],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="text_response",
+                from_branch="base",
+                from_tools=["query", "cited_summarize"],
+                is_branch=False,
+            ),
+        ],
+        branches=[
+            BranchInfo(
+                name="base",
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+            ),
+            BranchInfo(
+                name="epic_secondary_branch",
+                description="Lil buddy this branch is sick yo",
+                instruction=(
+                    "Pick between doing a big query or a little aggregate bro."
+                ),
+            ),
+        ],
+        default=False,
+    ),
+    ToolPreset(
+        preset_id="edward_preset_2",
+        name="Edward Preset 2",
+        order=[
+            ToolItem(
+                name="this_is_the_root_branch",
+                from_branch="",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="this_is_the_second_branch",
+                from_branch="this_is_the_root_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="this_is_the_third_branch",
+                from_branch="this_is_the_second_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="this_is_the_fourth_branch",
+                from_branch="this_is_the_third_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="this_is_the_fifth_branch",
+                from_branch="this_is_the_fourth_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="tell_a_joke",
+                from_branch="this_is_the_second_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="basic_linear_regression_tool",
+                from_branch="this_is_the_third_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="text_response",
+                from_branch="this_is_the_fourth_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="query",
+                from_branch="this_is_the_fifth_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="cited_summarize",
+                from_branch="this_is_the_fifth_branch",
+                from_tools=["query"],
+                is_branch=False,
+            ),
+        ],
+        branches=[
+            BranchInfo(
+                name="base",
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+            ),
+            BranchInfo(
+                name="this_is_the_second_branch",
+                description="",
+                instruction=(
+                    "Choose a secondary-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+            ),
+            BranchInfo(
+                name="this_is_the_third_branch",
+                description="",
+                instruction=(
+                    "Choose a third-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+            ),
+            BranchInfo(
+                name="this_is_the_fourth_branch",
+                description="",
+                instruction=(
+                    "Choose a fourth-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+            ),
+            BranchInfo(
+                name="this_is_the_fifth_branch",
+                description="",
+                instruction=(
+                    "Choose a fifth-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+            ),
+        ],
+        default=False,
+    ),
+]
+
 
 class ToolPresetManager:
     def __init__(self):
-        self.tool_presets = [default_preset]
+        self.tool_presets = [default_preset] + edward_presets
 
     def add(
         self,
