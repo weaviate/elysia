@@ -85,13 +85,13 @@ default_presets = [
             ),
             ToolItem(
                 name="cited_summarize",
-                from_branch="base",
+                from_branch="epic_secondary_branch",
                 from_tools=["query"],
                 is_branch=False,
             ),
             ToolItem(
                 name="text_response",
-                from_branch="base",
+                from_branch="epic_secondary_branch",
                 from_tools=["query", "cited_summarize"],
                 is_branch=False,
             ),
