@@ -13,43 +13,59 @@ BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
 
 from elysia.api.utils.tools import get_presets_weaviate
 
-default_preset = ToolPreset(
-    preset_id="default",
-    name="Default",
-    order=[
-        ToolItem(name="base", from_branch="", from_tools=[], is_branch=True),
-        ToolItem(name="query", from_branch="base", from_tools=[], is_branch=False),
-        ToolItem(name="aggregate", from_branch="base", from_tools=[], is_branch=False),
-        ToolItem(
-            name="cited_summarize", from_branch="base", from_tools=[], is_branch=False
-        ),
-        ToolItem(
-            name="text_response", from_branch="base", from_tools=[], is_branch=False
-        ),
-    ],
-    branches=[
-        BranchInfo(
-            name="base",
-            description="",
-            instruction=(
-                "Choose a base-level task based on the user's prompt and available information. "
-                "Decide based on the tools you have available as well as their descriptions. "
-                "Read them thoroughly and match the actions to the user prompt."
+default_presets = [
+    ToolPreset(
+        preset_id="default",
+        name="Default",
+        order=[
+            ToolItem(
+                instance_id="base",
+                name="base",
+                from_branch="",
+                from_tools=[],
+                is_branch=True,
             ),
-            is_root=True,
-        ),
-    ],
-    default=True,
-)
-
-# some example presets for edward that are a bit crazy
-edward_presets = [
+            ToolItem(name="query", from_branch="base", from_tools=[], is_branch=False),
+            ToolItem(
+                name="aggregate", from_branch="base", from_tools=[], is_branch=False
+            ),
+            ToolItem(
+                name="cited_summarize",
+                from_branch="base",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="text_response", from_branch="base", from_tools=[], is_branch=False
+            ),
+        ],
+        branches=[
+            BranchInfo(
+                reference_id="base",
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+        ],
+        default=True,
+    ),
     ToolPreset(
         preset_id="edward_preset_1",
         name="Edward Preset 1",
         order=[
-            ToolItem(name="base", from_branch="", from_tools=[], is_branch=True),
             ToolItem(
+                instance_id="base",
+                name="base",
+                from_branch="",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                instance_id="epic_secondary_branch",
                 name="epic_secondary_branch",
                 from_branch="base",
                 from_tools=[],
@@ -82,7 +98,7 @@ edward_presets = [
         ],
         branches=[
             BranchInfo(
-                name="base",
+                reference_id="base",
                 description="",
                 instruction=(
                     "Choose a base-level task based on the user's prompt and available information. "
@@ -92,7 +108,7 @@ edward_presets = [
                 is_root=True,
             ),
             BranchInfo(
-                name="epic_secondary_branch",
+                reference_id="epic_secondary_branch",
                 description="Lil buddy this branch is sick yo",
                 instruction=(
                     "Pick between doing a big query or a little aggregate bro."
@@ -107,30 +123,35 @@ edward_presets = [
         name="Edward Preset 2",
         order=[
             ToolItem(
+                instance_id="this_is_the_root_branch",
                 name="this_is_the_root_branch",
                 from_branch="",
                 from_tools=[],
                 is_branch=True,
             ),
             ToolItem(
+                instance_id="this_is_the_second_branch",
                 name="this_is_the_second_branch",
                 from_branch="this_is_the_root_branch",
                 from_tools=[],
                 is_branch=True,
             ),
             ToolItem(
+                instance_id="this_is_the_third_branch",
                 name="this_is_the_third_branch",
                 from_branch="this_is_the_second_branch",
                 from_tools=[],
                 is_branch=True,
             ),
             ToolItem(
+                instance_id="this_is_the_fourth_branch",
                 name="this_is_the_fourth_branch",
                 from_branch="this_is_the_third_branch",
                 from_tools=[],
                 is_branch=True,
             ),
             ToolItem(
+                instance_id="this_is_the_fifth_branch",
                 name="this_is_the_fifth_branch",
                 from_branch="this_is_the_fourth_branch",
                 from_tools=[],
@@ -169,7 +190,7 @@ edward_presets = [
         ],
         branches=[
             BranchInfo(
-                name="base",
+                reference_id="this_is_the_root_branch",
                 description="",
                 instruction=(
                     "Choose a base-level task based on the user's prompt and available information. "
@@ -179,7 +200,7 @@ edward_presets = [
                 is_root=True,
             ),
             BranchInfo(
-                name="this_is_the_second_branch",
+                reference_id="this_is_the_second_branch",
                 description="",
                 instruction=(
                     "Choose a secondary-level task based on the user's prompt and available information. "
@@ -189,7 +210,7 @@ edward_presets = [
                 is_root=False,
             ),
             BranchInfo(
-                name="this_is_the_third_branch",
+                reference_id="this_is_the_third_branch",
                 description="",
                 instruction=(
                     "Choose a third-level task based on the user's prompt and available information. "
@@ -199,7 +220,7 @@ edward_presets = [
                 is_root=False,
             ),
             BranchInfo(
-                name="this_is_the_fourth_branch",
+                reference_id="this_is_the_fourth_branch",
                 description="",
                 instruction=(
                     "Choose a fourth-level task based on the user's prompt and available information. "
@@ -209,7 +230,7 @@ edward_presets = [
                 is_root=False,
             ),
             BranchInfo(
-                name="this_is_the_fifth_branch",
+                reference_id="this_is_the_fifth_branch",
                 description="",
                 instruction=(
                     "Choose a fifth-level task based on the user's prompt and available information. "
@@ -226,7 +247,7 @@ edward_presets = [
 
 class ToolPresetManager:
     def __init__(self):
-        self.tool_presets = [default_preset] + edward_presets
+        self.tool_presets = default_presets
 
     def add(
         self,

@@ -408,7 +408,7 @@ class TreeManager:
         if root_branch_info is None:
             raise ValueError(f"Root branch not found in preset")
 
-        if preset.order[0].name != root_branch_info.name:
+        if preset.order[0].instance_id != root_branch_info.reference_id:
             raise ValueError(f"Root branch must be first in order")
 
         tree.add_branch(
@@ -426,7 +426,7 @@ class TreeManager:
                     (
                         branch
                         for branch in preset.branches
-                        if branch.name == tool_item.name
+                        if branch.reference_id == tool_item.instance_id
                     ),
                     None,
                 )

@@ -141,17 +141,18 @@ class ToolItem(BaseModel):
     is_branch: bool
 
     @field_validator("instance_id")
-    def validate_instance_id(self, instance_id: Optional[str]) -> Optional[str]:
+    @classmethod
+    def validate_instance_id(cls, instance_id: Optional[str]) -> Optional[str]:
         if instance_id is None:
             return str(uuid4())
         return instance_id
 
 
 class BranchInfo(BaseModel):
-    name: str
-    is_root: bool
+    reference_id: str
     description: str
     instruction: str
+    is_root: bool
 
 
 class ToolPreset(BaseModel):
@@ -161,18 +162,11 @@ class ToolPreset(BaseModel):
     branches: list[BranchInfo]
     default: bool = Field(default=False)
 
-    @field_validator("branches")
-    def validate_branches(self, branches: list[BranchInfo]) -> list[BranchInfo]:
-        if len(branches) != len(set(branch.name for branch in branches)):
-            raise ValueError("Branch names must be unique")
-
-        return branches
-
     @model_validator(mode="after")
     def validate_branch_tools_have_info(self) -> Self:
-        branch_names = {branch.name for branch in self.branches}
-        branch_tool_names = {tool.name for tool in self.order if tool.is_branch}
-        missing_branches = branch_tool_names - branch_names
+        branch_reference_ids = {branch.reference_id for branch in self.branches}
+        branch_tool_ids = {tool.instance_id for tool in self.order if tool.is_branch}
+        missing_branches = branch_tool_ids - branch_reference_ids
         if missing_branches:
             raise ValueError(
                 f"Branch tools {missing_branches} in order do not have corresponding info in branches"

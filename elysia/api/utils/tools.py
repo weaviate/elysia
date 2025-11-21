@@ -74,6 +74,7 @@ async def add_preset_weaviate(
                         name="order",
                         data_type=DataType.OBJECT_ARRAY,
                         nested_properties=[
+                            Property(name="instance_id", data_type=DataType.TEXT),
                             Property(name="name", data_type=DataType.TEXT),
                             Property(name="from_branch", data_type=DataType.TEXT),
                             Property(name="from_tools", data_type=DataType.TEXT_ARRAY),
@@ -84,9 +85,10 @@ async def add_preset_weaviate(
                         name="branches",
                         data_type=DataType.OBJECT_ARRAY,
                         nested_properties=[
-                            Property(name="name", data_type=DataType.TEXT),
+                            Property(name="reference_id", data_type=DataType.TEXT),
                             Property(name="description", data_type=DataType.TEXT),
                             Property(name="instruction", data_type=DataType.TEXT),
+                            Property(name="is_root", data_type=DataType.BOOL),
                         ],
                     ),
                     Property(name="default", data_type=DataType.BOOL),
