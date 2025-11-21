@@ -36,6 +36,7 @@ default_preset = ToolPreset(
                 "Decide based on the tools you have available as well as their descriptions. "
                 "Read them thoroughly and match the actions to the user prompt."
             ),
+            is_root=True,
         ),
     ],
     default=True,
@@ -88,6 +89,7 @@ edward_presets = [
                     "Decide based on the tools you have available as well as their descriptions. "
                     "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=True,
             ),
             BranchInfo(
                 name="epic_secondary_branch",
@@ -95,6 +97,7 @@ edward_presets = [
                 instruction=(
                     "Pick between doing a big query or a little aggregate bro."
                 ),
+                is_root=False,
             ),
         ],
         default=False,
@@ -173,6 +176,7 @@ edward_presets = [
                     "Decide based on the tools you have available as well as their descriptions. "
                     "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=True,
             ),
             BranchInfo(
                 name="this_is_the_second_branch",
@@ -182,6 +186,7 @@ edward_presets = [
                     "Decide based on the tools you have available as well as their descriptions. "
                     "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=False,
             ),
             BranchInfo(
                 name="this_is_the_third_branch",
@@ -191,6 +196,7 @@ edward_presets = [
                     "Decide based on the tools you have available as well as their descriptions. "
                     "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=False,
             ),
             BranchInfo(
                 name="this_is_the_fourth_branch",
@@ -200,6 +206,7 @@ edward_presets = [
                     "Decide based on the tools you have available as well as their descriptions. "
                     "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=False,
             ),
             BranchInfo(
                 name="this_is_the_fifth_branch",
@@ -209,6 +216,7 @@ edward_presets = [
                     "Decide based on the tools you have available as well as their descriptions. "
                     "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=False,
             ),
         ],
         default=False,

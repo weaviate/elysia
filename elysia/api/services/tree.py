@@ -401,21 +401,15 @@ class TreeManager:
         tree: Tree = self.get_tree(conversation_id)
         tree.clear_tree()
 
-        if not preset.order[0].is_branch:
-            raise ValueError(
-                "The first tool in the preset must be a (root) branch. Please add a branch to the preset."
-            )
-
         root_branch_info = next(
-            (
-                branch
-                for branch in preset.branches
-                if branch.name == preset.order[0].name
-            ),
+            (branch for branch in preset.branches if branch.is_root),
             None,
         )
         if root_branch_info is None:
-            raise ValueError(f"Root branch {preset.order[0].name} not found in preset")
+            raise ValueError(f"Root branch not found in preset")
+
+        if preset.order[0].name != root_branch_info.name:
+            raise ValueError(f"Root branch must be first in order")
 
         tree.add_branch(
             branch_id=preset.order[0].name,

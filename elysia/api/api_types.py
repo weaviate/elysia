@@ -1,6 +1,9 @@
 from typing import Any, Dict, List, Optional, Literal
+from typing_extensions import Self
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from uuid import uuid4
 
 
 class QueryData(BaseModel):
@@ -131,14 +134,22 @@ class AvailableModelsData(BaseModel):
 
 
 class ToolItem(BaseModel):
+    instance_id: Optional[str] = None
     name: str
     from_branch: str
     from_tools: list[str]
     is_branch: bool
 
+    @field_validator("instance_id")
+    def validate_instance_id(self, instance_id: Optional[str]) -> Optional[str]:
+        if instance_id is None:
+            return str(uuid4())
+        return instance_id
+
 
 class BranchInfo(BaseModel):
     name: str
+    is_root: bool
     description: str
     instruction: str
 
@@ -148,4 +159,23 @@ class ToolPreset(BaseModel):
     name: str
     order: list[ToolItem]
     branches: list[BranchInfo]
-    default: bool
+    default: bool = Field(default=False)
+
+    @field_validator("branches")
+    def validate_branches(self, branches: list[BranchInfo]) -> list[BranchInfo]:
+        if len(branches) != len(set(branch.name for branch in branches)):
+            raise ValueError("Branch names must be unique")
+
+        return branches
+
+    @model_validator(mode="after")
+    def validate_branch_tools_have_info(self) -> Self:
+        branch_names = {branch.name for branch in self.branches}
+        branch_tool_names = {tool.name for tool in self.order if tool.is_branch}
+        missing_branches = branch_tool_names - branch_names
+        if missing_branches:
+            raise ValueError(
+                f"Branch tools {missing_branches} in order do not have corresponding info in branches"
+            )
+
+        return self
