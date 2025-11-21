@@ -1,12 +1,16 @@
 from typing import Any, Dict, List, Optional, Literal
+from typing_extensions import Self
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from uuid import uuid4
 
 
 class QueryData(BaseModel):
     user_id: str
     conversation_id: str
     query_id: str
+    preset_id: Optional[str] = None
     query: str
     collection_names: list[str]
     route: Optional[str] = ""
@@ -125,31 +129,47 @@ class UpdateFrontendConfigData(BaseModel):
     config: dict[str, Any]
 
 
-class AddToolToTreeData(BaseModel):
-    tool_name: str
-    branch_id: str
-    from_tool_ids: list[str]
-
-
-class RemoveToolFromTreeData(BaseModel):
-    tool_name: str
-    branch_id: str
-    from_tool_ids: list[str]
-
-
-class AddBranchToTreeData(BaseModel):
-    id: str
-    description: str
-    instruction: str
-    from_branch_id: str
-    from_tool_ids: list[str]
-    status: str
-    root: bool
-
-
-class RemoveBranchFromTreeData(BaseModel):
-    id: str
-
-
 class AvailableModelsData(BaseModel):
     user_id: str
+
+
+class ToolItem(BaseModel):
+    instance_id: Optional[str] = None
+    name: str
+    from_branch: str
+    from_tools: list[str]
+    is_branch: bool
+
+    @field_validator("instance_id")
+    @classmethod
+    def validate_instance_id(cls, instance_id: Optional[str]) -> Optional[str]:
+        if instance_id is None:
+            return str(uuid4())
+        return instance_id
+
+
+class BranchInfo(BaseModel):
+    reference_id: str
+    description: str
+    instruction: str
+    is_root: bool
+
+
+class ToolPreset(BaseModel):
+    preset_id: str
+    name: str
+    order: list[ToolItem]
+    branches: list[BranchInfo]
+    default: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def validate_branch_tools_have_info(self) -> Self:
+        branch_reference_ids = {branch.reference_id for branch in self.branches}
+        branch_tool_ids = {tool.instance_id for tool in self.order if tool.is_branch}
+        missing_branches = branch_tool_ids - branch_reference_ids
+        if missing_branches:
+            raise ValueError(
+                f"Branch tools {missing_branches} in order do not have corresponding info in branches"
+            )
+
+        return self

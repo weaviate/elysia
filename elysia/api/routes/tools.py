@@ -7,56 +7,18 @@ from fastapi.responses import JSONResponse
 from elysia.api.dependencies.common import get_user_manager
 from elysia.api.services.user import UserManager
 from elysia.api.core.log import logger
-from elysia.tree.tree import Tree
-from elysia.api.api_types import (
-    AddToolToTreeData,
-    RemoveToolFromTreeData,
-    AddBranchToTreeData,
-    RemoveBranchFromTreeData,
+from elysia.api.utils.config import FrontendConfig
+from elysia.api.api_types import ToolPreset
+from elysia.api.utils.tools import (
+    add_preset_weaviate,
+    get_presets_weaviate,
+    delete_preset_weaviate,
+    find_tool_metadata,
+    find_tool_classes,
 )
-from elysia.api.services.tree import TreeManager
+from elysia.util.client import ClientManager
 
 router = APIRouter()
-
-
-def find_tool_classes() -> Dict[str, Type[Tool]]:
-    """
-    Find all Tool subclasses in the custom_tools module.
-
-    Returns:
-        (dict): Dictionary mapping class names to Tool subclass types
-    """
-    tool_classes = {}
-
-    # Get all objects from the custom_tools module
-    module_objects = dict(
-        [
-            (name, cls)
-            for name, cls in custom_tools.__dict__.items()
-            if isinstance(cls, type)
-        ]
-    )
-
-    # Filter for Tool subclasses (excluding the base Tool class)
-    for name, cls in module_objects.items():
-        if issubclass(cls, Tool) and cls.__name__ != "Tool":
-            tool_classes[name] = cls
-
-    return tool_classes
-
-
-def find_tool_metadata() -> Dict[str, Dict[str, str]]:
-    """
-    Find all tool metadata in the custom_tools module.
-
-    Returns:
-        (dict): Dictionary mapping tool names to tool metadata
-    """
-    tools = find_tool_classes()
-    metadata = {}
-    for name, cls in tools.items():
-        metadata[name] = cls.get_metadata()
-    return metadata
 
 
 @router.get("/available")
@@ -78,101 +40,67 @@ async def get_available_tools():
         )
 
 
-@router.post("/{user_id}/add")
-async def add_tool_to_tree(
+@router.post("/{user_id}")
+async def add_tool_preset(
     user_id: str,
-    data: AddToolToTreeData,
+    data: ToolPreset,
     user_manager: UserManager = Depends(get_user_manager),
 ):
-    try:
-        # get tool class
-        tool_class = find_tool_classes()[data.tool_name]
-        user = await user_manager.get_user_local(user_id)
-        tree_manager: TreeManager = user["tree_manager"]
+    user = await user_manager.get_user_local(user_id)
+    fe_config: FrontendConfig = user["frontend_config"]
 
-        # get tree and add tool
-        for conversation_id in tree_manager.trees:
-            tree: Tree = tree_manager.get_tree(conversation_id)
-            tree.add_tool(tool_class, data.branch_id, from_tool_ids=data.from_tool_ids)
+    if (
+        fe_config.config["save_configs_to_weaviate"]
+        and fe_config.save_location_client_manager.is_client
+    ):
+        client_manager: ClientManager = fe_config.save_location_client_manager
+        await add_preset_weaviate(
+            user_id,
+            data.preset_id,
+            data.name,
+            data.order,
+            data.branches,
+            data.default,
+            client_manager,
+        )
+        await user["tool_preset_manager"].retrieve(user_id, client_manager)
+    else:
+        user["tool_preset_manager"].add(
+            preset_id=data.preset_id,
+            name=data.name,
+            order=data.order,
+            branches=data.branches,
+            default=data.default,
+        )
+    return JSONResponse(content={"error": ""}, status_code=200)
 
-        # all trees should look the same, so return the most recent one
-        return JSONResponse(content={"tree": tree.tree, "error": ""}, status_code=200)
 
-    except Exception as e:
-        logger.error(f"Error adding tool to tree: {str(e)}")
-        return JSONResponse(content={"tree": {}, "error": str(e)}, status_code=500)
-
-
-@router.post("/{user_id}/remove")
-async def remove_tool_from_tree(
+@router.get("/{user_id}")
+async def get_tool_presets(
     user_id: str,
-    data: RemoveToolFromTreeData,
     user_manager: UserManager = Depends(get_user_manager),
 ):
-    try:
-        # get tool class
-        tool_class = find_tool_classes()[data.tool_name]
-
-        # get tree and remove tool
-        user = await user_manager.get_user_local(user_id)
-        tree_manager: TreeManager = user["tree_manager"]
-        for conversation_id in tree_manager.trees:
-            tree: Tree = tree_manager.get_tree(conversation_id)
-            tree.remove_tool(
-                tool_class.get_metadata()["name"],  # type: ignore
-                data.branch_id,
-                from_tool_ids=data.from_tool_ids,
-            )
-
-        return JSONResponse(content={"tree": tree.tree, "error": ""}, status_code=200)
-    except Exception as e:
-        logger.error(f"Error removing tool from tree: {str(e)}")
-        return JSONResponse(content={"tree": {}, "error": str(e)}, status_code=500)
+    user = await user_manager.get_user_local(user_id)
+    return JSONResponse(
+        content={"presets": user["tool_preset_manager"].to_json(), "error": ""},
+        status_code=200,
+    )
 
 
-@router.post("/{user_id}/add_branch")
-async def add_branch_to_tree(
+@router.delete("/{user_id}/{preset_id}")
+async def delete_tool_preset(
     user_id: str,
-    data: AddBranchToTreeData,
+    preset_id: str,
     user_manager: UserManager = Depends(get_user_manager),
 ):
-    try:
-        # get tree and add branch
-        user = await user_manager.get_user_local(user_id)
-        tree_manager: TreeManager = user["tree_manager"]
-        for conversation_id in tree_manager.trees:
-            tree: Tree = tree_manager.get_tree(conversation_id)
-            tree.add_branch(
-                branch_id=data.id,
-                instruction=data.instruction,
-                description=data.description,
-                root=data.root,
-                from_branch_id=data.from_branch_id,
-                from_tool_ids=data.from_tool_ids,
-                status=data.status,
-            )
+    user = await user_manager.get_user_local(user_id)
+    fe_config: FrontendConfig = user["frontend_config"]
 
-        return JSONResponse(content={"tree": tree.tree, "error": ""}, status_code=200)
-    except Exception as e:
-        logger.error(f"Error adding branch to tree: {str(e)}")
-        return JSONResponse(content={"tree": {}, "error": str(e)}, status_code=500)
-
-
-@router.post("/{user_id}/remove_branch")
-async def remove_branch_from_tree(
-    user_id: str,
-    data: RemoveBranchFromTreeData,
-    user_manager: UserManager = Depends(get_user_manager),
-):
-    try:
-        # get tree and remove branch
-        user = await user_manager.get_user_local(user_id)
-        tree_manager: TreeManager = user["tree_manager"]
-        for conversation_id in tree_manager.trees:
-            tree: Tree = tree_manager.get_tree(conversation_id)
-            tree.remove_branch(data.id)
-
-        return JSONResponse(content={"tree": tree.tree, "error": ""}, status_code=200)
-    except Exception as e:
-        logger.error(f"Error removing branch from tree: {str(e)}")
-        return JSONResponse(content={"tree": {}, "error": str(e)}, status_code=500)
+    if (
+        fe_config.config["save_configs_to_weaviate"]
+        and fe_config.save_location_client_manager.is_client
+    ):
+        client_manager: ClientManager = fe_config.save_location_client_manager
+        await delete_preset_weaviate(user_id, preset_id, client_manager)
+    user["tool_preset_manager"].remove(preset_id)
+    return JSONResponse(content={"error": ""}, status_code=200)

@@ -666,18 +666,17 @@ async def get_follow_up_suggestions(
 
 async def get_saved_trees_weaviate(
     collection_name: str,
+    user_id: str,
     client_manager: ClientManager | None = None,
-    user_id: str | None = None,
 ):
     """
     Get all saved trees from a Weaviate collection.
 
     Args:
         collection_name (str): The name of the collection to get the trees from.
+        user_id (str): The user ID to get the trees for.
         client_manager (ClientManager): The client manager to use.
             If not provided, a new ClientManager will be created from environment variables.
-        user_id (str): The user ID to get the trees from.
-            If not provided, the trees will be retrieved from the collection without any filters.
 
     Returns:
         dict: A dictionary of tree UUIDs and their titles.
@@ -688,30 +687,26 @@ async def get_saved_trees_weaviate(
     else:
         close_after_use = False
 
-    if user_id is not None:
-        user_id_filter = Filter.by_property("user_id").equal(user_id)
-    else:
-        user_id_filter = None
-
     async with client_manager.connect_to_async_client() as client:
 
         if not await client.collections.exists(collection_name):
             return {}
 
         collection = client.collections.get(collection_name)
+        if not await collection.tenants.exists(user_id):
+            return {}
+        user_collection = collection.with_tenant(user_id)
 
         len_collection = (
-            await collection.aggregate.over_all(
+            await user_collection.aggregate.over_all(
                 total_count=True,
-                filters=user_id_filter,
             )
         ).total_count
 
-        response = await collection.query.fetch_objects(
+        response = await user_collection.query.fetch_objects(
             limit=len_collection,
             sort=Sort.by_update_time(ascending=False),
             return_metadata=MetadataQuery(last_update_time=True),
-            filters=user_id_filter,
         )
 
     if close_after_use:
@@ -729,6 +724,7 @@ async def get_saved_trees_weaviate(
 
 
 async def delete_tree_from_weaviate(
+    user_id: str,
     conversation_id: str,
     collection_name: str,
     client_manager: ClientManager | None = None,
@@ -737,6 +733,7 @@ async def delete_tree_from_weaviate(
     Delete a tree from a Weaviate collection.
 
     Args:
+        user_id (str): The user ID to delete the tree from.
         conversation_id (str): The conversation ID of the tree to delete.
         collection_name (str): The name of the collection to delete the tree from.
         client_manager (ClientManager): The client manager to use.
@@ -748,6 +745,10 @@ async def delete_tree_from_weaviate(
 
     async with client_manager.connect_to_async_client() as client:
         collection = client.collections.get(collection_name)
+        if not await collection.tenants.exists(user_id):
+            return
+
+        user_collection = collection.with_tenant(user_id)
         uuid = generate_uuid5(conversation_id)
-        if await collection.data.exists(uuid):
-            await collection.data.delete_by_id(uuid)
+        if await user_collection.data.exists(uuid):
+            await user_collection.data.delete_by_id(uuid)

@@ -57,19 +57,25 @@ async def load_tree(
     headers = {"Cache-Control": "no-cache"}
 
     try:
-        frontend_rebuild = await user_manager.load_tree(user_id, conversation_id)
-        return JSONResponse(
-            content={"rebuild": frontend_rebuild, "error": ""},
-            status_code=200,
-            headers=headers,
+        frontend_rebuild, preset_id = await user_manager.load_tree(
+            user_id, conversation_id
         )
+        metadata = {
+            "preset_id": preset_id,
+        }
     except Exception as e:
         logger.error(f"Error loading tree: {str(e)}")
         return JSONResponse(
-            content={"rebuild": [], "error": str(e)},
+            content={"rebuild": [], "metadata": {}, "error": str(e)},
             status_code=500,
             headers=headers,
         )
+
+    return JSONResponse(
+        content={"rebuild": frontend_rebuild, "metadata": metadata, "error": ""},
+        status_code=200,
+        headers=headers,
+    )
 
 
 @router.post("/{user_id}/save_tree/{conversation_id}")

@@ -14,8 +14,7 @@ from elysia.api.services.tree import TreeManager
 from elysia.objects import Update
 from elysia.util.client import ClientManager
 from elysia.api.core.log import logger
-from elysia.api.utils.config import Config
-from elysia.api.utils.config import FrontendConfig
+from elysia.api.utils.config import Config, ToolPresetManager, FrontendConfig
 from elysia.tree.util import get_saved_trees_weaviate
 
 
@@ -152,6 +151,14 @@ class UserManager:
         frontend_config: FrontendConfig = local_user["frontend_config"]
         await frontend_config.configure(**config)
 
+        if (
+            frontend_config.config["save_configs_to_weaviate"]
+            and frontend_config.save_location_client_manager.is_client
+        ):
+            await local_user["tool_preset_manager"].retrieve(
+                user_id, frontend_config.save_location_client_manager
+            )
+
     async def add_user_local(
         self,
         user_id: str,
@@ -178,6 +185,14 @@ class UserManager:
                 config=config,
                 tree_timeout=fe_config.config["tree_timeout"],
             )
+            self.users[user_id]["tool_preset_manager"] = ToolPresetManager()
+            if (
+                fe_config.config["save_configs_to_weaviate"]
+                and fe_config.save_location_client_manager.is_client
+            ):
+                await self.users[user_id]["tool_preset_manager"].retrieve(
+                    user_id, fe_config.save_location_client_manager
+                )
 
             # client manager starts with env variables, when config is updated, api keys are updated
             self.users[user_id]["client_manager"] = ClientManager(
@@ -305,7 +320,7 @@ class UserManager:
                 Controls the LM history being saved in the tree, and some other variables.
                 Defaults to False.
         """
-        # self.add_user_local(user_id)
+
         local_user = await self.get_user_local(user_id)
         tree_manager: TreeManager = local_user["tree_manager"]
         if not tree_manager.tree_exists(conversation_id):
@@ -403,9 +418,9 @@ class UserManager:
         Args:
             user_id (str): Required. The unique identifier for the user stored in the UserManager.
             conversation_id (str): Required. The unique identifier for the conversation for the user.
-            wcd_url (str | None): Required. The URL of the Weaviate Cloud Database instance used to save the tree.
+            wcd_url (str | None): The URL of the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_url` setting in the frontend config.
-            wcd_api_key (str | None): Required. The API key for the Weaviate Cloud Database instance used to save the tree.
+            wcd_api_key (str | None): The API key for the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_api_key` setting in the frontend config.
 
         Returns:
@@ -427,8 +442,11 @@ class UserManager:
                 wcd_api_key=wcd_api_key,
             )
 
-        return await tree_manager.load_tree_weaviate(
-            conversation_id, save_location_client_manager
+        return (
+            await tree_manager.load_tree_weaviate(
+                conversation_id, save_location_client_manager
+            ),
+            tree_manager.get_tree(conversation_id).preset_id,
         )
 
     async def delete_tree(
@@ -446,9 +464,9 @@ class UserManager:
         Args:
             user_id (str): Required. The unique identifier for the user stored in the UserManager.
             conversation_id (str): Required. The unique identifier for the conversation for the user.
-            wcd_url (str | None): Required. The URL of the Weaviate Cloud Database instance used to save the tree.
+            wcd_url (str | None): The URL of the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_url` setting in the frontend config.
-            wcd_api_key (str | None): Required. The API key for the Weaviate Cloud Database instance used to save the tree.
+            wcd_api_key (str | None): The API key for the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_api_key` setting in the frontend config.
         """
 
@@ -482,9 +500,9 @@ class UserManager:
 
         Args:
             user_id (str): Required. The unique identifier for the user stored in the UserManager.
-            wcd_url (str | None): Required. The URL of the Weaviate Cloud Database instance used to save the tree.
+            wcd_url (str | None): The URL of the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_url` setting in the frontend config.
-            wcd_api_key (str | None): Required. The API key for the Weaviate Cloud Database instance used to save the tree.
+            wcd_api_key (str | None): The API key for the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_api_key` setting in the frontend config.
 
         Returns:
@@ -513,7 +531,7 @@ class UserManager:
             )
 
         return await get_saved_trees_weaviate(
-            "ELYSIA_TREES__", save_location_client_manager, user_id
+            "ELYSIA_TREES__", user_id, save_location_client_manager
         )
 
     async def update_user_last_request(self, user_id: str):
@@ -532,6 +550,7 @@ class UserManager:
         user_id: str,
         conversation_id: str,
         query_id: str,
+        preset_id: str | None = None,
         training_route: str = "",
         collection_names: list[str] = [],
         save_trees_to_weaviate: bool | None = None,
@@ -550,6 +569,9 @@ class UserManager:
             conversation_id (str): Required. The conversation ID which contains the tree.
                 This should be the same conversation ID as the one used to initialise the tree (see `initialise_tree`).
             query_id (str): Required. A unique identifier for the query.
+            preset_id (str | None): Optional. The ID of the tool preset to use.
+                This defines the set of tools and branches that will be used in the tree.
+                If not supplied, the tool preset will be chosen based on the user's default tool preset.
             training_route (str): Optional. The training route, a string of the form "tool1/tool2/tool1" etc.
                 See the `tree.async_run()` method for more details.
             collection_names (list[str]): Optional. A list of collection names to use in the query.
@@ -557,9 +579,9 @@ class UserManager:
             save_trees_to_weaviate (bool | None): Optional. Whether to save the trees to a Weaviate instance,
                 after the process_tree() method has finished.
                 Defaults to the value of the `save_trees_to_weaviate` setting in the frontend config.
-            wcd_url (str | None): Required. The URL of the Weaviate Cloud Database instance used to save the tree.
+            wcd_url (str | None): The URL of the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_url` setting in the frontend config.
-            wcd_api_key (str | None): Required. The API key for the Weaviate Cloud Database instance used to save the tree.
+            wcd_api_key (str | None): The API key for the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_api_key` setting in the frontend config.
         """
 
@@ -586,6 +608,23 @@ class UserManager:
         await self.update_user_last_request(user_id)
 
         tree_manager: TreeManager = local_user["tree_manager"]
+
+        # load tool preset if provided
+        if preset_id is None:
+            preset = local_user["tool_preset_manager"].get_default()
+        else:
+            preset = local_user["tool_preset_manager"].get(preset_id)
+
+        if preset is None:
+            raise ValueError(
+                f"Tool preset {preset_id if preset_id is not None else 'default'} not found"
+            )
+
+        # set class attribute preset_id in the tree for saving
+        tree = tree_manager.get_tree(conversation_id)
+        tree.preset_id = preset.preset_id
+
+        tree_manager.load_tool_preset(conversation_id, preset)
 
         async for yielded_result in tree_manager.process_tree(
             query,

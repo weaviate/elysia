@@ -6,8 +6,303 @@ from uuid import uuid4
 
 from elysia.config import Settings
 from elysia.util.client import ClientManager
+from elysia.api.api_types import ToolItem, BranchInfo, ToolPreset
+from pydantic import BaseModel
 
 BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
+
+from elysia.api.utils.tools import get_presets_weaviate
+
+default_presets = [
+    ToolPreset(
+        preset_id="default",
+        name="Default",
+        order=[
+            ToolItem(
+                instance_id="base",
+                name="base",
+                from_branch="",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(name="query", from_branch="base", from_tools=[], is_branch=False),
+            ToolItem(
+                name="aggregate", from_branch="base", from_tools=[], is_branch=False
+            ),
+            ToolItem(
+                name="cited_summarize",
+                from_branch="base",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="text_response", from_branch="base", from_tools=[], is_branch=False
+            ),
+        ],
+        branches=[
+            BranchInfo(
+                reference_id="base",
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+        ],
+        default=True,
+    ),
+    ToolPreset(
+        preset_id="edward_preset_1",
+        name="Edward Preset 1",
+        order=[
+            ToolItem(
+                instance_id="base",
+                name="base",
+                from_branch="",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                instance_id="epic_secondary_branch",
+                name="epic_secondary_branch",
+                from_branch="base",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="query",
+                from_branch="epic_secondary_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="aggregate",
+                from_branch="epic_secondary_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="cited_summarize",
+                from_branch="epic_secondary_branch",
+                from_tools=["query"],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="text_response",
+                from_branch="epic_secondary_branch",
+                from_tools=["query", "cited_summarize"],
+                is_branch=False,
+            ),
+        ],
+        branches=[
+            BranchInfo(
+                reference_id="base",
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+            BranchInfo(
+                reference_id="epic_secondary_branch",
+                description="Lil buddy this branch is sick yo",
+                instruction=(
+                    "Pick between doing a big query or a little aggregate bro."
+                ),
+                is_root=False,
+            ),
+        ],
+        default=False,
+    ),
+    ToolPreset(
+        preset_id="edward_preset_2",
+        name="Edward Preset 2",
+        order=[
+            ToolItem(
+                instance_id="this_is_the_root_branch",
+                name="this_is_the_root_branch",
+                from_branch="",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                instance_id="this_is_the_second_branch",
+                name="this_is_the_second_branch",
+                from_branch="this_is_the_root_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                instance_id="this_is_the_third_branch",
+                name="this_is_the_third_branch",
+                from_branch="this_is_the_second_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                instance_id="this_is_the_fourth_branch",
+                name="this_is_the_fourth_branch",
+                from_branch="this_is_the_third_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                instance_id="this_is_the_fifth_branch",
+                name="this_is_the_fifth_branch",
+                from_branch="this_is_the_fourth_branch",
+                from_tools=[],
+                is_branch=True,
+            ),
+            ToolItem(
+                name="tell_a_joke",
+                from_branch="this_is_the_second_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="basic_linear_regression_tool",
+                from_branch="this_is_the_third_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="text_response",
+                from_branch="this_is_the_fourth_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="query",
+                from_branch="this_is_the_fifth_branch",
+                from_tools=[],
+                is_branch=False,
+            ),
+            ToolItem(
+                name="cited_summarize",
+                from_branch="this_is_the_fifth_branch",
+                from_tools=["query"],
+                is_branch=False,
+            ),
+        ],
+        branches=[
+            BranchInfo(
+                reference_id="this_is_the_root_branch",
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+            BranchInfo(
+                reference_id="this_is_the_second_branch",
+                description="",
+                instruction=(
+                    "Choose a secondary-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            BranchInfo(
+                reference_id="this_is_the_third_branch",
+                description="",
+                instruction=(
+                    "Choose a third-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            BranchInfo(
+                reference_id="this_is_the_fourth_branch",
+                description="",
+                instruction=(
+                    "Choose a fourth-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            BranchInfo(
+                reference_id="this_is_the_fifth_branch",
+                description="",
+                instruction=(
+                    "Choose a fifth-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+        ],
+        default=False,
+    ),
+]
+
+
+class ToolPresetManager:
+    def __init__(self):
+        self.tool_presets = default_presets
+
+    def add(
+        self,
+        preset_id: str,
+        name: str,
+        order: list[ToolItem],
+        branches: list[BranchInfo],
+        default: bool,
+    ) -> None:
+
+        self.remove(preset_id)
+        if default:
+            for preset in self.tool_presets:
+                preset.default = False
+
+        self.tool_presets.append(
+            ToolPreset(
+                preset_id=preset_id,
+                name=name,
+                order=order,
+                branches=branches,
+                default=default,
+            )
+        )
+
+    def remove(self, preset_id: str) -> None:
+        self.tool_presets = [
+            preset for preset in self.tool_presets if preset.preset_id != preset_id
+        ]
+
+    def get(self, preset_id: str) -> ToolPreset | None:
+        return next(
+            (preset for preset in self.tool_presets if preset.preset_id == preset_id),
+            None,
+        )
+
+    def get_default(self) -> ToolPreset | None:
+        return next(
+            (preset for preset in self.tool_presets if preset.default),
+            None,
+        )
+
+    async def retrieve(self, user_id: str, client_manager: ClientManager) -> None:
+        retrieved_tool_presets = await get_presets_weaviate(user_id, client_manager)
+
+        retrieved_ids = {preset.preset_id for preset in retrieved_tool_presets}
+        self.tool_presets = [
+            preset
+            for preset in self.tool_presets
+            if preset.preset_id not in retrieved_ids
+        ]
+        self.tool_presets.extend(retrieved_tool_presets)
+
+    def to_json(self) -> list[dict]:
+        return [preset.model_dump() for preset in self.tool_presets]
 
 
 class Config:

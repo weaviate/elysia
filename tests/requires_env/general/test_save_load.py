@@ -33,6 +33,7 @@ async def test_save_load_weaviate():
         # load the tree from weaviate
         loaded_tree = await Tree.import_from_weaviate(
             collection_name="Test_ELYSIA_save_load_collection",
+            user_id=tree.user_id,
             conversation_id=tree.conversation_id,
             client_manager=client_manager,
         )
@@ -54,6 +55,7 @@ async def test_save_load_weaviate():
 
         saved_trees = await get_saved_trees_weaviate(
             collection_name="Test_ELYSIA_save_load_collection",
+            user_id=tree.user_id,
             client_manager=client_manager,
         )
 

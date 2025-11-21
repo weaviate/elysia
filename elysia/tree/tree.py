@@ -76,6 +76,7 @@ class Tree:
         end_goal: str = "No end goal provided.",
         user_id: str | None = None,
         conversation_id: str | None = None,
+        preset_id: str | None = None,
         low_memory: bool = False,
         use_elysia_collections: bool = True,
         settings: Settings | None = None,
@@ -110,6 +111,8 @@ class Tree:
             self.conversation_id = str(uuid.uuid4())
         else:
             self.conversation_id = conversation_id
+
+        self.preset_id = preset_id
 
         if settings is None:
             self.settings = environment_settings
@@ -540,7 +543,7 @@ class Tree:
 
     def add_tool(
         self,
-        tool,
+        tool: type[Tool] | Tool,
         branch_id: str | None = None,
         from_tool_ids: list[str] = [],
         root: bool = False,
@@ -556,8 +559,8 @@ class Tree:
                 If not specified, the tool will be added to the root branch
             from_tool_ids (list[str]): The ids of the tools to add the new tool after
                 If not specified, the tool will be added to the base of the branch
-            root (bool): Whether the tool is the root tool
-                If not specified, the tool will be added to the root branch
+            root (bool): Whether the tool is on the root branch. Defaults to False.
+                Equivalent to setting `branch_id` to the ID of the root branch.
             kwargs (any): Additional keyword arguments to pass to the initialisation of the tool
 
         Example 1:
@@ -581,11 +584,11 @@ class Tree:
             But after 'query', there will be a new option for the `CheckResult` tool.
 
         Example 3:
-            You can add a tool, `SendEmail`, after the `CheckResult` (from Example 2) tool like this:
+            You can add a tool, `SendEmail`, to the base of the tree like this:
             ```python
-            tree.add_tool(SendEmail, from_tool_ids=["query", "check_result"], root=True)
+            tree.add_tool(SendEmail, from_tool_ids=[], root=True)
             ```
-            It will add an additional option to the root branch, after the 'query' and 'check_result' tools.
+            It will add the `SendEmail` tool to the root branch, so can be called at the start of the decision process.
         """
 
         if (
@@ -1928,6 +1931,7 @@ class Tree:
             return {
                 "user_id": self.user_id,
                 "conversation_id": self.conversation_id,
+                "preset_id": self.preset_id,
                 "conversation_title": self.conversation_title,
                 "branch_initialisation": self.branch_initialisation,
                 "use_elysia_collections": self.use_elysia_collections,
@@ -1953,6 +1957,8 @@ class Tree:
             collection_name (str): The name of the collection to export to.
             client_manager (ClientManager): The client manager to use.
                 If not provided, a new ClientManager will be created from environment variables.
+            preset_id (str): The id of the tool preset used in the tree.
+                If not provided, set to None.
         """
         if client_manager is None:
             client_manager = ClientManager()
@@ -1965,15 +1971,17 @@ class Tree:
             if not await client.collections.exists(collection_name):
                 await client.collections.create(
                     collection_name,
-                    vectorizer_config=wc.Configure.Vectorizer.none(),
+                    vector_config=wc.Configure.Vectors.self_provided(),
                     inverted_index_config=wc.Configure.inverted_index(
-                        index_timestamps=True
+                        index_timestamps=True,
+                        index_null_state=True,
+                    ),
+                    multi_tenancy_config=wc.Configure.multi_tenancy(
+                        enabled=True,
+                        auto_tenant_creation=True,
+                        auto_tenant_activation=True,
                     ),
                     properties=[
-                        wc.Property(
-                            name="user_id",
-                            data_type=wc.DataType.TEXT,
-                        ),
                         wc.Property(
                             name="conversation_id",
                             data_type=wc.DataType.TEXT,
@@ -1990,16 +1998,18 @@ class Tree:
                 )
 
             collection = client.collections.get(collection_name)
+            if not await collection.tenants.exists(self.user_id):
+                await collection.tenants.create(self.user_id)
+            user_collection = collection.with_tenant(self.user_id)
 
             json_data_str = json.dumps(self.export_to_json())
 
             uuid = generate_uuid5(self.conversation_id)
 
-            if await collection.data.exists(uuid):
-                await collection.data.update(
+            if await user_collection.data.exists(uuid):
+                await user_collection.data.update(
                     uuid=uuid,
                     properties={
-                        "user_id": self.user_id,
                         "conversation_id": self.conversation_id,
                         "tree": json_data_str,
                         "title": self.conversation_title,
@@ -2009,10 +2019,9 @@ class Tree:
                     f"Successfully updated existing tree in collection '{collection_name}' with id '{self.conversation_id}'"
                 )
             else:
-                await collection.data.insert(
+                await user_collection.data.insert(
                     uuid=uuid,
                     properties={
-                        "user_id": self.user_id,
                         "conversation_id": self.conversation_id,
                         "tree": json_data_str,
                         "title": self.conversation_title,
@@ -2041,6 +2050,7 @@ class Tree:
         tree = cls(
             user_id=json_data["user_id"],
             conversation_id=json_data["conversation_id"],
+            preset_id=json_data["preset_id"],
             branch_initialisation=json_data["branch_initialisation"],
             style=json_data["tree_data"]["atlas"]["style"],
             agent_description=json_data["tree_data"]["atlas"]["agent_description"],
@@ -2069,6 +2079,7 @@ class Tree:
     async def import_from_weaviate(
         cls,
         collection_name: str,
+        user_id: str,
         conversation_id: str,
         client_manager: ClientManager | None = None,
     ) -> "Tree":
@@ -2077,6 +2088,7 @@ class Tree:
 
         Args:
             collection_name (str): The name of the collection to import from.
+            user_id (str): The user ID to import the tree from.
             conversation_id (str): The id of the conversation to import.
             client_manager (ClientManager): The client manager to use.
                 If not provided, a new ClientManager will be created from environment variables.
@@ -2099,24 +2111,23 @@ class Tree:
                 )
 
             collection = client.collections.get(collection_name)
+            if not await collection.tenants.exists(user_id):
+                raise ValueError(
+                    f"User '{user_id}' does not have any saved trees in collection '{collection_name}'."
+                )
+            user_collection = collection.with_tenant(user_id)
             uuid = generate_uuid5(conversation_id)
-            # if not await collection.data.exists(uuid):
-            #     raise ValueError(
-            #         f"No tree found for conversation id '{conversation_id}' in collection '{collection_name}'."
-            #     )
+            if not await user_collection.data.exists(uuid):
+                raise ValueError(
+                    f"No tree found for conversation id '{conversation_id}' in collection '{collection_name}'."
+                )
 
-            response = await collection.query.fetch_object_by_id(uuid)
+            response = await user_collection.query.fetch_object_by_id(uuid)
 
         if close_after_use:
             await client_manager.close_clients()
 
-        if response is None:
-            raise ValueError(
-                f"No tree found for conversation id '{conversation_id}' in collection '{collection_name}'."
-            )
-
-        json_data_str = response.properties["tree"]
-        json_data = json.loads(json_data_str)  # type: ignore
+        json_data = json.loads(response.properties["tree"])  # type: ignore
 
         return cls.import_from_json(json_data)
 
