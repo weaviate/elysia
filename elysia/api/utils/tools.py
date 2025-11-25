@@ -1,5 +1,5 @@
 from elysia.util.client import ClientManager
-from elysia.api.api_types import ToolItem, BranchInfo, ToolPreset
+from elysia.api.api_types import TreeNode, TreeGraph
 import elysia.api.custom_tools as custom_tools
 from elysia import Tool
 
@@ -55,8 +55,8 @@ async def add_preset_weaviate(
     user_id: str,
     preset_id: str,
     name: str,
-    order: list[ToolItem],
-    branches: list[BranchInfo],
+    nodes: dict[str, TreeNode],
+    edges: list[tuple[str, str]],
     default: bool,
     client_manager: ClientManager,
 ):
@@ -70,28 +70,27 @@ async def add_preset_weaviate(
                 properties=[
                     Property(name="preset_id", data_type=DataType.TEXT),
                     Property(name="name", data_type=DataType.TEXT),
+                    Property(name="default", data_type=DataType.BOOL),
                     Property(
-                        name="order",
+                        name="nodes",
                         data_type=DataType.OBJECT_ARRAY,
                         nested_properties=[
                             Property(name="instance_id", data_type=DataType.TEXT),
                             Property(name="name", data_type=DataType.TEXT),
-                            Property(name="from_branch", data_type=DataType.TEXT),
-                            Property(name="from_tools", data_type=DataType.TEXT_ARRAY),
                             Property(name="is_branch", data_type=DataType.BOOL),
-                        ],
-                    ),
-                    Property(
-                        name="branches",
-                        data_type=DataType.OBJECT_ARRAY,
-                        nested_properties=[
-                            Property(name="reference_id", data_type=DataType.TEXT),
                             Property(name="description", data_type=DataType.TEXT),
                             Property(name="instruction", data_type=DataType.TEXT),
                             Property(name="is_root", data_type=DataType.BOOL),
                         ],
                     ),
-                    Property(name="default", data_type=DataType.BOOL),
+                    Property(
+                        name="edges",
+                        data_type=DataType.OBJECT_ARRAY,
+                        nested_properties=[
+                            Property(name="from", data_type=DataType.TEXT),
+                            Property(name="to", data_type=DataType.TEXT),
+                        ],
+                    ),
                 ],
                 multi_tenancy_config=Configure.multi_tenancy(
                     enabled=True,
@@ -128,8 +127,18 @@ async def add_preset_weaviate(
                 properties={
                     "preset_id": preset_id,
                     "name": name,
-                    "order": [item.model_dump() for item in order],
-                    "branches": [item.model_dump() for item in branches],
+                    "nodes": [
+                        {
+                            "instance_id": node.id,
+                            "name": node.name,
+                            "is_branch": node.is_branch,
+                            "description": node.description,
+                            "instruction": node.instruction,
+                            "is_root": node.is_root,
+                        }
+                        for node in nodes.values()
+                    ],
+                    "edges": [{"from": from_, "to": to_} for from_, to_ in edges],
                     "default": default,
                 },
             )
@@ -139,8 +148,18 @@ async def add_preset_weaviate(
                 properties={
                     "preset_id": preset_id,
                     "name": name,
-                    "order": [item.model_dump() for item in order],
-                    "branches": [item.model_dump() for item in branches],
+                    "nodes": [
+                        {
+                            "instance_id": node.id,
+                            "name": node.name,
+                            "is_branch": node.is_branch,
+                            "description": node.description,
+                            "instruction": node.instruction,
+                            "is_root": node.is_root,
+                        }
+                        for node in nodes.values()
+                    ],
+                    "edges": [{"from": from_, "to": to_} for from_, to_ in edges],
                     "default": default,
                 },
             )
@@ -164,7 +183,26 @@ async def get_presets_weaviate(
                 limit=9999,
             )
             presets = [
-                ToolPreset.model_validate(preset.properties)
+                TreeGraph(
+                    id=preset.properties["preset_id"],  # type: ignore
+                    name=preset.properties["name"],  # type: ignore
+                    default=preset.properties["default"],  # type: ignore
+                    nodes={
+                        node["instance_id"]: TreeNode(
+                            id=node["instance_id"],
+                            name=node["name"],
+                            is_branch=node["is_branch"],
+                            description=node["description"],
+                            instruction=node["instruction"],
+                            is_root=node["is_root"],
+                        )
+                        for node in preset.properties["nodes"]  # type: ignore
+                    },
+                    edges=[
+                        (edge["from"], edge["to"])
+                        for edge in preset.properties["edges"]  # type: ignore
+                    ],
+                )
                 for preset in presets.objects
             ]
         else:

@@ -8,10 +8,8 @@ from elysia.api.services.user import UserManager
 from elysia.api.api_types import (
     InitialiseTreeData,
     SaveConfigUserData,
-    UpdateFrontendConfigData,
-    ToolPreset,
-    ToolItem,
-    BranchInfo,
+    TreeNode,
+    TreeGraph,
 )
 from elysia.api.routes.query import process
 from elysia.api.dependencies.common import get_user_manager
@@ -87,8 +85,181 @@ Tests when not saving configs to Weaviate.
 """
 
 
+test_presets = [
+    TreeGraph(
+        id="default",
+        name="Default",
+        default=True,
+        nodes={
+            "x12343": TreeNode(
+                id="x12343",
+                name="base",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+            "y12321": TreeNode(id="y12321", name="query", is_branch=False),
+            "z12321": TreeNode(id="z12321", name="aggregate", is_branch=False),
+            "a12321": TreeNode(id="a12321", name="cited_summarize", is_branch=False),
+            "b12321": TreeNode(id="b12321", name="text_response", is_branch=False),
+        },
+        edges=[
+            ("x12343", "y12321"),
+            ("x12343", "z12321"),
+            ("x12343", "a12321"),
+            ("x12343", "b12321"),
+        ],
+    ),
+    TreeGraph(
+        id="edward_preset_1",
+        name="Edward Preset 1",
+        default=False,
+        nodes={
+            "base": TreeNode(
+                id="base",
+                name="base",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+            "epic_secondary_branch": TreeNode(
+                id="epic_secondary_branch",
+                name="epic_secondary_branch",
+                is_branch=True,
+                description="Lil buddy this branch is sick yo",
+                instruction="Pick between doing a big query or a little aggregate bro.",
+                is_root=False,
+            ),
+            "query": TreeNode(id="query", name="query", is_branch=False),
+            "aggregate": TreeNode(id="aggregate", name="aggregate", is_branch=False),
+            "cited_summarize": TreeNode(
+                id="cited_summarize", name="cited_summarize", is_branch=False
+            ),
+            "text_response": TreeNode(
+                id="text_response", name="text_response", is_branch=False
+            ),
+        },
+        edges=[
+            ("base", "epic_secondary_branch"),
+            ("epic_secondary_branch", "query"),
+            ("epic_secondary_branch", "aggregate"),
+            ("epic_secondary_branch", "cited_summarize"),
+            ("query", "cited_summarize"),
+            ("epic_secondary_branch", "text_response"),
+            ("query", "text_response"),
+            ("cited_summarize", "text_response"),
+        ],
+    ),
+    TreeGraph(
+        id="edward_preset_2",
+        name="Edward Preset 2",
+        default=False,
+        nodes={
+            "this_is_the_root_branch": TreeNode(
+                id="this_is_the_root_branch",
+                name="this_is_the_root_branch",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=True,
+            ),
+            "this_is_the_second_branch": TreeNode(
+                id="this_is_the_second_branch",
+                name="this_is_the_second_branch",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a secondary-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            "this_is_the_third_branch": TreeNode(
+                id="this_is_the_third_branch",
+                name="this_is_the_third_branch",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a third-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            "this_is_the_fourth_branch": TreeNode(
+                id="this_is_the_fourth_branch",
+                name="this_is_the_fourth_branch",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a fourth-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            "this_is_the_fifth_branch": TreeNode(
+                id="this_is_the_fifth_branch",
+                name="this_is_the_fifth_branch",
+                is_branch=True,
+                description="",
+                instruction=(
+                    "Choose a fifth-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
+                ),
+                is_root=False,
+            ),
+            "tell_a_joke": TreeNode(
+                id="tell_a_joke", name="tell_a_joke", is_branch=False
+            ),
+            "basic_linear_regression_tool": TreeNode(
+                id="basic_linear_regression_tool",
+                name="basic_linear_regression_tool",
+                is_branch=False,
+            ),
+            "text_response": TreeNode(
+                id="text_response", name="text_response", is_branch=False
+            ),
+            "query": TreeNode(id="query", name="query", is_branch=False),
+            "cited_summarize": TreeNode(
+                id="cited_summarize", name="cited_summarize", is_branch=False
+            ),
+        },
+        edges=[
+            ("this_is_the_root_branch", "this_is_the_second_branch"),
+            ("this_is_the_second_branch", "this_is_the_third_branch"),
+            ("this_is_the_third_branch", "this_is_the_fourth_branch"),
+            ("this_is_the_fourth_branch", "this_is_the_fifth_branch"),
+            ("this_is_the_second_branch", "tell_a_joke"),
+            ("this_is_the_third_branch", "basic_linear_regression_tool"),
+            ("this_is_the_fourth_branch", "text_response"),
+            ("this_is_the_fifth_branch", "query"),
+            ("this_is_the_fifth_branch", "cited_summarize"),
+            ("query", "cited_summarize"),
+        ],
+    ),
+]
+
+
 @pytest.mark.asyncio
-async def test_cycle():
+@pytest.mark.parametrize("test_preset", test_presets)
+async def test_cycle(test_preset: TreeGraph):
     user_id = f"test_add_tool_preset_{uuid4()}"
     user_manager = get_user_manager()
     user = await initialise_user(user_id, user_manager)
@@ -108,80 +279,29 @@ async def test_cycle():
     response = read_response(response)
     assert response["error"] == ""
 
+    user_local = await user_manager.get_user_local(user_id)
+    tree_graph_manager = user_local["tree_graph_manager"]
+    for preset in tree_graph_manager.presets:
+        tree_graph_manager.remove(preset.id)
+
     # get available tools
     response = await get_available_tools()
     available_tools = read_response(response)["tools"]
 
     # add tool preset
-    tool_preset_id = f"test_add_tool_preset_{uuid4()}"
     response = await add_tool_preset(
         user_id=user_id,
-        data=ToolPreset(
-            preset_id=tool_preset_id,
-            name="Test Add Tool Preset",
-            order=[
-                ToolItem(
-                    instance_id="base",
-                    name="base",
-                    from_branch="",
-                    from_tools=[],
-                    is_branch=True,
-                ),
-            ]
-            + [
-                ToolItem(
-                    name=tool["name"],
-                    from_branch="base",
-                    from_tools=[],
-                    is_branch=False,
-                )
-                for tool in list(available_tools.values())[:2]
-            ]
-            + [
-                ToolItem(
-                    instance_id="secondary_branch",
-                    name="secondary_branch",
-                    from_branch="base",
-                    from_tools=[],
-                    is_branch=True,
-                )
-            ]
-            + [
-                ToolItem(
-                    name=tool["name"],
-                    from_branch="secondary_branch",
-                    from_tools=[],
-                    is_branch=False,
-                )
-                for tool in list(available_tools.values())[2:4]
-            ],
-            branches=[
-                BranchInfo(
-                    reference_id="base",
-                    description="Secondary branch",
-                    instruction="Use the secondary branch to get the information",
-                    is_root=False,
-                ),
-                BranchInfo(
-                    reference_id="secondary_branch",
-                    description="Secondary branch",
-                    instruction="Use the secondary branch to get the information",
-                    is_root=False,
-                ),
-            ],
-            default=True,
-        ),
+        data=test_preset,
         user_manager=user_manager,
     )
     response = read_response(response)
     assert response["error"] == ""
 
     user_local = await user_manager.get_user_local(user_id)
-    tool_preset_manager = user_local["tool_preset_manager"]
-    assert len(tool_preset_manager.tool_presets) == len(default_presets) + 1
-    assert tool_preset_manager.tool_presets[-1].preset_id == tool_preset_id
-    assert tool_preset_manager.tool_presets[-1].name == "Test Add Tool Preset"
-    assert len(tool_preset_manager.tool_presets[-1].order) == 6
+    tree_graph_manager = user_local["tree_graph_manager"]
+    assert len(tree_graph_manager.presets) == 1
+    assert tree_graph_manager.presets[-1].id == test_preset.id
+    assert tree_graph_manager.presets[-1].name == test_preset.name
 
     # get tool presets
     response = await get_tool_presets(user_id=user_id, user_manager=user_manager)
@@ -189,14 +309,13 @@ async def test_cycle():
     assert response["error"] == ""
     assert "presets" in response
     assert response["presets"] is not None
-    assert len(response["presets"]) == len(default_presets) + 1
-    assert response["presets"][-1]["preset_id"] == tool_preset_id
-    assert response["presets"][-1]["name"] == "Test Add Tool Preset"
-    assert len(response["presets"][-1]["order"]) == 6
+    assert len(response["presets"]) == 1
+    assert response["presets"][-1]["id"] == test_preset.id
+    assert response["presets"][-1]["name"] == test_preset.name
 
     # remove tool preset
     response = await delete_tool_preset(
-        user_id=user_id, preset_id=tool_preset_id, user_manager=user_manager
+        user_id=user_id, preset_id=test_preset.id, user_manager=user_manager
     )
     response = read_response(response)
     assert response["error"] == ""
@@ -207,4 +326,4 @@ async def test_cycle():
     assert response["error"] == ""
     assert "presets" in response
     assert response["presets"] is not None
-    assert len(response["presets"]) == len(default_presets)
+    assert len(response["presets"]) == 0

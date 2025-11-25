@@ -530,8 +530,6 @@ class Tree:
         self,
         tool: type[Tool] | Tool | str,
         from_node_id: str | None = None,
-        end: bool = False,
-        status: str = "",
         node_id: str | None = None,
         **kwargs,
     ) -> str:
@@ -649,8 +647,8 @@ class Tree:
                 branch=False,
                 root=False,
                 options=[],
-                end=end,
-                status=f"Running {tool_instance.name}..." if status == "" else status,
+                end=tool_instance.end,
+                status=tool_instance.status,
             )
 
         self.tracker.add_tracker(tracker_name=tool_instance.name)
@@ -748,6 +746,14 @@ class Tree:
         self._get_root()
 
         return node_id
+
+    @property
+    def edges(self):
+        edges = []
+        for node in self.nodes.values():
+            for option in node.options:
+                edges.append((node.id, option))
+        return edges
 
     # TODO: redo this with new refactor
     # def view(

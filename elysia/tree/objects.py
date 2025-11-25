@@ -1006,7 +1006,7 @@ class TreeData:
                     error = ""
                 out += f"\t- {task['task']}({inputs}){error}:\n"
 
-                if task["num_items"]:
+                if task.get("num_items", None):
                     out += f"{task['num_items']} object{'s' if task['num_items']>1 else ''} added to environment"
                 if prompt["prompt"] == self.user_prompt:
                     if "reasoning" in task:

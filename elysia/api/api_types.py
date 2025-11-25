@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional, Literal
+from sympy.core.symbol import Str
 from typing_extensions import Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -133,43 +134,18 @@ class AvailableModelsData(BaseModel):
     user_id: str
 
 
-class ToolItem(BaseModel):
-    instance_id: Optional[str] = None
+class TreeNode(BaseModel):
+    id: str
     name: str
-    from_branch: str
-    from_tools: list[str]
     is_branch: bool
-
-    @field_validator("instance_id")
-    @classmethod
-    def validate_instance_id(cls, instance_id: Optional[str]) -> Optional[str]:
-        if instance_id is None:
-            return str(uuid4())
-        return instance_id
+    description: Optional[str] = ""
+    instruction: Optional[str] = ""
+    is_root: Optional[bool] = False
 
 
-class BranchInfo(BaseModel):
-    reference_id: str
-    description: str
-    instruction: str
-    is_root: bool
-
-
-class ToolPreset(BaseModel):
-    preset_id: str
+class TreeGraph(BaseModel):
+    id: str
     name: str
-    order: list[ToolItem]
-    branches: list[BranchInfo]
-    default: bool = Field(default=False)
-
-    @model_validator(mode="after")
-    def validate_branch_tools_have_info(self) -> Self:
-        branch_reference_ids = {branch.reference_id for branch in self.branches}
-        branch_tool_ids = {tool.instance_id for tool in self.order if tool.is_branch}
-        missing_branches = branch_tool_ids - branch_reference_ids
-        if missing_branches:
-            raise ValueError(
-                f"Branch tools {missing_branches} in order do not have corresponding info in branches"
-            )
-
-        return self
+    default: bool
+    nodes: dict[str, TreeNode]
+    edges: list[tuple[str, str]]

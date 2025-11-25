@@ -141,6 +141,19 @@ class Node:
         if self.branch and self.end:
             raise ValueError("A branch cannot be at the end of the tree.")
 
+    def to_json(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "branch": self.branch,
+            "root": self.root,
+            "options": self.options,
+            "end": self.end,
+            "status": self.status,
+            "instruction": self.instruction,
+            "description": self.description,
+        }
+
     def _get_view_environment(self) -> dict:
         return {
             "name": "view_environment",
@@ -221,7 +234,7 @@ class Node:
 
     async def _execute_view_environment(
         self, kwargs: dict, tree_data: TreeData, inputs: dict, lm: dspy.LM
-    ):
+    ) -> dspy.Prediction:
 
         history = dspy.History(messages=[])
         view_env_inputs = self._get_view_environment()["inputs"]

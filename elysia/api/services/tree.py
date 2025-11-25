@@ -9,10 +9,11 @@ from weaviate.util import generate_uuid5
 # Load environment variables from .env file
 load_dotenv(override=True)
 
+from elysia.api.api_types import TreeGraph, TreeNode
 from elysia.tree.tree import Tree
 from elysia.util.client import ClientManager
 from elysia.tree.util import delete_tree_from_weaviate
-from elysia.api.utils.config import Config, BranchInitType, ToolPreset
+from elysia.api.utils.config import Config, BranchInitType
 from elysia.api.utils.tools import find_tool_classes
 
 tool_classes = find_tool_classes()
@@ -397,64 +398,57 @@ class TreeManager:
                 branch_initialisation
             )
 
-    def load_tool_preset(self, conversation_id: str, preset: ToolPreset):
+    def load_tree_graph(self, conversation_id: str, preset: TreeGraph):
         tree: Tree = self.get_tree(conversation_id)
         tree.clear_tree()
 
-        root_branch_info = next(
-            (branch for branch in preset.branches if branch.is_root),
+        # get root node
+        root_node = next(
+            (node for node in preset.nodes.values() if node.is_root),
             None,
         )
-        if root_branch_info is None:
-            raise ValueError(f"Root branch not found in preset")
 
-        if preset.order[0].instance_id != root_branch_info.reference_id:
-            raise ValueError(f"Root branch must be first in order")
+        if root_node is None:
+            raise ValueError("Root node not found in preset")
 
+        if not root_node.is_branch:
+            raise ValueError("Root node must be a branch")
+
+        # attach root node
         tree.add_branch(
-            branch_id=preset.order[0].name,
-            instruction=root_branch_info.instruction,
-            description=root_branch_info.description,
-            root=True,
-            status=f"Making an initial decision...",
+            name=root_node.name,
+            instruction=root_node.instruction,
+            description=root_node.description,
+            node_id=root_node.id,
+            from_node_id=None,
         )
 
-        for tool_item in preset.order[1:]:
-            if tool_item.is_branch:
+        # need to ensure this happens in the correct order
+        def attach_nodes(node_id: str):
 
-                branch_info = next(
-                    (
-                        branch
-                        for branch in preset.branches
-                        if branch.reference_id == tool_item.instance_id
-                    ),
-                    None,
-                )
-                if branch_info is None:
-                    raise ValueError(f"Branch {tool_item.name} not found in preset")
+            # first find all edges from the root node
+            edges = [edge for edge in preset.edges if edge[0] == node_id]
 
-                tree.add_branch(
-                    branch_id=tool_item.name,
-                    instruction=branch_info.instruction,
-                    description=branch_info.description,
-                    from_branch_id=tool_item.from_branch,
-                    from_tool_ids=tool_item.from_tools,
-                    root=False,
-                    status=f"Running {tool_item.name}...",
-                )
-
-            else:
-                if tool_item.name not in tool_classes:
-                    raise ValueError(
-                        f"Tool {tool_item.name} not found in custom_tools.py file. Please add the tool to the file."
+            for edge in edges:
+                node = preset.nodes[edge[1]]
+                if node.is_branch:
+                    tree.add_branch(
+                        name=node.name,
+                        instruction=node.instruction,
+                        description=node.description,
+                        node_id=node.id,
+                        from_node_id=edge[0],
                     )
-                tree.add_tool(
-                    tool=tool_classes[tool_item.name],
-                    branch_id=tool_item.from_branch,
-                    from_tool_ids=tool_item.from_tools,
-                    root=False,
-                    status=f"Running {tool_item.name}...",
-                )
+                else:
+                    tree.add_tool(
+                        tool=tool_classes[node.name],
+                        from_node_id=edge[0],
+                        node_id=node.id,
+                    )
+
+                attach_nodes(node.id)
+
+        attach_nodes(root_node.id)
 
     async def process_tree(
         self,

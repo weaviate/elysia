@@ -1,6 +1,3 @@
-import elysia.api.custom_tools as custom_tools
-from elysia import Tool
-from typing import Dict, Type
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
@@ -8,13 +5,11 @@ from elysia.api.dependencies.common import get_user_manager
 from elysia.api.services.user import UserManager
 from elysia.api.core.log import logger
 from elysia.api.utils.config import FrontendConfig
-from elysia.api.api_types import ToolPreset
+from elysia.api.api_types import TreeGraph
 from elysia.api.utils.tools import (
     add_preset_weaviate,
-    get_presets_weaviate,
     delete_preset_weaviate,
     find_tool_metadata,
-    find_tool_classes,
 )
 from elysia.util.client import ClientManager
 
@@ -43,7 +38,7 @@ async def get_available_tools():
 @router.post("/{user_id}")
 async def add_tool_preset(
     user_id: str,
-    data: ToolPreset,
+    data: TreeGraph,
     user_manager: UserManager = Depends(get_user_manager),
 ):
     user = await user_manager.get_user_local(user_id)
@@ -56,20 +51,20 @@ async def add_tool_preset(
         client_manager: ClientManager = fe_config.save_location_client_manager
         await add_preset_weaviate(
             user_id,
-            data.preset_id,
+            data.id,
             data.name,
-            data.order,
-            data.branches,
+            data.nodes,
+            data.edges,
             data.default,
             client_manager,
         )
-        await user["tool_preset_manager"].retrieve(user_id, client_manager)
+        await user["tree_graph_manager"].retrieve(user_id, client_manager)
     else:
-        user["tool_preset_manager"].add(
-            preset_id=data.preset_id,
+        user["tree_graph_manager"].add(
+            id=data.id,
             name=data.name,
-            order=data.order,
-            branches=data.branches,
+            nodes=data.nodes,
+            edges=data.edges,
             default=data.default,
         )
     return JSONResponse(content={"error": ""}, status_code=200)
@@ -82,7 +77,7 @@ async def get_tool_presets(
 ):
     user = await user_manager.get_user_local(user_id)
     return JSONResponse(
-        content={"presets": user["tool_preset_manager"].to_json(), "error": ""},
+        content={"presets": user["tree_graph_manager"].to_json(), "error": ""},
         status_code=200,
     )
 
@@ -102,5 +97,5 @@ async def delete_tool_preset(
     ):
         client_manager: ClientManager = fe_config.save_location_client_manager
         await delete_preset_weaviate(user_id, preset_id, client_manager)
-    user["tool_preset_manager"].remove(preset_id)
+    user["tree_graph_manager"].remove(preset_id)
     return JSONResponse(content={"error": ""}, status_code=200)

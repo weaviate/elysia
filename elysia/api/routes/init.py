@@ -155,7 +155,8 @@ async def initialise_tree(
     Returns:
         (JSONResponse): A JSON response with the following fields:
             - conversation_id (str): The conversation ID.
-            - tree (dict): The tree.
+            - nodes (dict[str, dict]): The nodes.
+            - edges (list[tuple[str, str]]): The edges.
             - error (str): Any error message (empty string if no error).
     """
     logger.debug(f"/initialise_tree API request received")
@@ -174,7 +175,8 @@ async def initialise_tree(
         return JSONResponse(
             content={
                 "conversation_id": conversation_id,
-                "tree": "",
+                "nodes": {},
+                "edges": [],
                 "error": str(e),
             },
             status_code=500,
@@ -183,7 +185,8 @@ async def initialise_tree(
     return JSONResponse(
         content={
             "conversation_id": conversation_id,
-            "tree": tree.tree,
+            "nodes": {node_id: node.to_json() for node_id, node in tree.nodes.items()},
+            "edges": tree.edges,
             "error": "",
         },
         status_code=200,

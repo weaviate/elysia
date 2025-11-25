@@ -14,7 +14,7 @@ from elysia.api.services.tree import TreeManager
 from elysia.objects import Update
 from elysia.util.client import ClientManager
 from elysia.api.core.log import logger
-from elysia.api.utils.config import Config, ToolPresetManager, FrontendConfig
+from elysia.api.utils.config import Config, TreeGraphManager, FrontendConfig
 from elysia.tree.util import get_saved_trees_weaviate
 
 
@@ -155,7 +155,7 @@ class UserManager:
             frontend_config.config["save_configs_to_weaviate"]
             and frontend_config.save_location_client_manager.is_client
         ):
-            await local_user["tool_preset_manager"].retrieve(
+            await local_user["tree_graph_manager"].retrieve(
                 user_id, frontend_config.save_location_client_manager
             )
 
@@ -185,12 +185,12 @@ class UserManager:
                 config=config,
                 tree_timeout=fe_config.config["tree_timeout"],
             )
-            self.users[user_id]["tool_preset_manager"] = ToolPresetManager()
+            self.users[user_id]["tree_graph_manager"] = TreeGraphManager()
             if (
                 fe_config.config["save_configs_to_weaviate"]
                 and fe_config.save_location_client_manager.is_client
             ):
-                await self.users[user_id]["tool_preset_manager"].retrieve(
+                await self.users[user_id]["tree_graph_manager"].retrieve(
                     user_id, fe_config.save_location_client_manager
                 )
 
@@ -611,9 +611,9 @@ class UserManager:
 
         # load tool preset if provided
         if preset_id is None:
-            preset = local_user["tool_preset_manager"].get_default()
+            preset = local_user["tree_graph_manager"].get_default()
         else:
-            preset = local_user["tool_preset_manager"].get(preset_id)
+            preset = local_user["tree_graph_manager"].get(preset_id)
 
         if preset is None:
             raise ValueError(

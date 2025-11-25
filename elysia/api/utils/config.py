@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from elysia.config import Settings
 from elysia.util.client import ClientManager
-from elysia.api.api_types import ToolItem, BranchInfo, ToolPreset
+from elysia.api.api_types import TreeGraph, TreeNode
 from pydantic import BaseModel
 
 BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
@@ -14,91 +14,15 @@ BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
 from elysia.api.utils.tools import get_presets_weaviate
 
 default_presets = [
-    ToolPreset(
-        preset_id="default",
+    TreeGraph(
+        id="default",
         name="Default",
-        order=[
-            ToolItem(
-                instance_id="base",
-                name="base",
-                from_branch="",
-                from_tools=[],
-                is_branch=True,
-            ),
-            ToolItem(name="query", from_branch="base", from_tools=[], is_branch=False),
-            ToolItem(
-                name="aggregate", from_branch="base", from_tools=[], is_branch=False
-            ),
-            ToolItem(
-                name="cited_summarize",
-                from_branch="base",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="text_response", from_branch="base", from_tools=[], is_branch=False
-            ),
-        ],
-        branches=[
-            BranchInfo(
-                reference_id="base",
-                description="",
-                instruction=(
-                    "Choose a base-level task based on the user's prompt and available information. "
-                    "Decide based on the tools you have available as well as their descriptions. "
-                    "Read them thoroughly and match the actions to the user prompt."
-                ),
-                is_root=True,
-            ),
-        ],
         default=True,
-    ),
-    ToolPreset(
-        preset_id="edward_preset_1",
-        name="Edward Preset 1",
-        order=[
-            ToolItem(
-                instance_id="base",
+        nodes={
+            "x12343": TreeNode(
+                id="x12343",
                 name="base",
-                from_branch="",
-                from_tools=[],
                 is_branch=True,
-            ),
-            ToolItem(
-                instance_id="epic_secondary_branch",
-                name="epic_secondary_branch",
-                from_branch="base",
-                from_tools=[],
-                is_branch=True,
-            ),
-            ToolItem(
-                name="query",
-                from_branch="epic_secondary_branch",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="aggregate",
-                from_branch="epic_secondary_branch",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="cited_summarize",
-                from_branch="epic_secondary_branch",
-                from_tools=["query"],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="text_response",
-                from_branch="epic_secondary_branch",
-                from_tools=["query", "cited_summarize"],
-                is_branch=False,
-            ),
-        ],
-        branches=[
-            BranchInfo(
-                reference_id="base",
                 description="",
                 instruction=(
                     "Choose a base-level task based on the user's prompt and available information. "
@@ -107,90 +31,72 @@ default_presets = [
                 ),
                 is_root=True,
             ),
-            BranchInfo(
-                reference_id="epic_secondary_branch",
-                description="Lil buddy this branch is sick yo",
+            "y12321": TreeNode(id="y12321", name="query", is_branch=False),
+            "z12321": TreeNode(id="z12321", name="aggregate", is_branch=False),
+            "a12321": TreeNode(id="a12321", name="cited_summarize", is_branch=False),
+            "b12321": TreeNode(id="b12321", name="text_response", is_branch=False),
+        },
+        edges=[
+            ("x12343", "y12321"),
+            ("x12343", "z12321"),
+            ("x12343", "a12321"),
+            ("x12343", "b12321"),
+        ],
+    ),
+    TreeGraph(
+        id="edward_preset_1",
+        name="Edward Preset 1",
+        default=False,
+        nodes={
+            "base": TreeNode(
+                id="base",
+                name="base",
+                is_branch=True,
+                description="",
                 instruction=(
-                    "Pick between doing a big query or a little aggregate bro."
+                    "Choose a base-level task based on the user's prompt and available information. "
+                    "Decide based on the tools you have available as well as their descriptions. "
+                    "Read them thoroughly and match the actions to the user prompt."
                 ),
+                is_root=True,
+            ),
+            "epic_secondary_branch": TreeNode(
+                id="epic_secondary_branch",
+                name="epic_secondary_branch",
+                is_branch=True,
+                description="Lil buddy this branch is sick yo",
+                instruction="Pick between doing a big query or a little aggregate bro.",
                 is_root=False,
             ),
+            "query": TreeNode(id="query", name="query", is_branch=False),
+            "aggregate": TreeNode(id="aggregate", name="aggregate", is_branch=False),
+            "cited_summarize": TreeNode(
+                id="cited_summarize", name="cited_summarize", is_branch=False
+            ),
+            "text_response": TreeNode(
+                id="text_response", name="text_response", is_branch=False
+            ),
+        },
+        edges=[
+            ("base", "epic_secondary_branch"),
+            ("epic_secondary_branch", "query"),
+            ("epic_secondary_branch", "aggregate"),
+            ("epic_secondary_branch", "cited_summarize"),
+            ("query", "cited_summarize"),
+            ("epic_secondary_branch", "text_response"),
+            ("query", "text_response"),
+            ("cited_summarize", "text_response"),
         ],
-        default=False,
     ),
-    ToolPreset(
-        preset_id="edward_preset_2",
+    TreeGraph(
+        id="edward_preset_2",
         name="Edward Preset 2",
-        order=[
-            ToolItem(
-                instance_id="this_is_the_root_branch",
+        default=False,
+        nodes={
+            "this_is_the_root_branch": TreeNode(
+                id="this_is_the_root_branch",
                 name="this_is_the_root_branch",
-                from_branch="",
-                from_tools=[],
                 is_branch=True,
-            ),
-            ToolItem(
-                instance_id="this_is_the_second_branch",
-                name="this_is_the_second_branch",
-                from_branch="this_is_the_root_branch",
-                from_tools=[],
-                is_branch=True,
-            ),
-            ToolItem(
-                instance_id="this_is_the_third_branch",
-                name="this_is_the_third_branch",
-                from_branch="this_is_the_second_branch",
-                from_tools=[],
-                is_branch=True,
-            ),
-            ToolItem(
-                instance_id="this_is_the_fourth_branch",
-                name="this_is_the_fourth_branch",
-                from_branch="this_is_the_third_branch",
-                from_tools=[],
-                is_branch=True,
-            ),
-            ToolItem(
-                instance_id="this_is_the_fifth_branch",
-                name="this_is_the_fifth_branch",
-                from_branch="this_is_the_fourth_branch",
-                from_tools=[],
-                is_branch=True,
-            ),
-            ToolItem(
-                name="tell_a_joke",
-                from_branch="this_is_the_second_branch",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="basic_linear_regression_tool",
-                from_branch="this_is_the_third_branch",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="text_response",
-                from_branch="this_is_the_fourth_branch",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="query",
-                from_branch="this_is_the_fifth_branch",
-                from_tools=[],
-                is_branch=False,
-            ),
-            ToolItem(
-                name="cited_summarize",
-                from_branch="this_is_the_fifth_branch",
-                from_tools=["query"],
-                is_branch=False,
-            ),
-        ],
-        branches=[
-            BranchInfo(
-                reference_id="this_is_the_root_branch",
                 description="",
                 instruction=(
                     "Choose a base-level task based on the user's prompt and available information. "
@@ -199,8 +105,10 @@ default_presets = [
                 ),
                 is_root=True,
             ),
-            BranchInfo(
-                reference_id="this_is_the_second_branch",
+            "this_is_the_second_branch": TreeNode(
+                id="this_is_the_second_branch",
+                name="this_is_the_second_branch",
+                is_branch=True,
                 description="",
                 instruction=(
                     "Choose a secondary-level task based on the user's prompt and available information. "
@@ -209,8 +117,10 @@ default_presets = [
                 ),
                 is_root=False,
             ),
-            BranchInfo(
-                reference_id="this_is_the_third_branch",
+            "this_is_the_third_branch": TreeNode(
+                id="this_is_the_third_branch",
+                name="this_is_the_third_branch",
+                is_branch=True,
                 description="",
                 instruction=(
                     "Choose a third-level task based on the user's prompt and available information. "
@@ -219,8 +129,10 @@ default_presets = [
                 ),
                 is_root=False,
             ),
-            BranchInfo(
-                reference_id="this_is_the_fourth_branch",
+            "this_is_the_fourth_branch": TreeNode(
+                id="this_is_the_fourth_branch",
+                name="this_is_the_fourth_branch",
+                is_branch=True,
                 description="",
                 instruction=(
                     "Choose a fourth-level task based on the user's prompt and available information. "
@@ -229,8 +141,10 @@ default_presets = [
                 ),
                 is_root=False,
             ),
-            BranchInfo(
-                reference_id="this_is_the_fifth_branch",
+            "this_is_the_fifth_branch": TreeNode(
+                id="this_is_the_fifth_branch",
+                name="this_is_the_fifth_branch",
+                is_branch=True,
                 description="",
                 instruction=(
                     "Choose a fifth-level task based on the user's prompt and available information. "
@@ -239,70 +153,92 @@ default_presets = [
                 ),
                 is_root=False,
             ),
+            "tell_a_joke": TreeNode(
+                id="tell_a_joke", name="tell_a_joke", is_branch=False
+            ),
+            "basic_linear_regression_tool": TreeNode(
+                id="basic_linear_regression_tool",
+                name="basic_linear_regression_tool",
+                is_branch=False,
+            ),
+            "text_response": TreeNode(
+                id="text_response", name="text_response", is_branch=False
+            ),
+            "query": TreeNode(id="query", name="query", is_branch=False),
+            "cited_summarize": TreeNode(
+                id="cited_summarize", name="cited_summarize", is_branch=False
+            ),
+        },
+        edges=[
+            ("this_is_the_root_branch", "this_is_the_second_branch"),
+            ("this_is_the_second_branch", "this_is_the_third_branch"),
+            ("this_is_the_third_branch", "this_is_the_fourth_branch"),
+            ("this_is_the_fourth_branch", "this_is_the_fifth_branch"),
+            ("this_is_the_second_branch", "tell_a_joke"),
+            ("this_is_the_third_branch", "basic_linear_regression_tool"),
+            ("this_is_the_fourth_branch", "text_response"),
+            ("this_is_the_fifth_branch", "query"),
+            ("this_is_the_fifth_branch", "cited_summarize"),
+            ("query", "cited_summarize"),
         ],
-        default=False,
     ),
 ]
 
 
-class ToolPresetManager:
+class TreeGraphManager:
     def __init__(self):
-        self.tool_presets = default_presets
+        self.presets: list[TreeGraph] = default_presets
 
     def add(
         self,
-        preset_id: str,
+        id: str,
         name: str,
-        order: list[ToolItem],
-        branches: list[BranchInfo],
+        nodes: dict[str, TreeNode],
+        edges: list[tuple[str, str]],
         default: bool,
     ) -> None:
 
-        self.remove(preset_id)
+        self.remove(id)
         if default:
-            for preset in self.tool_presets:
+            for preset in self.presets:
                 preset.default = False
 
-        self.tool_presets.append(
-            ToolPreset(
-                preset_id=preset_id,
+        self.presets.append(
+            TreeGraph(
+                id=id,
                 name=name,
-                order=order,
-                branches=branches,
+                nodes=nodes,
+                edges=edges,
                 default=default,
             )
         )
 
-    def remove(self, preset_id: str) -> None:
-        self.tool_presets = [
-            preset for preset in self.tool_presets if preset.preset_id != preset_id
-        ]
+    def remove(self, id: str) -> None:
+        self.presets = [preset for preset in self.presets if preset.id != id]
 
-    def get(self, preset_id: str) -> ToolPreset | None:
+    def get(self, id: str) -> TreeGraph | None:
         return next(
-            (preset for preset in self.tool_presets if preset.preset_id == preset_id),
+            (preset for preset in self.presets if preset.id == id),
             None,
         )
 
-    def get_default(self) -> ToolPreset | None:
+    def get_default(self) -> TreeGraph | None:
         return next(
-            (preset for preset in self.tool_presets if preset.default),
+            (preset for preset in self.presets if preset.default),
             None,
         )
 
     async def retrieve(self, user_id: str, client_manager: ClientManager) -> None:
-        retrieved_tool_presets = await get_presets_weaviate(user_id, client_manager)
+        retrieved_presets = await get_presets_weaviate(user_id, client_manager)
 
-        retrieved_ids = {preset.preset_id for preset in retrieved_tool_presets}
-        self.tool_presets = [
-            preset
-            for preset in self.tool_presets
-            if preset.preset_id not in retrieved_ids
+        retrieved_ids = {preset.id for preset in retrieved_presets}
+        self.presets = [
+            preset for preset in self.presets if preset.id not in retrieved_ids
         ]
-        self.tool_presets.extend(retrieved_tool_presets)
+        self.presets.extend(retrieved_presets)
 
     def to_json(self) -> list[dict]:
-        return [preset.model_dump() for preset in self.tool_presets]
+        return [preset.model_dump() for preset in self.presets]
 
 
 class Config:
