@@ -29,7 +29,11 @@ class DummyAdapter(ChatAdapter):
 
         # for decision node
         if "available_actions" in inputs:
-            defaults["function_name"] = list(inputs["available_actions"].keys())[0]
+            names = [action["name"] for action in inputs["available_actions"]]
+            if "text_response" in names:
+                defaults["function_name"] = "text_response"
+            else:
+                defaults["function_name"] = names[0]
 
         # for preprocessing return type assignment
         if "possible_return_types" in inputs:
@@ -89,7 +93,11 @@ class DummyAdapter(ChatAdapter):
 
         # for decision node
         if "available_actions" in inputs:
-            defaults["function_name"] = list(inputs["available_actions"].keys())[0]
+            names = [action["name"] for action in inputs["available_actions"]]
+            if "text_response" in names:
+                defaults["function_name"] = "text_response"
+            else:
+                defaults["function_name"] = names[0]
 
         # for preprocessing return type assignment
         if "possible_return_types" in inputs:

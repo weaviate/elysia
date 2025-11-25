@@ -622,9 +622,9 @@ class UserManager:
 
         # set class attribute preset_id in the tree for saving
         tree = tree_manager.get_tree(conversation_id)
-        tree.preset_id = preset.preset_id
+        tree.preset_id = preset.id
 
-        tree_manager.load_tool_preset(conversation_id, preset)
+        tree_manager.load_tree_graph(conversation_id, preset)
 
         async for yielded_result in tree_manager.process_tree(
             query,

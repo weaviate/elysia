@@ -5,6 +5,7 @@ from cryptography.fernet import InvalidToken
 from elysia.api.api_types import InitialiseTreeData
 from elysia.api.dependencies.common import get_user_manager
 from elysia.api.services.user import UserManager
+from elysia.tree.tree import Tree
 from elysia.api.core.log import logger
 from elysia.util.client import ClientManager
 from elysia.api.utils.config import Config
@@ -165,7 +166,7 @@ async def initialise_tree(
     logger.debug(f"Low Memory: {data.low_memory}")
 
     try:
-        tree = await user_manager.initialise_tree(
+        tree: Tree = await user_manager.initialise_tree(
             user_id,
             conversation_id,
             low_memory=data.low_memory,
@@ -182,10 +183,26 @@ async def initialise_tree(
             status_code=500,
         )
 
+    nodes = {
+        node.id: {
+            "id": node.id,
+            "name": node.name,
+            "is_branch": node.branch,
+            "description": (
+                tree.tools[node.name].description
+                if not node.branch
+                else node.description
+            ),
+            "instruction": node.instruction,
+            "is_root": node.root,
+        }
+        for node_id, node in tree.nodes.items()
+    }
+
     return JSONResponse(
         content={
             "conversation_id": conversation_id,
-            "nodes": {node_id: node.to_json() for node_id, node in tree.nodes.items()},
+            "nodes": nodes,
             "edges": tree.edges,
             "error": "",
         },

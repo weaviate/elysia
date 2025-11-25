@@ -138,17 +138,18 @@ async def process(data: dict, websocket: WebSocket, user_manager: UserManager):
 
     except Exception as e:
         logger.exception(f"Error in /query API")
+        import traceback
 
         if "conversation_id" in data:
             error = error_payload(
-                text=f"{str(e)}",
+                text=f"{str(e)}\n{traceback.format_exc()}",
                 conversation_id=data["conversation_id"],
                 query_id=data["query_id"],
             )
             await websocket.send_json(error)
         else:
             error = error_payload(
-                text=f"{str(e)}",
+                text=f"{str(e)}\n{traceback.format_exc()}",
                 conversation_id="",
                 query_id="",
             )

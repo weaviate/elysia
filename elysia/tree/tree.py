@@ -1177,12 +1177,6 @@ class Tree:
                 **self.settings.API_KEYS,
             )
 
-        # If training route is provided, split it into a list
-        if training_route != "":
-            route_list = training_route.split("/")
-        else:
-            route_list = []
-
         # Some initial steps if this is the first run (no recursion yet)
         if _first_run:
 
