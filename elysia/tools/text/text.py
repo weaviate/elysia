@@ -184,6 +184,7 @@ class FakeTextResponse(Tool):
                         "Plain text only. "
                     ),
                     "default": "",
+                    "required": True,
                 }
             },
             end=True,

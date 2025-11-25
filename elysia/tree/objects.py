@@ -767,6 +767,7 @@ class TreeData:
         num_trees_completed: int | None = None,
         recursion_limit: int | None = None,
         settings: Settings | None = None,
+        use_weaviate_collections: bool = True,
     ):
         if settings is None:
             self.settings = environment_settings
@@ -810,6 +811,7 @@ class TreeData:
         # -- Collection Data --
         self.collection_data = collection_data
         self.collection_names = []
+        self.use_weaviate_collections = use_weaviate_collections
 
         # -- Errors --
         self.errors: dict[str, list[str]] = {}
@@ -1002,14 +1004,17 @@ class TreeData:
                     error = " [ERRORED] "
                 else:
                     error = ""
-                out += f"\t- {task['task']}({inputs}){error}\n"
+                out += f"\t- {task['task']}({inputs}){error}:\n"
 
+                if task["num_items"]:
+                    out += f"{task['num_items']} object{'s' if task['num_items']>1 else ''} added to environment"
                 if prompt["prompt"] == self.user_prompt:
                     if "reasoning" in task:
                         reasoning = task["reasoning"]
                     else:
                         reasoning = ""
                     out += f"\t  Reasoning: {reasoning}\n"
+
         return out
 
     async def set_collection_names(

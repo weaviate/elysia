@@ -125,7 +125,7 @@ class TreeManager:
                     end_goal=self.config.end_goal,
                     branch_initialisation=self.config.branch_initialisation,
                     low_memory=low_memory,
-                    use_elysia_collections=self.config.use_elysia_collections,
+                    use_weaviate_collections=self.config.use_weaviate_collections,
                 ),
                 "last_request": datetime.datetime.now(),
                 "event": asyncio.Event(),

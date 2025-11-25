@@ -62,14 +62,13 @@ class DPWithEnv(dspy.Signature):
     available_actions: list[dict] = dspy.InputField(
         description="""
         List of possible actions to choose from for this task only:
-        {
-            "[name]": {
-                "function_name": [name of the function],
+        [
+            {
+                "name": [name of the option],
                 "description": [task description],
-                "future": [future information],
-                "inputs": [inputs for the action]. A dictionary where the keys are the input names, and the values are the input descriptions.
+                "inputs": [inputs for the option]. A dictionary where the keys are the input names, and the values are the input descriptions.
             }
-        }
+        ]
         """.strip()
     )
 

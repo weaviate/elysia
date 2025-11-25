@@ -3,10 +3,12 @@ import json
 
 # dspy requires a 'base' LM but this should not be used
 import dspy
+import types
+from pydantic import BaseModel, ConfigDict
 from pympler import asizeof
 from logging import Logger
 
-from typing import Callable, Union
+from typing import Callable, Union, Any, Optional, Sequence
 
 from weaviate.util import generate_uuid5
 from weaviate.classes.query import MetadataQuery, Sort, Filter
@@ -87,148 +89,109 @@ class Decision:
         function_name: str,
         function_inputs: dict,
         reasoning: str,
-        impossible: bool,
         end_actions: bool,
         last_in_tree: bool = False,
     ):
         self.function_name = function_name
         self.function_inputs = function_inputs
         self.reasoning = reasoning
-        self.impossible = impossible
         self.end_actions = end_actions
-        self.last_in_tree = last_in_tree
 
 
-class DecisionNode:
-    """
-    A decision node is a node in the tree that makes a decision based on the available options.
-    This class is essentially the executor of the decision node.
-    """
+class ToolInput(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    name: str
+    description: str
+    type: type | types.GenericAlias
+    default: Any
+    required: Optional[bool] = False
 
+
+class ToolOption(BaseModel):
+    name: str
+    available: bool
+    description: str
+    inputs: list[ToolInput]
+    unavailable_reason: Optional[str] = None
+
+
+class Node:
     def __init__(
         self,
         id: str,
-        instruction: str,
-        options: dict[
-            str, dict[str, Union[str, dict, bool, Tool, "DecisionNode", None]]
-        ],
-        root: bool = False,
-        logger: Logger | None = None,
-        use_elysia_collections: bool = True,
+        name: str,
+        branch: bool,
+        root: bool,
+        options: list[str] = [],
+        end: bool = False,
+        status: str = "",
+        instruction: str = "",
+        description: str = "",
     ):
         self.id = id
-        self.instruction = instruction
-        self.options = options
+        self.name = name
+        self.branch = branch
         self.root = root
-        self.logger = logger
-        self.use_elysia_collections = use_elysia_collections
+        self.options = options
+        self.end = end
+        self.status = status
+        self.instruction = instruction
+        self.description = description
 
-    def _get_options(self):
-        return self.options
+        if self.branch and self.end:
+            raise ValueError("A branch cannot be at the end of the tree.")
 
-    def add_option(
-        self,
-        id: str,
-        description: str,
-        inputs: dict,
-        action: Tool | None = None,
-        end: bool = True,
-        status: str = "",
-        next: "DecisionNode | None" = None,
-    ):
-        if status == "":
-            status = f"Running {id}..."
-
-        self.options[id] = {
-            "description": description,  # type: str
-            "inputs": inputs,  # type: dict
-            "action": action,  # type: Tool | None
-            "end": end,  # type: bool
-            "status": status,  # type: str
-            "next": next,  # type: DecisionNode | None
-        }
-
-    def remove_option(self, id: str):
-        if id in self.options:
-            del self.options[id]
-
-    def _options_to_json(self, available_tools: list[str]):
-        """
-        Options that get shown to the LLM.
-        Remove any that are empty branches.
-        """
-        out = {}
-        for node in self.options:
-            if node not in available_tools:  # empty branch
-                continue
-
-            out[node] = {
-                "function_name": node,
-                "description": self.options[node]["description"],
-            }
-
-            if self.options[node]["inputs"] != {}:
-                out[node]["inputs"] = self.options[node]["inputs"]
-
-                for input_dict in out[node]["inputs"].values():
-                    if hasattr(input_dict["type"], "model_json_schema"):
-                        type_overwrite = f"A JSON object of the following properties: {input_dict['type'].model_json_schema()['properties']}"
-                        if "$defs" in input_dict["type"].model_json_schema():
-                            type_overwrite += f"\nWhere the values are: {input_dict['type'].model_json_schema()['$defs']}"
-                        input_dict["type"] = type_overwrite
-            else:
-                out[node]["inputs"] = {}
-
-        return out
-
-    def _unavailable_options_to_json(self, unavailable_tools: list[tuple[str, str]]):
-        """
-        Options unavailable at this time and why.
-        """
-        out = {}
-        for tool, reason in unavailable_tools:
-            if reason == "":
-                reason = "No reason provided."
-            out[tool] = {
-                "function_name": tool,
-                "description": self.options[tool]["description"],
-                "available_at": reason,
-            }
-        return out
-
-    def decide_from_route(self, route: list[str]):
-        possible_nodes = self._get_options()
-
-        next_route = route[0]
-        if next_route not in possible_nodes:
-            raise Exception(
-                f"Next node in training route ({next_route}) not in possible nodes ({possible_nodes})"
-            )
-
-        route = route[1:]
-        completed = len(route) == 0
-
-        return (
-            Decision(
-                function_name=next_route,
-                reasoning=f"Decided to run {next_route} from route {route}",
-                impossible=False,
-                function_inputs={},
-                end_actions=completed,
-                last_in_tree=completed,
+    def _get_view_environment(self) -> dict:
+        return {
+            "name": "view_environment",
+            "description": (
+                "An auxiliary tool to inspect the current environment containing all objects from this session. "
+                "Use this tool when you need to reference existing data before making decisions or selecting other actions. "
+                "This tool does NOT complete the user's request immediately, it only helps you gather information to inform your next action choice or inputs. "
+                "After viewing the environment, you can select another tool after selecting this tool from available_actions. "
+                "Retrieved objects from previous tool calls are stored here. "
+                "Optionally input tool_name to filter by a specific tool's results. "
+                "Optionally input metadata_key and metadata_value alongside tool_name to filter by specific metadata criteria. "
             ),
-            "/".join(route),
-        )
-
-    def _get_function_inputs(self, llm_inputs: dict, real_inputs: dict) -> dict:
-        # any non-provided inputs are set to the default
-        default_inputs = {
-            key: value["default"] if "default" in value else None
-            for key, value in real_inputs.items()
+            "inputs": [
+                {
+                    "name": "tool_name",
+                    "description": (
+                        "The name of the tool to view the environment for. Top level key for the environment. "
+                        "If not provided or None, view the entire environment."
+                    ),
+                    "default": None,
+                    "type": str,
+                    "required": False,
+                },
+                {
+                    "name": "metadata_key",
+                    "description": (
+                        "A key of the metadata to view the environment for. Subkey for the environment. "
+                        "If not provided or None, view all objects for the given tool_name. "
+                        "If provided metadata_key, must provide metadata_value. "
+                    ),
+                    "default": None,
+                    "type": str,
+                    "required": False,
+                },
+                {
+                    "name": "metadata_value",
+                    "description": (
+                        "A value of the metadata to view the environment for. Subkey for the environment. "
+                        "If not provided or None, view all objects for the given tool_name."
+                        "If provided metadata_value, must provide metadata_key. "
+                    ),
+                    "default": None,
+                    "type": str,
+                    "required": False,
+                },
+            ],
         }
-        for default_input_name in default_inputs:
-            if default_input_name not in llm_inputs:
-                llm_inputs[default_input_name] = default_inputs[default_input_name]
+
+    def _get_function_inputs(
+        self, llm_inputs: dict[str, Any], real_inputs: list[ToolInput]
+    ) -> dict[str, Any]:
 
         # if the inputs match the 'schema' of keys: description, type, default, value, then take the value
         for input_name in llm_inputs:
@@ -238,254 +201,174 @@ class DecisionNode:
             ):
                 llm_inputs[input_name] = llm_inputs[input_name]["value"]
 
+        # any non-provided inputs are set to the default
+        default_inputs = {value.name: value.default for value in real_inputs}
+        for default_input_name in default_inputs:
+            if default_input_name not in llm_inputs:
+                llm_inputs[default_input_name] = default_inputs[default_input_name]
+
         return llm_inputs
 
-    async def load_model_from_examples(
-        self,
-        decision_executor: dspy.Module,
-        client_manager: ClientManager,
-        user_prompt: str,
-    ) -> dspy.Module:
-
-        examples = await retrieve_feedback(client_manager, user_prompt, "decision")
-
-        if len(examples) == 0:
-            return decision_executor
-
-        optimizer = dspy.LabeledFewShot(k=10)
-        compiled_executor = optimizer.compile(decision_executor, trainset=examples)
-        return compiled_executor
-
     def _tool_assertion(self, pred: dspy.Prediction, kwargs: dict) -> tuple[bool, str]:
+        available_option_names = [
+            action["name"] for action in kwargs["available_actions"]
+        ]
         return (
-            pred.function_name in kwargs["available_actions"],
+            pred.function_name in available_option_names,
             f"You picked the action `{pred.function_name}` - that is not in `available_actions`! "
-            f"Your output MUST be one of the following: {list(kwargs['available_actions'].keys())}",
+            f"Your output MUST be one of the following: {available_option_names}",
         )
-
-    def _get_view_environment(self):
-        return {
-            "function_name": "view_environment",
-            "description": (
-                "An auxiliary tool to inspect the current environment containing all objects from this session. "
-                "Use this tool when you need to reference existing data before making decisions or selecting other actions. "
-                "This tool does NOT complete the user's request immediately, it only helps you gather information to inform your next action choice or inputs. "
-                "After viewing the environment, you can select another tool after selecting this tool from available_actions. "
-                "Retrieved objects from previous tool calls are stored here. "
-                "Optionally input tool_name to filter by a specific tool's results. "
-                "Optionally input metadata_key and metadata_value to filter by specific metadata criteria. "
-            ),
-            "inputs": {
-                "tool_name": {
-                    "description": (
-                        "The name of the tool to view the environment for. Top level key for the environment. "
-                        "If not provided or None, view the entire environment."
-                    ),
-                    "default": None,
-                    "type": str,
-                },
-                "metadata_key": {
-                    "description": (
-                        "A key of the metadata to view the environment for. Subkey for the environment. "
-                        "If not provided or None, view all objects for the given tool_name. "
-                        "If provided metadata_key, must provide metadata_value. "
-                    ),
-                    "default": None,
-                    "type": str,
-                },
-                "metadata_value": {
-                    "description": (
-                        "A value of the metadata to view the environment for. Subkey for the environment. "
-                        "If not provided or None, view all objects for the given tool_name."
-                        "If provided metadata_value, must provide metadata_key. "
-                    ),
-                    "default": None,
-                    "type": str,
-                },
-            },
-        }
 
     async def _execute_view_environment(
         self, kwargs: dict, tree_data: TreeData, inputs: dict, lm: dspy.LM
     ):
 
         history = dspy.History(messages=[])
-        history.messages.append({**kwargs})
+        view_env_inputs = self._get_view_environment()["inputs"]
 
-        if self.logger:
-            self.logger.debug(
-                f"Model picked view_environment, using environment decision executor."
+        chosen_function = "view_environment"
+        max_env_views = 3
+        i = 0
+
+        while chosen_function == "view_environment" and i < max_env_views:
+
+            history.messages.append({**kwargs})
+
+            function_inputs = self._get_function_inputs(
+                llm_inputs=inputs,
+                real_inputs=[
+                    ToolInput(
+                        name=i.get("name", ""),
+                        description=i.get("description", ""),
+                        type=i.get("type", Any),
+                        default=i.get("default", None),
+                        required=i.get("required", False),
+                    )
+                    for i in view_env_inputs
+                ],
             )
+            tool_name = function_inputs["tool_name"]
+            metadata_key = function_inputs["metadata_key"]
+            metadata_value = function_inputs["metadata_value"]
 
-        function_inputs = self._get_function_inputs(
-            llm_inputs=inputs,
-            real_inputs=self._get_view_environment()["inputs"],
-        )
-        tool_name = function_inputs["tool_name"]
-        metadata_key = function_inputs["metadata_key"]
-        metadata_value = function_inputs["metadata_value"]
-
-        if (
-            metadata_key
-            and metadata_value
-            and tool_name
-            and tool_name in tree_data.environment.environment
-        ):
-            environment = (
-                tree_data.environment.get_objects(
-                    tool_name=tool_name,
-                    metadata_key=metadata_key,
-                    metadata_value=metadata_value,
+            if (
+                metadata_key
+                and metadata_value
+                and tool_name
+                and tool_name in tree_data.environment.environment
+            ):
+                environment = (
+                    tree_data.environment.get_objects(
+                        tool_name=tool_name,
+                        metadata_key=metadata_key,
+                        metadata_value=metadata_value,
+                    )
+                    or tree_data.environment.to_json()["environment"]
                 )
-                or tree_data.environment.to_json()["environment"]
-            )
-        elif tool_name and tool_name in tree_data.environment.environment:
-            environment = [
-                {
-                    "metadata": item.metadata,
-                    "objects": item.objects,
-                }
-                for item in tree_data.environment.get(tool_name) or []
-            ]
-        else:
-            environment = tree_data.environment.to_json()["environment"]
+            elif tool_name and tool_name in tree_data.environment.environment:
+                environment = [
+                    {
+                        "metadata": item.metadata,
+                        "objects": item.objects,
+                    }
+                    for item in tree_data.environment.get(tool_name) or []
+                ]
+            else:
+                environment = tree_data.environment.to_json()["environment"]
 
-        environment_decision_executor = ElysiaChainOfThought(
-            DPWithEnvMetadataResponse,
-            tree_data=tree_data,
-            collection_schemas=self.use_elysia_collections,
-            tasks_completed=True,
-            message_update=True,
-            reasoning=tree_data.settings.BASE_USE_REASONING,
-        )
-        available_actions = kwargs["available_actions"]
-        available_actions.pop("view_environment")
-        pred = await environment_decision_executor.predict.aforward(
-            environment=environment,
-            available_actions=available_actions,
-            history=history,
-            lm=lm,
-        )
+            environment_decision_executor = ElysiaChainOfThought(
+                DPWithEnvMetadataResponse,
+                tree_data=tree_data,
+                collection_schemas=tree_data.use_weaviate_collections,
+                tasks_completed=True,
+                message_update=True,
+                reasoning=tree_data.settings.BASE_USE_REASONING,
+            )
+
+            pred = await environment_decision_executor.predict.aforward(
+                environment=environment,
+                available_actions=kwargs["available_actions"],
+                history=history,
+                lm=lm,
+            )
+
+            chosen_function = pred.function_name
+            inputs = pred.function_inputs
+            i += 1
+
+            kwargs = {
+                "environment": environment,
+                "available_actions": kwargs["available_actions"],
+                **pred,
+            }
 
         return pred
 
-    async def __call__(
+    async def decide(
         self,
         tree_data: TreeData,
         base_lm: dspy.LM,
         complex_lm: dspy.LM,
-        available_tools: list[str],
-        unavailable_tools: list[tuple[str, str]],
-        successive_actions: dict,
-        client_manager: ClientManager,
-        **kwargs,
-    ) -> tuple[Decision, list[TrainingUpdate | Status | Response | FewShotExamples]]:
-        """
-        Make a decision from the current node.
-        If only one option is available, and there are no function inputs, that is the decision.
-        Otherwise, use the decision executor to make a decision:
-        1. Picks a tool from the available options
-        2. (Optional) If an incorrect decision is made, add feedback in conversation history and try again. Errors on reaching max attempts.
-        3. (Optional) If the decision needs to look at the environment, use the environment executor to make a decision.
-        """
+        options: list[ToolOption],
+        client_manager: ClientManager | None = None,
+    ) -> tuple[Decision, Sequence[Result | Update | Text | Error | TrainingUpdate]]:
 
-        available_options = self._options_to_json(available_tools)
-        unavailable_options = self._unavailable_options_to_json(unavailable_tools)
+        available_options = [
+            {
+                "name": option.name,
+                "description": option.description,
+                "inputs": [o.model_dump() for o in option.inputs],
+            }
+            for option in options
+            if option.available
+        ]
+        unavailable_options = [
+            {
+                "name": option.name,
+                "available_at": option.unavailable_reason,
+            }
+            for option in options
+            if not option.available
+        ]
 
-        if len(available_options) == 0:
-            raise RuntimeError(
-                "No available tools to call! Make sure you have added some tools to the tree. "
-                "Or the .is_tool_available() method is returning True for at least one tool."
-            )
+        if len(available_options) == 1:
+            only_option = next(option for option in options if option.available)
+            if only_option.inputs == []:
+                return (
+                    Decision(
+                        function_name=only_option.name,
+                        function_inputs={},
+                        reasoning="Only one option available, no inputs required.",
+                        end_actions=False,
+                    ),
+                    [],
+                )
 
-        if self.logger:
-            self.logger.debug(f"Available options: {list(available_options.keys())}")
-
-        one_choice = (
-            all(option["inputs"] == {} for option in available_options.values())
-            and len(available_options) == 1
-        )
-
-        # add environment view to tools
         # TODO: replace this with actual token counting
         env_token_limit_reached = (
             len(json.dumps(tree_data.environment._unhidden_to_json()))
             > tree_data.env_token_limit
         )
         if env_token_limit_reached:
-            available_options["view_environment"] = self._get_view_environment()
+            available_options.append(self._get_view_environment())
             signature = DPWithEnvMetadata
         else:
             signature = DPWithEnv
 
-        if one_choice:
-
-            if self.logger:
-                self.logger.debug(
-                    f"Only one option available: {list(available_options.keys())[0]} (and no function inputs are needed)."
-                )
-
-            decision = Decision(
-                function_name=list(available_options.keys())[0],
-                reasoning=f"Only one option available: {list(available_options.keys())[0]} (and no function inputs are needed).",
-                impossible=False,
-                function_inputs={},
-                end_actions=(
-                    bool(self.options[list(available_options.keys())[0]]["end"])
-                    and self.options[list(available_options.keys())[0]]["next"] is None
-                ),
-            )
-
-            results: list[TrainingUpdate | Status | Response | FewShotExamples] = [
-                Status(str(self.options[list(available_options.keys())[0]]["status"])),
-            ]
-
-            return decision, results
-
         decision_executor = ElysiaChainOfThought(
             signature,
             tree_data=tree_data,
-            environment=not env_token_limit_reached,
-            collection_schemas=self.use_elysia_collections,
+            collection_schemas=tree_data.use_weaviate_collections,
             tasks_completed=True,
-            message_update=True,
+            message_update=False,
+            impossible=False,
             reasoning=tree_data.settings.BASE_USE_REASONING,
+            environment=not env_token_limit_reached,
         )
         decision_executor = AssertedModule(
             decision_executor,
             self._tool_assertion,
         )
-
-        # TODO: do feedback thing
-        # if tree_data.settings.USE_FEEDBACK:
-        #     if not client_manager.is_client:
-        #         raise ValueError(
-        #             "A Weaviate connection is required for the experimental `use_feedback` method. "
-        #             "Please set the WCD_URL and WCD_API_KEY in the settings. "
-        #             "Or, set `use_feedback` to False."
-        #         )
-
-        #     if self.logger:
-        #         self.logger.debug(f"Using feedback examples for decision executor.")
-
-        #     pred, uuids = await decision_executor.aforward_with_feedback_examples(
-        #         feedback_model="decision",
-        #         client_manager=client_manager,
-        #         base_lm=base_lm,
-        #         complex_lm=complex_lm,
-        #         instruction=self.instruction,
-        #         tree_count=tree_data.tree_count_string(),
-        #         environment_metadata=tree_data.environment.output_llm_metadata(),
-        #         available_actions=available_options,
-        #         unavailable_actions=unavailable_options,
-        #         successive_actions=successive_actions,
-        #         num_base_lm_examples=3,
-        #         return_example_uuids=True,
-        #     )
-        # else:
-
-        if self.logger:
-            self.logger.debug(f"Using base LM for decision executor.")
 
         pred = await decision_executor.aforward(
             instruction=self.instruction,
@@ -493,22 +376,23 @@ class DecisionNode:
             environment_metadata=tree_data.environment.output_llm_metadata(),
             available_actions=available_options,
             unavailable_actions=unavailable_options,
-            successive_actions=successive_actions,
             lm=base_lm,
         )
 
-        if pred.function_name.startswith("'") and pred.function_name.endswith("'"):
-            pred.function_name = pred.function_name[1:-1]
-        elif pred.function_name.startswith('"') and pred.function_name.endswith('"'):
-            pred.function_name = pred.function_name[1:-1]
-        elif pred.function_name.startswith("`") and pred.function_name.endswith("`"):
-            pred.function_name = pred.function_name[1:-1]
-
-        if pred.function_name not in available_options:
-            raise Exception(
-                f"Model picked an action `{pred.function_name}` that is not in the available tools: {available_tools}"
+        results = [
+            TrainingUpdate(
+                module_name="decision",
+                inputs={
+                    "instruction": self.instruction,
+                    "tree_count": tree_data.tree_count_string(),
+                    "environment_metadata": tree_data.environment.output_llm_metadata(),
+                    "available_actions": available_options,
+                    "unavailable_actions": unavailable_options,
+                    **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
+                },
+                outputs={k: v for k, v in pred.__dict__["_store"].items()},
             )
-
+        ]
         if pred.function_name == "view_environment":
             pred = await self._execute_view_environment(
                 kwargs={
@@ -518,7 +402,6 @@ class DecisionNode:
                     "environment_metadata": tree_data.environment.output_llm_metadata(),
                     "available_actions": available_options,
                     "unavailable_actions": unavailable_options,
-                    "successive_actions": successive_actions,
                     **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
                     **pred,
                 },
@@ -527,34 +410,22 @@ class DecisionNode:
                 lm=base_lm,
             )
 
-        decision = Decision(
-            pred.function_name,
-            self._get_function_inputs(
-                llm_inputs=pred.function_inputs,
-                real_inputs=available_options[pred.function_name]["inputs"],
+        return (
+            Decision(
+                function_name=pred.function_name,
+                function_inputs=self._get_function_inputs(
+                    llm_inputs=pred.function_inputs,
+                    real_inputs=next(
+                        option
+                        for option in options
+                        if pred.function_name == option.name
+                    ).inputs,
+                ),
+                reasoning=pred.reasoning,
+                end_actions=pred.end_actions,
             ),
-            pred.reasoning if tree_data.settings.BASE_USE_REASONING else "",
-            pred.impossible,
-            pred.end_actions and bool(self.options[pred.function_name]["end"]),
+            results,
         )
-
-        results = [
-            TrainingUpdate(
-                module_name="decision",
-                inputs=tree_data.to_json(),
-                outputs={k: v for k, v in pred.__dict__["_store"].items()},
-            ),
-            Status(str(self.options[pred.function_name]["status"])),
-        ]
-
-        if pred.function_name != "text_response":
-            results.append(Response(pred.message_update))
-
-        # TODO: do feedback thing
-        # if tree_data.settings.USE_FEEDBACK and len(uuids) > 0:
-        #     results.append(FewShotExamples(uuids))
-
-        return decision, results
 
 
 class TreeReturner:

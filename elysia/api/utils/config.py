@@ -316,7 +316,7 @@ class Config:
         agent_description: str | None = None,
         end_goal: str | None = None,
         branch_initialisation: BranchInitType = "one_branch",
-        use_elysia_collections: bool = True,
+        use_weaviate_collections: bool = True,
     ):
 
         if id is None:
@@ -353,7 +353,7 @@ class Config:
             self.end_goal = end_goal
 
         self.branch_initialisation: BranchInitType = branch_initialisation
-        self.use_elysia_collections: bool = use_elysia_collections
+        self.use_weaviate_collections: bool = use_weaviate_collections
 
     def to_json(self):
         return {
@@ -368,7 +368,7 @@ class Config:
                 if self.branch_initialisation is not None
                 else "one_branch"
             ),
-            "use_elysia_collections": self.use_elysia_collections,
+            "use_weaviate_collections": self.use_weaviate_collections,
         }
 
     @classmethod
@@ -384,9 +384,9 @@ class Config:
             agent_description=json["agent_description"],
             end_goal=json["end_goal"],
             branch_initialisation=json["branch_initialisation"],
-            use_elysia_collections=(
-                json["use_elysia_collections"]
-                if "use_elysia_collections" in json
+            use_weaviate_collections=(
+                json["use_weaviate_collections"]
+                if "use_weaviate_collections" in json
                 else True
             ),
         )

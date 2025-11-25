@@ -208,11 +208,9 @@ def test_view_environment_incorrect_items():
     tree = Tree()
 
     if "cited_summarize" in tree.tools:
-        tree.remove_tool("cited_summarize", branch_id="base")
+        tree.remove_tool("cited_summarize")
     if "query_postprocessing" in tree.tools:
-        tree.remove_tool(
-            "query_postprocessing", branch_id="base", from_tool_ids=["query"]
-        )
+        tree.remove_tool("query_postprocessing")
 
     # add random items to the environment
     tree.tree_data.environment.add_objects(

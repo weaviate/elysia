@@ -9,7 +9,7 @@
 >
 > If you encounter any issues, please [open an issue on GitHub](https://github.com/weaviate/elysia/issues).
 
-[![PyPI Downloads](https://static.pepy.tech/badge/elysia-ai)](https://pepy.tech/projects/elysia-ai) [![Demo](https://img.shields.io/badge/Check%20out%20the%20demo!-yellow?&style=flat-square&logo=react&logoColor=white)](https://elysia.weaviate.io/)
+[![PyPI Downloads](https://static.pepy.tech/badge/elysia-ai)](https://pepy.tech/projects/elysia-ai) [![Demo](https://img.shields.io/badge/Check%20out%20the%20demo!-yellow?&style=flat-square&logo=react&logoColor=white)](https://elysia.weaviate.io/) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Elysia is an agentic platform designed to use tools in a decision tree. A decision agent decides which tools to use dynamically based on its environment and context. You can use custom tools or use the pre-built tools designed to retrieve your data in a Weaviate cluster.
 

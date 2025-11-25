@@ -3,7 +3,7 @@ import json
 import time
 import textwrap
 from copy import deepcopy
-from typing import AsyncGenerator, Literal
+from typing import AsyncGenerator, Literal, Any
 
 import dspy
 from pympler import asizeof
@@ -14,6 +14,7 @@ from rich.panel import Panel
 import uuid
 
 # Weaviate
+from sympy.strategies import branch
 import weaviate.classes.config as wc
 from weaviate.util import generate_uuid5
 
@@ -21,8 +22,10 @@ from weaviate.util import generate_uuid5
 from elysia.config import Settings, ElysiaKeyManager
 from elysia.config import settings as environment_settings
 from elysia.tree.util import (
-    DecisionNode,
+    Node,
     TreeReturner,
+    ToolOption,
+    ToolInput,
     Decision,
     get_follow_up_suggestions,
     create_conversation_title,
@@ -78,7 +81,7 @@ class Tree:
         conversation_id: str | None = None,
         preset_id: str | None = None,
         low_memory: bool = False,
-        use_elysia_collections: bool = True,
+        use_weaviate_collections: bool = True,
         settings: Settings | None = None,
     ) -> None:
         """
@@ -96,7 +99,7 @@ class Tree:
             low_memory (bool): Whether to run the tree in low memory mode.
                 If True, the tree will not load the (dspy) models within the tree.
                 Set to False for normal operation.
-            use_elysia_collections (bool): Whether to use weaviate collections as processed by Elysia.
+            use_weaviate_collections (bool): Whether to use weaviate collections as processed by Elysia.
                 If False, the tree will not use the processed collections.
             settings (Settings): The settings for the tree, an object of elysia.Settings.
                 This is automatically set to the environment settings if not provided.
@@ -122,10 +125,8 @@ class Tree:
             ), "settings must be an instance of Settings"
             self.settings = settings
 
-        self.use_elysia_collections = use_elysia_collections
-
         # Initialise some tree variables
-        self.decision_nodes: dict[str, DecisionNode] = {}
+        self.nodes: dict[str, Node] = {}
         self.decision_history = [[]]
         self.tree_index = -1
         self.suggestions = []
@@ -154,6 +155,7 @@ class Tree:
             ),
             recursion_limit=5,
             settings=self.settings,
+            use_weaviate_collections=use_weaviate_collections,
         )
 
         # initialise the timers
@@ -163,7 +165,7 @@ class Tree:
         )
 
         # Set the initialisations
-        self.tools = {}
+        self.tools: dict[str, Tool] = {}
         self.set_branch_initialisation(branch_initialisation)
         self.tree_data.atlas.style = style
         self.tree_data.atlas.agent_description = agent_description
@@ -178,8 +180,8 @@ class Tree:
 
         # -- Get the root node and construct the tree
         self._get_root()
-        self.tree = {}
-        self._construct_tree(self.root, self.tree)
+        # self.tree = {}
+        # self._construct_tree(self.root, self.tree)
 
         # initialise the returner (for frontend)
         self.returner = TreeReturner(
@@ -191,10 +193,11 @@ class Tree:
         self.settings.logger.debug(
             "Initialised tree with the following decision nodes:"
         )
-        for decision_node in self.decision_nodes.values():
-            self.settings.logger.debug(
-                f"  - [magenta]{decision_node.id}[/magenta]: {list(decision_node.options.keys())}"
-            )
+        for node in self.nodes.values():
+            if len(node.options) > 0:
+                self.settings.logger.debug(
+                    f"  - [magenta]{node.name}[/magenta]: {[self.nodes[o].name for o in node.options]}"
+                )
 
     @property
     def base_lm(self) -> dspy.LM:
@@ -215,9 +218,8 @@ class Tree:
             return self._complex_lm
 
     def multi_branch_init(self) -> None:
-        self.add_branch(
-            root=True,
-            branch_id="base",
+        base_id = self.add_branch(
+            name="base",
             instruction="""
             Choose a base-level task based on the user's prompt and available information.
             You can search, which includes aggregating or querying information - this should be used if the user needs (more) information.
@@ -227,13 +229,12 @@ class Tree:
             """,
             status="Choosing a base-level task...",
         )
-        self.add_tool(branch_id="base", tool=CitedSummarizer)
-        self.add_tool(branch_id="base", tool=FakeTextResponse)
+        self.add_tool(from_node_id=base_id, tool=CitedSummarizer, end=True)
+        self.add_tool(from_node_id=base_id, tool=FakeTextResponse, end=True)
 
-        self.add_branch(
-            root=False,
-            branch_id="search",
-            from_branch_id="base",
+        search_id = self.add_branch(
+            name="search",
+            from_node_id=base_id,
             instruction="""
             Choose between querying the knowledge base via semantic/keyword search, or aggregating information by performing operations, on the knowledge base.
             Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query. This is for retrieving specific information via a _query_, similar to a search engine.
@@ -245,15 +246,16 @@ class Tree:
             """,
             status="Searching the knowledge base...",
         )
-        self.add_tool(branch_id="search", tool=Query, summariser_in_tree=True)
-        self.add_tool(branch_id="search", tool=Aggregate)
-        self.add_tool(branch_id="base", tool=Visualise)
-        self.add_tool(SummariseItems, branch_id="search", from_tool_ids=["query"])
+        query_id = self.add_tool(
+            from_node_id=search_id, tool=Query, summariser_in_tree=True, end=False
+        )
+        self.add_tool(from_node_id=search_id, tool=Aggregate, end=False)
+        self.add_tool(from_node_id=base_id, tool=Visualise, end=False)
+        self.add_tool(SummariseItems, from_node_id=query_id)
 
     def one_branch_init(self) -> None:
-        self.add_branch(
-            root=True,
-            branch_id="base",
+        base_id = self.add_branch(
+            name="base",
             instruction="""
             Choose a base-level task based on the user's prompt and available information.
             Decide based on the tools you have available as well as their descriptions.
@@ -261,17 +263,18 @@ class Tree:
             """,
             status="Choosing a base-level task...",
         )
-        self.add_tool(branch_id="base", tool=CitedSummarizer)
-        self.add_tool(branch_id="base", tool=FakeTextResponse)
-        self.add_tool(branch_id="base", tool=Aggregate)
-        self.add_tool(branch_id="base", tool=Query, summariser_in_tree=True)
-        self.add_tool(branch_id="base", tool=Visualise)
-        self.add_tool(SummariseItems, branch_id="base", from_tool_ids=["query"])
+        self.add_tool(from_node_id=base_id, tool=CitedSummarizer, end=True)
+        self.add_tool(from_node_id=base_id, tool=FakeTextResponse, end=True)
+        self.add_tool(from_node_id=base_id, tool=Aggregate, end=False)
+        query_id = self.add_tool(
+            from_node_id=base_id, tool=Query, summariser_in_tree=True, end=False
+        )
+        self.add_tool(from_node_id=base_id, tool=Visualise, end=False)
+        self.add_tool(SummariseItems, from_node_id=query_id)
 
     def empty_init(self) -> None:
         self.add_branch(
-            root=True,
-            branch_id="base",
+            name="base",
             instruction="""
             Choose a base-level task based on the user's prompt and available information.
             Decide based on the tools you have available as well as their descriptions.
@@ -281,7 +284,7 @@ class Tree:
         )
 
     def clear_tree(self) -> None:
-        self.decision_nodes = {}
+        self.nodes: dict[str, Node] = {}
         self.root = None
 
     def set_branch_initialisation(self, initialisation: str | None) -> None:
@@ -338,94 +341,95 @@ class Tree:
         self._config_modified = True
 
     def _get_root(self) -> None:
-        for decision_node in self.decision_nodes.values():
-            if decision_node.root:
-                if self.root is not None and self.root != decision_node.id:
-                    raise ValueError("Multiple root decision nodes found")
+        self.root = None
+        for node_id, node in self.nodes.items():
+            if node.root:
+                if self.root is not None and self.root != node_id:
+                    raise ValueError("Multiple root nodes found")
 
-                self.root = decision_node.id
+                self.root = node_id
 
         if self.root is None:
-            raise ValueError("No root decision node found")
+            raise ValueError("No root node found")
 
-    def _construct_tree(
-        self, node_id: str | None, tree: dict, branch: bool = True
-    ) -> dict:
-        if node_id is None:
-            raise ValueError("Node ID is None")
+    # def _construct_tree(
+    #     self, node_id: str | None, tree: dict, branch: bool = True
+    # ) -> dict:
+    #     if node_id is None:
+    #         raise ValueError("Node ID is None")
 
-        decision_node = self.decision_nodes[node_id]
+    #     node = self.nodes[node_id]
 
-        # Ensure the order of the keys in each option is the same
-        key_order = [
-            "name",
-            "id",
-            "description",
-            "instruction",
-            "reasoning",
-            "branch",
-            "options",
-        ]
+    #     # Ensure the order of the keys in each option is the same
+    #     key_order = [
+    #         "name",
+    #         "id",
+    #         "description",
+    #         "instruction",
+    #         "reasoning",
+    #         "branch",
+    #         "options",
+    #     ]
 
-        # Set the base node information
-        tree["name"] = node_id.capitalize().replace("_", " ")
-        tree["id"] = node_id
-        if node_id == self.root:
-            tree["description"] = ""
-        tree["instruction"] = remove_whitespace(
-            decision_node.instruction.replace("\n", "")
-        )
-        tree["reasoning"] = ""
-        tree["branch"] = branch
-        tree["options"] = {}
+    #     # Set the base node information
+    #     tree["name"] = node_id.capitalize().replace("_", " ")
+    #     tree["id"] = node_id
+    #     if node_id == self.root:
+    #         tree["description"] = ""
+    #     tree["instruction"] = remove_whitespace(
+    #         node.instruction.replace("\n", "")
+    #     )
+    #     tree["reasoning"] = ""
+    #     tree["branch"] = branch
+    #     tree["options"] = {}
 
-        # Order the top-level dictionary
-        tree = {key: tree[key] for key in key_order if key in tree}
+    #     # Order the top-level dictionary
+    #     tree = {key: tree[key] for key in key_order if key in tree}
 
-        # Initialize all options first with ordered dictionaries
-        for option in decision_node.options:
-            tree["options"][option] = {
-                "description": remove_whitespace(
-                    str(decision_node.options[option]["description"]).replace("\n", "")
-                )
-            }
+    #     # Initialize all options first with ordered dictionaries
+    #     for option in node.options:
+    #         tree["options"][option] = {
+    #             "description": remove_whitespace(
+    #                 str(node.options[option]["description"]).replace("\n", "")
+    #             )
+    #         }
 
-        # Then handle the recursive cases
-        for option in decision_node.options:
-            next_node: DecisionNode | None = decision_node.options[option]["next"]  # type: ignore
-            if (
-                decision_node.options[option]["action"] is not None
-                and next_node is None
-            ):
-                tree["options"][option]["name"] = option.capitalize().replace("_", " ")
-                tree["options"][option]["id"] = option
-                tree["options"][option]["instruction"] = ""
-                tree["options"][option]["reasoning"] = ""
-                tree["options"][option]["branch"] = False
-                tree["options"][option]["options"] = {}
+    #     # Then handle the recursive cases
+    #     for option in decision_node.options:
+    #         next_node: DecisionNode | None = decision_node.options[option]["next"]  # type: ignore
+    #         if (
+    #             decision_node.options[option]["action"] is not None
+    #             and next_node is None
+    #         ):
+    #             tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+    #             tree["options"][option]["id"] = option
+    #             tree["options"][option]["instruction"] = ""
+    #             tree["options"][option]["reasoning"] = ""
+    #             tree["options"][option]["branch"] = False
+    #             tree["options"][option]["options"] = {}
 
-            elif next_node is not None:
-                tree["options"][option] = self._construct_tree(
-                    next_node.id,
-                    tree["options"][option],
-                    branch=decision_node.options[option]["action"] is None,
-                )
-            else:
-                tree["options"][option]["name"] = option.capitalize().replace("_", " ")
-                tree["options"][option]["id"] = option
-                tree["options"][option]["instruction"] = ""
-                tree["options"][option]["reasoning"] = ""
-                tree["options"][option]["branch"] = True
-                tree["options"][option]["options"] = {}
+    #         elif next_node is not None:
+    #             tree["options"][option] = self._construct_tree(
+    #                 next_node.id,
+    #                 tree["options"][option],
+    #                 branch=decision_node.options[option]["action"] is None,
+    #             )
+    #         else:
+    #             tree["options"][option]["name"] = option.capitalize().replace("_", " ")
+    #             tree["options"][option]["id"] = option
+    #             tree["options"][option]["instruction"] = ""
+    #             tree["options"][option]["reasoning"] = ""
+    #             tree["options"][option]["branch"] = True
+    #             tree["options"][option]["options"] = {}
 
-            # Order each option's dictionary
-            tree["options"][option] = {
-                key: tree["options"][option][key]
-                for key in key_order
-                if key in tree["options"][option]
-            }
+    #         # Order each option's dictionary
+    #         tree["options"][option] = {
+    #             key: tree["options"][option][key]
+    #             for key in key_order
+    #             if key in tree["options"][option]
+    #         }
 
-        return tree
+    #     return tree
 
     async def set_collection_names(
         self,
@@ -440,36 +444,17 @@ class Tree:
             collection_names, client_manager
         )
 
-    def _remove_empty_branches(self) -> list[str]:
-        empty_branches = []
-        for branch_id, branch in self.decision_nodes.items():
-            if len(branch.options) == 0:
-                empty_branches.append(branch_id)
-
-        for branch_id in self.decision_nodes:
-            for empty_branch in empty_branches:
-                self.decision_nodes[branch_id].remove_option(empty_branch)
-
-        for empty_branch in empty_branches:
-            if empty_branch != self.root:
-                self.settings.logger.warning(
-                    f"Removing empty branch: {empty_branch} "
-                    "No tools are attached to this branch, so it has been removed. "
-                    f"To add a tool to this branch, use .add_tool(tool_name, branch_id={empty_branch})"
-                )
-                del self.decision_nodes[empty_branch]
-
-        return empty_branches
-
     async def _check_rules(
-        self, branch_id: str, client_manager: ClientManager
+        self, node: Node, client_manager: ClientManager
     ) -> tuple[list[str], dict]:
-        branch = self.decision_nodes[branch_id]
+
         nodes_with_rules_met = []
         rule_tool_inputs = {}
-        for function_name, option in branch.options.items():
+        for function_name in node.options:
+
             if function_name not in self.tools:
                 pass
+
             elif "run_if_true" in dir(self.tools[function_name]):
                 rule_met, rule_tool_inputs = await self.tools[
                     function_name
@@ -543,25 +528,28 @@ class Tree:
 
     def add_tool(
         self,
-        tool: type[Tool] | Tool,
-        branch_id: str | None = None,
-        from_tool_ids: list[str] = [],
-        root: bool = False,
+        tool: type[Tool] | Tool | str,
+        from_node_id: str | None = None,
+        end: bool = False,
+        status: str = "",
+        node_id: str | None = None,
         **kwargs,
-    ) -> None:
+    ) -> str:
         """
         Add a Tool to a branch or on top of an existing tool.
+        Creates a new node in the tree corresponding to that tool call.
         The tool needs to be an instance of the Tool class.
 
         Args:
             tool (Tool): The tool to add
-            branch_id (str): The id of the branch to add the tool to
-                If not specified, the tool will be added to the root branch
-            from_tool_ids (list[str]): The ids of the tools to add the new tool after
-                If not specified, the tool will be added to the base of the branch
-            root (bool): Whether the tool is on the root branch. Defaults to False.
-                Equivalent to setting `branch_id` to the ID of the root branch.
+            from_node_id (str): The ID of the node to add the tool to. If not specified, the tool will be added to the root node.
+            end (bool): Whether a new tree process can not spawn after this tool call. Optional, defaults to False.
+            status (str): The status message to be displayed when this tool is chosen. Optional, defaults to "Running {tool.name}...".
+            node_id (str): The ID of the node created. If not specified, a new random node ID will be generated and returned.
             kwargs (any): Additional keyword arguments to pass to the initialisation of the tool
+
+        Returns:
+            (str): The node ID of the tool node created.
 
         Example 1:
             To add a tool, `Query`, to a branch called 'search', you can do this:
@@ -591,19 +579,26 @@ class Tree:
             It will add the `SendEmail` tool to the root branch, so can be called at the start of the decision process.
         """
 
-        if (
-            inspect.getfullargspec(tool.__init__).varkw is None
-            or inspect.getfullargspec(tool.__call__).varkw is None
-        ):
-            raise TypeError("tool __init__ and __call__ must accept **kwargs")
+        if not isinstance(tool, str):
+            if (
+                inspect.getfullargspec(tool.__init__).varkw is None
+                or inspect.getfullargspec(tool.__call__).varkw is None
+            ):
+                raise TypeError("tool __init__ and __call__ must accept **kwargs")
 
-        if not inspect.isasyncgenfunction(tool.__call__):
-            raise TypeError(
-                "__call__ must be an async generator function. "
-                "I.e. it must yield objects."
-            )
+            if not inspect.isasyncgenfunction(tool.__call__):
+                raise TypeError(
+                    "__call__ must be an async generator function. "
+                    "I.e. it must yield objects."
+                )
 
-        if isinstance(tool, Tool):
+        if isinstance(tool, str):
+            if tool not in self.tools:
+                raise ValueError(
+                    f"Tool specified as string, but '{tool}' not found in tree (self.tools)."
+                )
+            tool_instance = self.tools[tool]
+        elif isinstance(tool, Tool):
             tool_instance = tool
         else:
             tool_instance = tool(
@@ -632,451 +627,201 @@ class Tree:
                     "run_if_true must be an async function that returns a single boolean value"
                 )
 
-        if root:
-            if branch_id is not None:
+        if node_id is None:
+            node_id = str(uuid.uuid4())
+
+        if from_node_id and from_node_id not in self.nodes:
+            raise ValueError(f"Node with ID '{from_node_id}' not found.")
+
+        if not isinstance(tool, str):
+            if tool_instance.name in self.tools:
                 self.settings.logger.warning(
-                    f"In .add_tool(), `root` is True, so `branch_id` ('{branch_id}') will be ignored. "
-                    f"Tool: '{tool_instance.name}' will be added to the root branch ('{self.root}')."
+                    f"Tool '{tool_instance.name}' already exists in tree (self.tools). Overwriting."
                 )
-            branch_id = self.root
+                del self.tools[tool_instance.name]
+            self.tools[tool_instance.name] = tool_instance
 
-        if branch_id is None:
-            branch_id = self.root
-
-        if branch_id not in self.decision_nodes:
-            raise ValueError(
-                f"Branch '{branch_id}' not found. Use .add_branch() to add a branch before adding a tool. "
-                f"Or, set `root=True` to add the tool to the root branch ('{self.root}')."
+        if from_node_id:
+            self.nodes[from_node_id].options.append(node_id)
+            self.nodes[node_id] = Node(
+                id=node_id,
+                name=tool_instance.name,
+                branch=False,
+                root=False,
+                options=[],
+                end=end,
+                status=f"Running {tool_instance.name}..." if status == "" else status,
             )
 
-        current_decision_node = self.decision_nodes[branch_id]
-        for from_tool_id in from_tool_ids:
-            if isinstance(current_decision_node, DecisionNode):
-                if from_tool_id not in current_decision_node.options:
-                    raise ValueError(
-                        f"Tool '{from_tool_id}' not found in branch '{branch_id}'. "
-                        f"Available options are: {list(current_decision_node.options.keys())}"
-                    )
-
-                current_decision_node = current_decision_node.options[from_tool_id][
-                    "next"
-                ]
-
-        self.tools[tool_instance.name] = tool_instance
-
-        if from_tool_ids == []:
-            self.decision_nodes[branch_id].add_option(
-                id=tool_instance.name,
-                description=tool_instance.description,
-                inputs=tool_instance.inputs,
-                action=self.tools[tool_instance.name],
-                end=tool_instance.end,
-                status=tool_instance.status,
-            )
-        else:
-
-            new_branch_id = branch_id
-            for from_tool_id in from_tool_ids:
-                new_branch_id += f".{from_tool_id}"
-
-            # only create a new decision node if one doesn't exist here
-            if new_branch_id not in self.decision_nodes:
-                decision_node = DecisionNode(
-                    id=new_branch_id,
-                    instruction=f"Choose one of the actions based on their descriptions and the user prompt.",
-                    options={},
-                    root=False,
-                    logger=self.settings.logger,
-                    use_elysia_collections=self.use_elysia_collections,
-                )
-                self.decision_nodes[new_branch_id] = decision_node
-
-                prev_branch_id = branch_id
-                for from_tool_id in from_tool_ids[:-1]:
-                    prev_branch_id += f".{from_tool_id}"
-
-                self.decision_nodes[prev_branch_id].options[from_tool_ids[-1]][
-                    "next"
-                ] = self.decision_nodes[new_branch_id]
-
-            # add the tool to the new decision node
-            self.decision_nodes[new_branch_id].add_option(
-                id=tool_instance.name,
-                description=tool_instance.description,
-                inputs=tool_instance.inputs,
-                action=self.tools[tool_instance.name],
-                end=tool_instance.end,
-                status=tool_instance.status,
-            )
-
-        self.tracker.add_tracker(tool_instance.name)
-
-        # reconstruct tree
+        self.tracker.add_tracker(tracker_name=tool_instance.name)
         self._get_root()
-        self.tree = {}
-        self._construct_tree(self.root, self.tree)
 
-    def remove_tool(
-        self,
-        tool_name: str,
-        branch_id: str | None = None,
-        from_tool_ids: list[str] = [],
-        root: bool = False,
-    ) -> None:
+        return node_id
+
+    def remove_node(self, node_id: str) -> None:
         """
-        Remove a Tool from a branch.
+        Remove a single node from the tree based on its ID.
+
+        Args:
+            node_id (str): The ID of the node to remove.
+        """
+
+        if node_id not in self.nodes:
+            raise ValueError(f"Node with ID '{node_id}' not found.")
+
+        del self.nodes[node_id]
+        for node in self.nodes.values():
+            if node_id in node.options:
+                node.options.remove(node_id)
+
+    def remove_tool(self, tool_name: str) -> None:
+        """
+        Remove a Tool from a completely from the tree. Purges all instances of it across the tree.
 
         Args:
             tool_name (str): The name of the tool to remove.
-            branch_id (str): The id of the branch to remove the tool from,
-                if not specified, the tool will be removed from the root branch.
-            from_tool_ids (list[str]): The ids of the tools to which precedes the tool to remove.
-            root (bool): Whether the branch the tool is in is the root branch.
         """
-        if root:
-            if branch_id is not None:
-                self.settings.logger.warning(
-                    f"In .add_tool(), `root` is True, so `branch_id` ('{branch_id}') will be ignored. "
-                    f"Tool: '{tool_name}' will be removed from the root branch ('{self.root}')."
-                )
-            branch_id = self.root
 
-        if branch_id is None:
-            branch_id = self.root
+        if tool_name not in self.tools:
+            raise ValueError(f"Tool '{tool_name}' not found in tree (self.tools).")
 
-        if branch_id not in self.decision_nodes:
-            raise ValueError(f"Branch {branch_id} not found.")
+        nodes_to_remove = []
+        for node in self.nodes.values():
+            if node.name == tool_name:
+                nodes_to_remove.append(node.id)
 
-        if (
-            tool_name not in self.decision_nodes[branch_id].options
-            and from_tool_ids == []
-        ):
-            raise ValueError(f"Tool {tool_name} not found in branch {branch_id}.")
-
-        current_decision_node = self.decision_nodes[branch_id]
-        for from_tool_id in from_tool_ids:
-            if isinstance(current_decision_node, DecisionNode):
-                if from_tool_id not in current_decision_node.options:
-                    raise ValueError(
-                        f"Tool '{from_tool_id}' not found in branch '{current_decision_node.id}'. "
-                        f"Available options are: {list(current_decision_node.options.keys())}"
-                    )
-                current_decision_node = current_decision_node.options[from_tool_id][
-                    "next"
-                ]
-
-        if (
-            isinstance(current_decision_node, DecisionNode)
-            and tool_name not in current_decision_node.options
-        ):
-            raise ValueError(
-                f"Tool '{tool_name}' not found in branch '{current_decision_node.id}'. "
-                f"Available options are: {list(current_decision_node.options.keys())}"
-            )
-
-        if from_tool_ids == []:
-            self.decision_nodes[branch_id].remove_option(tool_name)
-        else:
-            tool_branch_id = branch_id
-            for from_tool_id in from_tool_ids:
-                tool_branch_id += f".{from_tool_id}"
-            tool_branch_id += f".{tool_name}"
-
-            prev_branch_id = branch_id
-            for from_tool_id in from_tool_ids:
-                prev_branch_id += f".{from_tool_id}"
-
-            self.decision_nodes[prev_branch_id].remove_option(tool_name)
-            if self.decision_nodes[prev_branch_id].options == {}:
-                del self.decision_nodes[prev_branch_id]
-                stem_branch_id = prev_branch_id[: prev_branch_id.rfind(".")]
-                for stem_branch_option in self.decision_nodes[
-                    stem_branch_id
-                ].options.values():
-                    if (
-                        stem_branch_option["next"] is not None
-                        and isinstance(stem_branch_option["next"], DecisionNode)
-                        and stem_branch_option["next"].id == prev_branch_id
-                    ):
-                        stem_branch_option["next"] = None
-
-            if (
-                tool_branch_id in self.decision_nodes
-                and self.decision_nodes[tool_branch_id].options != {}
-            ):
-                self.settings.logger.warning(
-                    f"The following tools stem from '{tool_branch_id}', "
-                    f"and have also been removed: {list(self.decision_nodes[tool_branch_id].options.keys())}"
-                )
-
-            # find any decision nodes that stem from this
-            nodes_to_remove = []
-            for decision_node_id in self.decision_nodes:
-                if decision_node_id.startswith(tool_branch_id):
-                    if decision_node_id != tool_branch_id:
-                        self.settings.logger.warning(
-                            f"Decision node '{decision_node_id}' stems from '{tool_branch_id}'. "
-                            f"Removing tool '{tool_name}' has also removed '{decision_node_id}'."
-                        )
-                    nodes_to_remove.append(decision_node_id)
-
-            for decision_node_id in nodes_to_remove:
-                del self.decision_nodes[decision_node_id]
+        for node_id in nodes_to_remove:
+            for node in self.nodes.values():
+                if node_id in node.options:
+                    node.options.remove(node_id)
+            del self.nodes[node_id]
 
         del self.tools[tool_name]
         self.tracker.remove_tracker(tool_name)
 
-        # reconstruct tree
-        self._get_root()
-        self.tree = {}
-        self._construct_tree(self.root, self.tree)
-
     def add_branch(
         self,
-        branch_id: str,
-        instruction: str,
+        name: str,
+        instruction: str = "",
         description: str = "",
-        root: bool = False,
-        from_branch_id: str = "",
-        from_tool_ids: list[str] = [],
+        node_id: str | None = None,
+        from_node_id: str | None = None,
         status: str = "",
-    ) -> None:
+    ) -> str:
         """
-        Add a branch to the tree.
+        Add a branch to the tree. Creates a new node in the tree corresponding to that branch.
 
         args:
-            branch_id (str): The id of the branch being added.
             instruction (str): The general instruction for the branch, what is this branch containing?
                 What kind of tools or actions are being decided on this branch?
                 Only displayed to the decision maker when this branch is chosen.
             description (str): A description of the branch, if it is to be chosen from a previous branch.
                 How does the model know whether to choose this branch or not?
-            root (bool): Whether this is the root branch, i.e. the beginning of the tree.
-            from_branch_id (str): The id of the branch that this branch is stemming from.
-            from_tool_ids (list[str]): The ids of the tools that precede this branch being added (after the `from_branch_id` branch).
+            node_id (str): The id of the node being added. If not specified, a new random node ID will be generated and returned.
+            from_node_id (str): The id of the node to add the branch to. If not specified, the branch will be the root node.
             status (str): The status message to be displayed when this branch is chosen.
         """
-        if not root and description == "":
+        if from_node_id is not None and description == "":
             raise ValueError("Description is required for non-root branches.")
-        if not root and from_branch_id == "":
-            raise ValueError(
-                "`from_branch_id` is required for non-root branches. "
-                "Set `root=True` to create a root branch or choose where this branch stems from."
-            )
-        if root and description != "":
+
+        if from_node_id and description != "":
             self.settings.logger.warning(f"Description is not used for root branches. ")
-            description = ""
 
-        if root and from_branch_id != "":
-            self.settings.logger.warning(
-                "`from_branch_id` is not used for root branches. "
-                "(As this is the root branch, it does not stem from any other branch.)"
-                "If you wish this to be stemming from a previous branch, set `root=False`."
-            )
-            from_branch_id = ""
+        if node_id is None:
+            node_id = str(uuid.uuid4())
 
-        if status == "":
-            status = f"Running {branch_id}..."
-
-        decision_node = DecisionNode(
-            id=branch_id,
+        self.nodes[node_id] = Node(
+            id=node_id,
+            name=name,
+            branch=True,
+            root=from_node_id is None,
+            options=[],
+            end=False,
+            status=status,
             instruction=instruction,
-            options={},
-            root=root,
-            logger=self.settings.logger,
-            use_elysia_collections=self.use_elysia_collections,
-        )
-        self.decision_nodes[branch_id] = decision_node
-
-        if not root:
-
-            if from_tool_ids == []:
-                self.decision_nodes[from_branch_id].add_option(
-                    id=branch_id,
-                    description=description,
-                    inputs={},
-                    action=None,
-                    end=False,
-                    status=status,
-                    next=self.decision_nodes[branch_id],
-                )
-
-            else:
-
-                current_decision_node = self.decision_nodes[from_branch_id]
-                for from_tool_id in from_tool_ids:
-                    if isinstance(current_decision_node, DecisionNode):
-                        if from_tool_id not in current_decision_node.options:
-                            raise ValueError(
-                                f"Tool '{from_tool_id}' not found in branch '{from_branch_id}'. "
-                                f"Available options are: {list(current_decision_node.options.keys())}"
-                            )
-                        current_decision_node = current_decision_node.options[
-                            from_tool_id
-                        ]["next"]
-
-                new_branch_id = from_branch_id
-                for from_tool_id in from_tool_ids:
-                    new_branch_id += f".{from_tool_id}"
-
-                # only create a new decision node if one doesn't exist here
-                if new_branch_id not in self.decision_nodes:
-                    decision_node = DecisionNode(
-                        id=new_branch_id,
-                        instruction=f"Choose one of the actions based on their descriptions and the user prompt.",
-                        options={},
-                        root=False,
-                        logger=self.settings.logger,
-                        use_elysia_collections=self.use_elysia_collections,
-                    )
-                    self.decision_nodes[new_branch_id] = decision_node
-
-                    prev_branch_id = branch_id
-                    for from_tool_id in from_tool_ids[:-1]:
-                        prev_branch_id += f".{from_tool_id}"
-
-                    self.decision_nodes[prev_branch_id].options[from_tool_ids[-1]][
-                        "next"
-                    ] = self.decision_nodes[new_branch_id]
-
-                # add the tool to the new decision node
-                self.decision_nodes[new_branch_id].add_option(
-                    id=branch_id,
-                    description=description,
-                    inputs={},
-                    action=None,
-                    end=False,
-                    status=status,
-                    next=self.decision_nodes[branch_id],
-                )
-
-        if root and (self.root is not None):
-            # replace root branch with this one
-            self.decision_nodes[self.root] = decision_node
-            self.settings.logger.debug(
-                f"Replacing root branch '{self.root}' with '{branch_id}'."
-            )
-            old_root = self.root
-            self.root = branch_id
-            self.remove_branch(old_root)
-
-        # reconstruct tree
-        self._get_root()
-        self.tree = {}
-        self._construct_tree(self.root, self.tree)
-
-    def remove_branch(self, branch_id: str) -> None:
-        """
-        Remove a branch from the tree.
-
-        Args:
-            branch_id (str): The id of the branch to remove
-        """
-        # Validate branch exists
-        if branch_id not in self.decision_nodes:
-            self.settings.logger.warning(
-                f"Branch {branch_id} not found, nothing to remove."
-            )
-            return
-
-        # Special handling for root node
-        if (
-            branch_id == self.root
-            and sum(1 for node in self.decision_nodes.values() if node.root) == 1
-        ):
-            self.settings.logger.error(
-                "Cannot remove root branch if there is only one root branch."
-            )
-            raise ValueError(
-                "Cannot remove the root branch when there is only one root branch. "
-                "Create a new root branch via .add_branch(..., root=True) first. "
-                "(You could be trying to replace a root branch with the same ID as the one you are trying to remove. "
-                "Try a different name for the new root branch.)"
-            )
-
-        for decision_node_id in self.decision_nodes:
-            self.decision_nodes[decision_node_id].remove_option(branch_id)
-
-        if branch_id in self.decision_nodes:
-            del self.decision_nodes[branch_id]
-
-        # reconstruct tree
-        self._get_root()
-        self.tree = {}
-        self._construct_tree(self.root, self.tree)
-
-    def view(
-        self,
-        indent: int = 0,
-        prefix: str = "",
-        max_width: int = 80,
-        tree_dict: dict | None = None,
-    ):
-        """
-        Format a tree dictionary into a nice hierarchical text representation.
-
-        Args:
-            tree_dict: The tree dictionary to format
-            indent: Current indentation level
-            prefix: Prefix for the current line (for tree structure visualization)
-            max_width: Maximum width for text wrapping
-
-        Returns:
-            str: Formatted tree string
-        """
-        if tree_dict is None:
-            tree_dict = self.tree
-
-        result = []
-
-        name = tree_dict.get("name", "Unknown")
-        node_id = tree_dict.get("id", "")
-        description = tree_dict.get("description", "")
-        is_branch = tree_dict.get("branch", False)
-
-        indent_str = "  " * indent
-        node_line = (
-            f"{indent_str}{prefix}📁 {name}"
-            if is_branch
-            else f"{indent_str}{prefix}🔧 {name}"
+            description=description,
         )
 
-        result.append(node_line)
+        if from_node_id:
+            self.nodes[from_node_id].options.append(node_id)
 
-        if description:
-            desc_indent = len(indent_str) + 4  # Extra space for description
-            available_width = max_width - desc_indent
+        self._get_root()
 
-            wrapped_desc = textwrap.fill(
-                description,
-                width=available_width,
-                initial_indent="",
-                subsequent_indent="",
-            )
+        return node_id
 
-            for i, line in enumerate(wrapped_desc.split("\n")):
-                if i == 0:
-                    result.append(f"{indent_str}    💬 {line}")
-                else:
-                    result.append(f"{indent_str}       {line}")
+    # TODO: redo this with new refactor
+    # def view(
+    #     self,
+    #     indent: int = 0,
+    #     prefix: str = "",
+    #     max_width: int = 80,
+    #     tree_dict: dict | None = None,
+    # ):
+    #     """
+    #     Format a tree dictionary into a nice hierarchical text representation.
 
-            result.append("")
+    #     Args:
+    #         tree_dict: The tree dictionary to format
+    #         indent: Current indentation level
+    #         prefix: Prefix for the current line (for tree structure visualization)
+    #         max_width: Maximum width for text wrapping
 
-        options = tree_dict.get("options", {})
-        if options:
-            option_items = list(options.items())
-            for i, (key, option) in enumerate(option_items):
-                is_last = i == len(option_items) - 1
-                child_prefix = "└── " if is_last else "├── "
-                child_result = self.view(
-                    indent + 1, child_prefix, max_width, tree_dict=option
-                )
-                result.append(child_result)
+    #     Returns:
+    #         str: Formatted tree string
+    #     """
+    #     if tree_dict is None:
+    #         tree_dict = self.tree
 
-                if indent == 0 and not is_last:
-                    result.append("")
+    #     result = []
 
-        return "\n".join(result)
+    #     name = tree_dict.get("name", "Unknown")
+    #     node_id = tree_dict.get("id", "")
+    #     description = tree_dict.get("description", "")
+    #     is_branch = tree_dict.get("branch", False)
+
+    #     indent_str = "  " * indent
+    #     node_line = (
+    #         f"{indent_str}{prefix}📁 {name}"
+    #         if is_branch
+    #         else f"{indent_str}{prefix}🔧 {name}"
+    #     )
+
+    #     result.append(node_line)
+
+    #     if description:
+    #         desc_indent = len(indent_str) + 4  # Extra space for description
+    #         available_width = max_width - desc_indent
+
+    #         wrapped_desc = textwrap.fill(
+    #             description,
+    #             width=available_width,
+    #             initial_indent="",
+    #             subsequent_indent="",
+    #         )
+
+    #         for i, line in enumerate(wrapped_desc.split("\n")):
+    #             if i == 0:
+    #                 result.append(f"{indent_str}    💬 {line}")
+    #             else:
+    #                 result.append(f"{indent_str}       {line}")
+
+    #         result.append("")
+
+    #     options = tree_dict.get("options", {})
+    #     if options:
+    #         option_items = list(options.items())
+    #         for i, (key, option) in enumerate(option_items):
+    #             is_last = i == len(option_items) - 1
+    #             child_prefix = "└── " if is_last else "├── "
+    #             child_result = self.view(
+    #                 indent + 1, child_prefix, max_width, tree_dict=option
+    #             )
+    #             result.append(child_result)
+
+    #             if indent == 0 and not is_last:
+    #                 result.append("")
+
+    #     return "\n".join(result)
 
     @property
     def conversation_history(self):
@@ -1241,10 +986,7 @@ class Tree:
             prompt=self.user_prompt,
             task=decision.function_name,
             num_trees_completed=self.tree_data.num_trees_completed,
-            reasoning=decision.reasoning,
-            inputs=decision.function_inputs,
-            parsed_info=result.llm_parse(),
-            action=True,
+            num_items=len(result.objects),
         )
 
         # add to log of actions called
@@ -1328,43 +1070,39 @@ class Tree:
             error,
         )
 
-    async def _get_available_tools(
-        self, current_decision_node: DecisionNode, client_manager: ClientManager
+    async def _get_available_options(
+        self, current_node: Node, client_manager: ClientManager
     ) -> tuple[list[str], list[tuple[str, str]]]:
-        available_tools = []
-        unavailable_tools = []
-        for tool in current_decision_node.options.keys():
-            if current_decision_node.options[tool]["action"] is None:
-                available_tools.append(tool)
-            elif "is_tool_available" in dir(self.tools[tool]) and await self.tools[
-                tool
-            ].is_tool_available(
-                tree_data=self.tree_data,
-                base_lm=self.base_lm,
-                complex_lm=self.complex_lm,
-                client_manager=client_manager,
+        available_options = []
+        unavailable_options = []
+
+        for option in current_node.options:
+            # if the option is a branch and it has no options itself, it is invisibly unavailable
+            if self.nodes[option].branch and len(self.nodes[option].options) == 0:
+                pass
+
+            # if it is a tool, and it has the is_tool_available method, and it returns True, it is available
+            elif (
+                not self.nodes[option].branch
+                and option in self.tools
+                and "is_tool_available" in dir(self.tools[self.nodes[option].name])
+                and not (
+                    await self.tools[self.nodes[option].name].is_tool_available(
+                        tree_data=self.tree_data,
+                        base_lm=self.base_lm,
+                        complex_lm=self.complex_lm,
+                        client_manager=client_manager,
+                    )
+                )
             ):
-                available_tools.append(tool)
+
+                doc = self.tools[self.nodes[option].name].is_tool_available.__doc__
+                is_tool_available_doc = doc.strip() if isinstance(doc, str) else ""
+                unavailable_options.append((option, is_tool_available_doc))
             else:
-                is_tool_available_doc = (
-                    self.tools[tool].is_tool_available.__doc__.strip()
-                    if self.tools[tool].is_tool_available.__doc__
-                    else ""
-                )
-                unavailable_tools.append((tool, is_tool_available_doc))
-        return available_tools, unavailable_tools
+                available_options.append(option)
 
-    def _get_successive_actions(
-        self, successive_actions: dict, current_options: dict
-    ) -> dict:
-
-        for branch in current_options:
-            successive_actions[branch] = {}
-            if current_options[branch]["options"] != {}:
-                successive_actions[branch] = self._get_successive_actions(
-                    successive_actions[branch], current_options[branch]["options"]
-                )
-        return successive_actions
+        return available_options, unavailable_options
 
     def log_token_usage(self) -> None:
         if not self.low_memory:
@@ -1472,7 +1210,7 @@ class Tree:
                 await client_manager.start_clients()
 
                 # Initialise the collections
-                if self.use_elysia_collections:
+                if self.tree_data.use_weaviate_collections:
                     if collection_names == []:
                         async with client_manager.connect_to_async_client() as client:
                             collection_names = await retrieve_all_collection_names(
@@ -1482,9 +1220,6 @@ class Tree:
                         collection_names,
                         client_manager,
                     )
-
-            # If there are any empty branches, remove them (no tools attached to them)
-            self._remove_empty_branches()
 
             if self.settings.LOGGING_LEVEL_INT <= 20:
                 print(
@@ -1498,33 +1233,27 @@ class Tree:
 
         # Start the tree at the root node
         if self.root is not None:
-            current_decision_node: DecisionNode = self.decision_nodes[self.root]
+            current_decision_node: Node = self.nodes[self.root]
         else:
             raise ValueError("No root node found!")
 
         # Loop through the tree until the end is reached
         while True:
 
-            available_tools, unavailable_tools = await self._get_available_tools(
+            available_options, unavailable_options = await self._get_available_options(
                 current_decision_node, client_manager
             )
 
-            if len(available_tools) == 0:
-                self.settings.logger.error("No tools available to use!")
+            if len(available_options) == 0:
+                self.settings.logger.error("No options available to use!")
                 raise ValueError(
-                    "No tools available to use! "
+                    f"No tools or branches available to be decided from (on branch [magenta]{current_decision_node.name}[/magenta])! "
                     "Check the tool definitions and the `is_tool_available` methods."
                 )
 
-            init_options = deepcopy(self.tree["options"])
-            successive_actions = self._get_successive_actions(
-                successive_actions={},
-                current_options=init_options,
-            )
-
             # Evaluate any tools which have hardcoded rules that have been met
             nodes_with_rules_met, rule_tool_inputs = await self._check_rules(
-                current_decision_node.id, client_manager
+                current_decision_node, client_manager
             )
 
             if len(nodes_with_rules_met) > 0:
@@ -1544,71 +1273,94 @@ class Tree:
                             if action_result is not None:
                                 yield action_result
 
-            # If training route is provided, decide from the training route
-            if len(route_list) > 0:
-                self.settings.logger.debug(f"Route that will be used: {route_list}")
-
-                (
-                    self.current_decision,
-                    training_route,
-                ) = current_decision_node.decide_from_route(route_list)
-
-                force_text_response = (
-                    self.current_decision.function_name == "text_response"
-                )
-
-            # Under normal circumstances decide from the decision node
-            else:
-                self.tracker.start_tracking("decision_node")
-                self.tree_data.set_current_task("elysia_decision_node")
-                with ElysiaKeyManager(self.settings):
-                    self.current_decision, results = await current_decision_node(
-                        tree_data=self.tree_data,
-                        base_lm=self.base_lm,
-                        complex_lm=self.complex_lm,
-                        available_tools=available_tools,
-                        unavailable_tools=unavailable_tools,
-                        successive_actions=successive_actions,
-                        client_manager=client_manager,
+            self.tracker.start_tracking("decision_node")
+            self.tree_data.set_current_task("elysia_decision_node")
+            options = []
+            for option in available_options:
+                if self.nodes[option].branch:
+                    options.append(
+                        ToolOption(
+                            name=self.nodes[option].name,
+                            available=True,
+                            description=self.nodes[option].description,
+                            inputs=[],
+                        )
+                    )
+                else:
+                    options.append(
+                        ToolOption(
+                            name=self.nodes[option].name,
+                            available=True,
+                            description=self.tools[self.nodes[option].name].description,
+                            inputs=[
+                                ToolInput(
+                                    name=input_name,
+                                    description=input.get("description", ""),
+                                    type=input.get("type", Any),
+                                    default=input.get("default", None),
+                                    required=input.get("required", False),
+                                )
+                                for input_name, input in self.tools[
+                                    self.nodes[option].name
+                                ].inputs.items()
+                            ],
+                        )
                     )
 
-                for result in results:
-                    action_result, _ = await self._evaluate_result(
-                        result, self.current_decision
+            options.extend(
+                [
+                    ToolOption(
+                        name=self.nodes[option].name,
+                        available=False,
+                        description="",
+                        unavailable_reason=unavailable_reason,
+                        inputs=[],
                     )
-                    if action_result is not None:
-                        yield action_result
+                    for option, unavailable_reason in unavailable_options
+                ]
+            )
 
-                self.tracker.end_tracking(
-                    "decision_node",
-                    "Decision Node",
-                    self.base_lm if not self.low_memory else None,
-                    self.complex_lm if not self.low_memory else None,
+            with ElysiaKeyManager(self.settings):
+                self.current_decision, results = await current_decision_node.decide(
+                    tree_data=self.tree_data,
+                    base_lm=self.base_lm,
+                    complex_lm=self.complex_lm,
+                    options=options,
+                    client_manager=client_manager,
                 )
 
-                # Force text response (later) if model chooses end actions
-                # but no response will be generated from the node, set flag now
-                force_text_response = (
-                    not current_decision_node.options[
-                        self.current_decision.function_name
-                    ]["end"]
-                    and self.current_decision.end_actions
+            for result in results:
+                action_result, _ = await self._evaluate_result(
+                    result, self.current_decision
                 )
+                if action_result is not None:
+                    yield action_result
+
+            self.tracker.end_tracking(
+                "decision_node",
+                "Decision Node",
+                self.base_lm if not self.low_memory else None,
+                self.complex_lm if not self.low_memory else None,
+            )
+
+            next_node_id = next(
+                option
+                for option in available_options
+                if self.nodes[option].name == self.current_decision.function_name
+            )
+
+            # Force text response (later) if model chooses end actions
+            # but no response will be generated from the node, set flag now
+            force_text_response = (
+                not self.nodes[next_node_id].end and self.current_decision.end_actions
+            )
 
             # end criteria, task picked is "text_response" or model chooses to end conversation
             completed = (
                 self.current_decision.function_name == "text_response"
                 or self.current_decision.end_actions
-                or self.current_decision.impossible
                 or self.tree_data.num_trees_completed > self.tree_data.recursion_limit
             )
-
-            # assign action function
-            action_fn: Tool | None = current_decision_node.options[
-                self.current_decision.function_name
-            ][
-                "action"
-            ]  # type: ignore
 
             # update the decision history
             self.decision_history[-1].append(self.current_decision.function_name)
@@ -1617,7 +1369,7 @@ class Tree:
             if self.settings.LOGGING_LEVEL_INT <= 20:
                 print(
                     Panel.fit(
-                        f"[bold]Node:[/bold] [magenta]{current_decision_node.id}[/magenta]\n"
+                        f"[bold]Node:[/bold] [magenta]{current_decision_node.name}[/magenta]\n"
                         f"[bold]Decision:[/bold] [green]{self.current_decision.function_name}[/green]\n"
                         f"[bold]Reasoning:[/bold] {self.current_decision.reasoning}\n",
                         title="Current Decision",
@@ -1626,21 +1378,13 @@ class Tree:
                     )
                 )
 
-            self.tree_data.update_tasks_completed(
-                prompt=self.user_prompt,
-                task=self.current_decision.function_name,
-                num_trees_completed=self.tree_data.num_trees_completed,
-                reasoning=self.current_decision.reasoning,
-                action=action_fn is not None,
-            )
-
             # evaluate the action if this is not a branch
-            if action_fn is not None:
+            if not self.nodes[next_node_id].branch:
                 self.tracker.start_tracking(self.current_decision.function_name)
                 self.tree_data.set_current_task(self.current_decision.function_name)
                 successful_action = True
                 with ElysiaKeyManager(self.settings):
-                    async for result in action_fn(
+                    async for result in self.tools[self.nodes[next_node_id].name](
                         tree_data=self.tree_data,
                         inputs=self.current_decision.function_inputs,
                         base_lm=self.base_lm,
@@ -1657,22 +1401,29 @@ class Tree:
 
                         successful_action = not error and successful_action
 
-                if not successful_action:
-                    completed = (
-                        False
-                        or self.tree_data.num_trees_completed
-                        > self.tree_data.recursion_limit
-                    )
-
-                if successful_action:
-                    self.tree_data.clear_error(self.current_decision.function_name)
-
                 self.tracker.end_tracking(
                     self.current_decision.function_name,
                     self.current_decision.function_name,
                     self.base_lm if not self.low_memory else None,
                     self.complex_lm if not self.low_memory else None,
                 )
+
+                if not successful_action:
+                    completed = (
+                        self.tree_data.num_trees_completed
+                        > self.tree_data.recursion_limit
+                    )
+
+                if successful_action:
+                    self.tree_data.clear_error(self.current_decision.function_name)
+
+            self.tree_data.update_tasks_completed(
+                prompt=self.user_prompt,
+                task=self.current_decision.function_name,
+                num_trees_completed=self.tree_data.num_trees_completed,
+                reasoning=self.current_decision.reasoning,
+                action=not self.nodes[next_node_id].branch,
+            )
 
             yield (
                 await self._evaluate_result(
@@ -1684,31 +1435,20 @@ class Tree:
                             if self.settings.BASE_USE_REASONING
                             else ""
                         ),
-                        reset_tree=current_decision_node.options[
-                            self.current_decision.function_name
-                        ]["next"]
-                        is None
-                        and (not completed),
+                        reset_tree=(
+                            not completed and len(self.nodes[next_node_id].options) > 0
+                        ),
                     ),
                     self.current_decision,
                 )
             )[0]
 
             # check if the current node is the end of the tree
-            if (
-                current_decision_node.options[self.current_decision.function_name][
-                    "next"
-                ]
-                is None
-                or completed
-            ):
+            if completed or len(self.nodes[next_node_id].options) == 0:
                 break
+            # otherwise iterate through the tree
             else:
-                current_decision_node = current_decision_node.options[
-                    self.current_decision.function_name
-                ][
-                    "next"
-                ]  # type: ignore
+                current_decision_node = self.nodes[next_node_id]
 
         self.tree_data.num_trees_completed += 1
 
@@ -1716,18 +1456,14 @@ class Tree:
         if completed:
 
             # firstly, if we reached the end of a tree at a node that shouldn't be the end, call text response tool here to respond
-            if (
-                not current_decision_node.options[self.current_decision.function_name][
-                    "end"
-                ]
-                or force_text_response
-            ):
+            if not self.nodes[next_node_id].end or force_text_response:
                 with ElysiaKeyManager(self.settings):
                     async for result in self.tools["forced_text_response"](
                         tree_data=self.tree_data,
                         inputs={},
                         base_lm=self.base_lm,
                         complex_lm=self.complex_lm,
+                        client_manager=client_manager,
                     ):
                         action_result, _ = await self._evaluate_result(
                             result, self.current_decision
@@ -1874,52 +1610,6 @@ class Tree:
 
         return text, yielded_results
 
-    def detailed_memory_usage(self) -> dict:
-        """
-        Returns a detailed breakdown of memory usage for all major objects in the Tree class.
-
-        Returns:
-            dict: Dictionary containing memory sizes (in bytes) for each major component
-        """
-        memory_usage = {}
-
-        # Core data structures
-        memory_usage["tree_data"] = asizeof.asizeof(self.tree_data)
-        memory_usage["tree_data"] = asizeof.asizeof(self.tree_data)
-        memory_usage["tree_data"] = asizeof.asizeof(self.tree_data)
-        memory_usage["collection_data"] = asizeof.asizeof(
-            self.tree_data.collection_data
-        )
-
-        # Decision nodes and tools
-        memory_usage["decision_nodes"] = {
-            node_id: asizeof.asizeof(node)
-            for node_id, node in self.decision_nodes.items()
-        }
-        memory_usage["tools"] = {
-            tool_name: asizeof.asizeof(tool) for tool_name, tool in self.tools.items()
-        }
-
-        # History and tracking
-        memory_usage["decision_history"] = asizeof.asizeof(self.decision_history)
-        memory_usage["history"] = asizeof.asizeof(self.history)
-        memory_usage["training_updates"] = asizeof.asizeof(self.training_updates)
-        memory_usage["action_information"] = asizeof.asizeof(self.action_information)
-
-        # Mapping dictionaries
-        memory_usage["query_mappings"] = {
-            "query_id_to_prompt": asizeof.asizeof(self.query_id_to_prompt),
-            "prompt_to_query_id": asizeof.asizeof(self.prompt_to_query_id),
-        }
-
-        # Calculate total
-        memory_usage["total"] = sum(
-            (v if isinstance(v, int) else sum(v.values()) if isinstance(v, dict) else 0)
-            for v in memory_usage.values()
-        )
-
-        return memory_usage
-
     def export_to_json(self) -> dict:
         """
         Export the tree to a JSON object, to be used for loading the tree via import_from_json().
@@ -1934,7 +1624,6 @@ class Tree:
                 "preset_id": self.preset_id,
                 "conversation_title": self.conversation_title,
                 "branch_initialisation": self.branch_initialisation,
-                "use_elysia_collections": self.use_elysia_collections,
                 "tree_index": self.tree_index,
                 "store_retrieved_objects": self.store_retrieved_objects,
                 "low_memory": self.low_memory,
@@ -2056,7 +1745,7 @@ class Tree:
             agent_description=json_data["tree_data"]["atlas"]["agent_description"],
             end_goal=json_data["tree_data"]["atlas"]["end_goal"],
             low_memory=json_data["low_memory"],
-            use_elysia_collections=json_data["use_elysia_collections"],
+            use_weaviate_collections=json_data["use_weaviate_collections"],
             settings=settings,
         )
 

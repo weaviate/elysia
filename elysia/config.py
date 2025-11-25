@@ -1,13 +1,7 @@
 import os
 import logging
-import litellm
-from litellm import (
-    AuthenticationError,
-    NotFoundError,
-    BadRequestError,
-    models_by_provider,
-)
-from litellm.utils import get_valid_models, check_valid_key
+from litellm import models_by_provider
+from litellm.exceptions import AuthenticationError, NotFoundError, BadRequestError
 from rich.logging import RichHandler
 from typing import Callable, Literal
 
@@ -25,7 +19,6 @@ try:
 except Exception:
     spacy.cli.download("en_core_web_sm")  # type: ignore
     nlp = spacy.load("en_core_web_sm")
-
 
 api_key_to_provider = {
     "openai_api_key": ["openai"],
@@ -327,13 +320,13 @@ class Settings:
                 # use gemini 2.0 flash
                 self.BASE_PROVIDER = "openrouter/google"
                 self.COMPLEX_PROVIDER = "openrouter/google"
-                self.BASE_MODEL = "gemini-2.0-flash-001"
+                self.BASE_MODEL = "gemini-2.5-flash"
                 self.COMPLEX_MODEL = "gemini-2.5-flash"
             elif os.getenv("GEMINI_API_KEY", None):
                 # use gemini 2.0 flash
                 self.BASE_PROVIDER = "gemini"
                 self.COMPLEX_PROVIDER = "gemini"
-                self.BASE_MODEL = "gemini-2.0-flash-001"
+                self.BASE_MODEL = "gemini-2.5-flash"
                 self.COMPLEX_MODEL = "gemini-2.5-flash"
             elif os.getenv("OPENAI_API_KEY", None):
                 # use gpt family

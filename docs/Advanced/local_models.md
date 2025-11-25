@@ -57,7 +57,7 @@ Within the python package, you can configure the Elysia process to be faster by 
 
 ```python
 from elysia import Tree
-tree = Tree(use_elysia_collections=False)
+tree = Tree(use_weaviate_collections=False)
 ```
 
 Setting this to `False` (default `True`) will disable the Elysia decision agent having access to the [preprocessed schemas](https://weaviate.github.io/elysia/setting_up/#preprocessing-collections) for any connected Weaviate collections. If you are not using a complex Weaviate integration, then this is safe to disable.
