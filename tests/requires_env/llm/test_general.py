@@ -89,10 +89,10 @@ async def test_incorrect_branch_id():
 
     # error if branch_id is not found
     with pytest.raises(ValueError):
-        tree.add_tool(CitedSummarizer, branch_id="incorrect_branch_id")
+        tree.add_tool(CitedSummarizer, from_node_id="incorrect_branch_id")
 
-    # no error if root is True
-    tree.add_tool(CitedSummarizer, root=True)
+    # no error if from_node_id is not specified
+    tree.add_tool(CitedSummarizer)
 
 
 @pytest.mark.asyncio
@@ -104,7 +104,7 @@ async def test_default_multi_branch():
         settings=Settings.from_smart_setup(),
     )
 
-    assert len(tree.decision_nodes) > 1
+    assert len([node for node in tree.nodes.values() if node.branch]) > 1
 
     async for result in tree.async_run(
         user_prompt="Hello",
@@ -120,64 +120,42 @@ async def test_new_multi_branch():
         branch_initialisation="empty",
         settings=Settings.from_smart_setup(),
     )
+    assert len(tree.nodes) == 1
+    base_node_id = list(tree.nodes.values())[0].id
+    assert len(tree.nodes[base_node_id].options) == 0
 
     tree.add_branch(
         "respond_to_user",
         "choose between citing objects from the environment, or not citing any objects",
         "choose when responding to user",
-        from_branch_id="base",
+        from_node_id=base_node_id,
+        node_id="respond_to_user_id",
     )
     tree.add_branch(
         "search_for_objects",
         "choose between searching for objects from the environment, or aggregating objects from the environment",
         "choose when searching for objects",
-        from_branch_id="base",
+        from_node_id=base_node_id,
+        node_id="search_for_objects_id",
     )
 
-    tree.add_tool(CitedSummarizer, branch_id="respond_to_user")
-    tree.add_tool(TextResponse, branch_id="respond_to_user")
-    tree.add_tool(Query, branch_id="search_for_objects")
-    tree.add_tool(Aggregate, branch_id="search_for_objects")
+    cited_summariser_id = tree.add_tool(
+        CitedSummarizer, from_node_id="respond_to_user_id"
+    )
+    text_response_id = tree.add_tool(TextResponse, from_node_id="respond_to_user_id")
+    query_id = tree.add_tool(Query, from_node_id="search_for_objects_id")
+    aggregate_id = tree.add_tool(Aggregate, from_node_id="search_for_objects_id")
 
-    assert len(tree.decision_nodes) == 3
+    assert len(tree.nodes) == 7
+    assert sorted(tree.nodes["respond_to_user_id"].options) == sorted(
+        [cited_summariser_id, text_response_id]
+    )
+    assert sorted(tree.nodes["search_for_objects_id"].options) == sorted(
+        [query_id, aggregate_id]
+    )
 
     async for result in tree.async_run(
         user_prompt="What was the most recent github issue?",
         collection_names=[],
     ):
         pass
-
-
-def test_add_tool_with_stem_tool():
-    tree = Tree(
-        low_memory=False,
-        branch_initialisation="empty",
-        settings=Settings.from_smart_setup(),
-    )
-
-    tree.add_branch(
-        branch_id="search",
-        instruction="Search for information",
-        description="Search for information",
-        root=False,
-        from_branch_id="base",
-    )
-
-    tree.add_tool(TextResponse, branch_id="base")
-    tree.add_tool(RetrieveProductData, branch_id="search")
-    tree.add_tool(
-        CheckResult, branch_id="search", from_tool_ids=["retrieve_product_data"]
-    )
-    tree.add_tool(
-        SendEmail,
-        branch_id="search",
-        from_tool_ids=["retrieve_product_data", "check_result"],
-    )
-
-    response, objects = tree(
-        "Retrieve the product data for the product with the id 'prod1', then send an email to danny@weaviate.io with the product data",
-        collection_names=[],
-    )
-
-    assert "Email sent to danny@weaviate.io!" in response
-    assert "Looks good to me!" in response

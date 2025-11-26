@@ -385,9 +385,46 @@ def tool(
                         self._original_function_args[arg] = function.__annotations__[
                             arg
                         ]
+
+                # parse docstring for inputs
+                if function.__doc__ and "Args:\n" in function.__doc__:
+                    arg_text = function.__doc__.split("Args:\n")[1].split("\n\n")[0]
+                    args, types, descriptions = [], [], []
+                    args = {}
+                    current_description = ""
+                    for line in arg_text.split("\n"):
+                        if ":" not in line:
+                            current_description += line.strip() + "\n"
+                        else:
+                            current_arg_and_type = line.split(":")[0].strip()
+                            current_description = line.split(":")[1].strip()
+                            if "(" and ")" in current_arg_and_type:
+                                arg_name = current_arg_and_type.split("(")[0].strip()
+
+                                if arg_name not in args:
+                                    args[arg_name] = {}
+                                args[arg_name]["type"] = current_arg_and_type.split(
+                                    ")"
+                                )[1].strip()
+                            else:
+                                arg_name = current_arg_and_type
+                                if arg_name not in args:
+                                    args[arg_name] = {}
+                                args[arg_name]["type"] = Any
+
+                            if current_description != "":
+                                args[arg_name][
+                                    "description"
+                                ] = current_description.strip()
+
+                    doc = function.__doc__.split("Args:\n")[0].strip()
+                else:
+                    doc = function.__doc__ or ""
+                    args = {}
+
                 super().__init__(
                     name=function.__name__,
-                    description=function.__doc__ or "",
+                    description=doc,
                     status=(
                         status
                         if status is not None
@@ -395,13 +432,12 @@ def tool(
                     ),
                     inputs={
                         input_key: {
-                            "description": "",
-                            "type": (
-                                "Not specified" if input_value is None else input_value
+                            "description": args.get(input_key, {}).get(
+                                "description", ""
                             ),
+                            "type": args.get(input_key, {}).get("type", Any),
                             "default": defaults_mapping.get(input_key, None),
-                            "required": defaults_mapping.get(input_key, None)
-                            is not None,
+                            "required": defaults_mapping.get(input_key, True),
                         }
                         for input_key, input_value in self._original_function_args.items()
                         if input_key
