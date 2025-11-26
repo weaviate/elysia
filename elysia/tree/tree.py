@@ -532,7 +532,7 @@ class Tree:
         from_node_id: str | None = None,
         node_id: str | None = None,
         **kwargs,
-    ) -> str:
+    ) -> str | None:
         """
         Add a Tool to a branch or on top of an existing tool.
         Creates a new node in the tree corresponding to that tool call.
@@ -637,7 +637,23 @@ class Tree:
                     f"Tool '{tool_instance.name}' already exists in tree (self.tools). Overwriting."
                 )
                 del self.tools[tool_instance.name]
+
             self.tools[tool_instance.name] = tool_instance
+
+            self.nodes[node_id] = Node(
+                id=node_id,
+                name=tool_instance.name,
+                branch=False,
+                root=False,
+                options=[],
+                end=tool_instance.end,
+                status=tool_instance.status,
+            )
+
+            self.tracker.add_tracker(tracker_name=tool_instance.name)
+            self._get_root()
+        else:
+            node_id = next(node.id for node in self.nodes.values() if node.name == tool)
 
         if from_node_id:
             self.nodes[from_node_id].options.append(node_id)
@@ -646,19 +662,7 @@ class Tree:
         else:
             raise ValueError("No root node found and no from_node_id provided.")
 
-        self.nodes[node_id] = Node(
-            id=node_id,
-            name=tool_instance.name,
-            branch=False,
-            root=False,
-            options=[],
-            end=tool_instance.end,
-            status=tool_instance.status,
-        )
-        self.tracker.add_tracker(tracker_name=tool_instance.name)
-        self._get_root()
-
-        return node_id
+        return None if isinstance(tool, str) else node_id
 
     def remove_node(self, node_id: str) -> None:
         """
