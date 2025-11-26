@@ -14,7 +14,6 @@ from rich.panel import Panel
 import uuid
 
 # Weaviate
-from sympy.strategies import branch
 import weaviate.classes.config as wc
 from weaviate.util import generate_uuid5
 
