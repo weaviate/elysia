@@ -2,6 +2,7 @@ import datetime
 import json
 import uuid
 from typing import Any
+from types import GenericAlias
 
 from weaviate.collections.classes.aggregate import (
     AggregateDate,
@@ -78,6 +79,12 @@ def format_dict_to_serialisable(d: dict[str, Any], remove_unserialisable: bool =
                 del d[key][index]
 
         elif isinstance(value, uuid.UUID):
+            d[key] = str(value)
+
+        elif isinstance(value, type):
+            d[key] = value.__name__
+
+        elif isinstance(value, GenericAlias):
             d[key] = str(value)
 
         elif remove_unserialisable and not isinstance(

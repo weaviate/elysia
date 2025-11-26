@@ -450,7 +450,8 @@ class Tree:
 
         nodes_with_rules_met = []
         rule_tool_inputs = {}
-        for function_name in node.options:
+        for node_id in node.options:
+            function_name = self.nodes[node_id].name
 
             if function_name not in self.tools:
                 pass
@@ -641,16 +642,20 @@ class Tree:
 
         if from_node_id:
             self.nodes[from_node_id].options.append(node_id)
-            self.nodes[node_id] = Node(
-                id=node_id,
-                name=tool_instance.name,
-                branch=False,
-                root=False,
-                options=[],
-                end=tool_instance.end,
-                status=tool_instance.status,
-            )
+        elif self.root:
+            self.nodes[self.root].options.append(node_id)
+        else:
+            raise ValueError("No root node found and no from_node_id provided.")
 
+        self.nodes[node_id] = Node(
+            id=node_id,
+            name=tool_instance.name,
+            branch=False,
+            root=False,
+            options=[],
+            end=tool_instance.end,
+            status=tool_instance.status,
+        )
         self.tracker.add_tracker(tracker_name=tool_instance.name)
         self._get_root()
 
@@ -1090,7 +1095,7 @@ class Tree:
             # if it is a tool, and it has the is_tool_available method, and it returns True, it is available
             elif (
                 not self.nodes[option].branch
-                and option in self.tools
+                and self.nodes[option].name in self.tools
                 and "is_tool_available" in dir(self.tools[self.nodes[option].name])
                 and not (
                     await self.tools[self.nodes[option].name].is_tool_available(
@@ -1745,7 +1750,7 @@ class Tree:
             agent_description=json_data["tree_data"]["atlas"]["agent_description"],
             end_goal=json_data["tree_data"]["atlas"]["end_goal"],
             low_memory=json_data["low_memory"],
-            use_weaviate_collections=json_data["use_weaviate_collections"],
+            use_weaviate_collections=json_data["tree_data"]["use_weaviate_collections"],
             settings=settings,
         )
 

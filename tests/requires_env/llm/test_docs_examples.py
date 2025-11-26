@@ -92,17 +92,18 @@ def test_create_tools_simple():
 
 def test_query_weaviate():
 
-    try:
-        from rich import print
+    from elysia.util.client import ClientManager
+    from weaviate.classes.config import Configure
 
-        import requests, json
+    from rich import print
+
+    import requests, json
+
+    try:
 
         url = "https://raw.githubusercontent.com/weaviate/weaviate-examples/main/jeopardy_small_dataset/jeopardy_tiny.json"
         resp = requests.get(url)
         data = json.loads(resp.text)
-
-        from elysia.util.client import ClientManager
-        from weaviate.classes.config import Configure
 
         client_manager = ClientManager()
 
@@ -135,10 +136,6 @@ def test_query_weaviate():
         from elysia import Tree
 
         tree = Tree()
-
-        print(tree.view())
-
-        tree.tree
 
         response, objects = tree(
             "Find a single question about Science",

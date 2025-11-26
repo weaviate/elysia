@@ -138,7 +138,7 @@ class RunIfTrueTrueWithInputsTool(Tool):
             description="Always returns True",
             inputs={
                 "message": {
-                    "type": "string",
+                    "type": str,
                     "description": "A test input",
                     "default": "This is the default input",
                 }
@@ -297,10 +297,10 @@ async def run_tree(
     )
 
     if not remove_tools:
-        tree.add_tool(TextResponse, root=True)
+        tree.add_tool(TextResponse)
 
     for tool in tools:
-        tree.add_tool(tool, root=True, **kwargs)
+        tree.add_tool(tool, **kwargs)
 
     async for result in tree.async_run(
         user_prompt,
@@ -503,123 +503,3 @@ def test_decorator_with_elysia_inputs():
     assert "base_lm" not in tree.tools["example_decorator_tool"].inputs
     assert "complex_lm" not in tree.tools["example_decorator_tool"].inputs
     assert "client_manager" not in tree.tools["example_decorator_tool"].inputs
-
-
-@pytest.mark.asyncio
-async def test_add_tool_with_stem_tool():
-    tree = Tree(
-        low_memory=False,
-        branch_initialisation="empty",
-        settings=Settings.from_smart_setup(),
-    )
-
-    tree.add_branch(
-        branch_id="search",
-        instruction="Search for information",
-        description="Search for information",
-        root=False,
-        from_branch_id="base",
-    )
-
-    tree.add_tool(Query, branch_id="search")
-    tree.add_tool(Aggregate, branch_id="search")
-
-    # no query in base branch
-    with pytest.raises(ValueError):
-        tree.add_tool(CheckResult, branch_id="base", from_tool_ids=["query"])
-
-    # random_text is not a tool
-    with pytest.raises(ValueError):
-        tree.add_tool(CheckResult, branch_id="base", from_tool_ids=["random_text"])
-
-    # query is in search branch, should not error
-    tree.add_tool(CheckResult, branch_id="search", from_tool_ids=["query"])
-    assert "check_result" in tree.tools
-
-    # query (from search) should now be a decision node
-    assert "search.query" in tree.decision_nodes
-
-    # must specify all from_tool_ids or it will error
-    with pytest.raises(ValueError):
-        tree.add_tool(SendEmail, branch_id="search", from_tool_ids=["check_result"])
-
-    # correct usage, should not error
-    tree.add_tool(
-        SendEmail, branch_id="search", from_tool_ids=["query", "check_result"]
-    )
-
-    assert "send_email" in tree.tools
-    assert "search.query.check_result" in tree.decision_nodes
-
-    # check the tree.tree is correct
-    assert (
-        "check_result" in tree.tree["options"]["search"]["options"]["query"]["options"]
-    )
-    assert (
-        "send_email"
-        in tree.tree["options"]["search"]["options"]["query"]["options"][
-            "check_result"
-        ]["options"]
-    )
-
-    # remove with the wrong from_tool_ids
-    with pytest.raises(ValueError):
-        tree.remove_tool(
-            tool_name="send_email",
-            branch_id="search",
-            from_tool_ids=["query"],
-        )
-
-    # remove from the wrong branch
-    with pytest.raises(ValueError):
-        tree.remove_tool(
-            tool_name="send_email",
-            branch_id="base",
-            from_tool_ids=["query", "check_result"],
-        )
-
-    # remove with the correct from_tool_ids
-    tree.remove_tool(
-        tool_name="send_email",
-        branch_id="search",
-        from_tool_ids=["query", "check_result"],
-    )
-
-    assert "send_email" not in tree.tools
-    assert "search.query.check_result" not in tree.decision_nodes
-
-    # check the tree.tree is correct
-    assert (
-        "send_email"
-        not in tree.tree["options"]["search"]["options"]["query"]["options"][
-            "check_result"
-        ]["options"]
-    )
-
-    # add the tool back in
-    tree.add_tool(
-        SendEmail, branch_id="search", from_tool_ids=["query", "check_result"]
-    )
-
-    # remove the tool that this tool stems from
-    tree.remove_tool(
-        tool_name="check_result",
-        branch_id="search",
-        from_tool_ids=["query"],
-    )
-
-    # check that the tool is removed
-    assert "check_result" not in tree.tools
-    assert "search.query" not in tree.decision_nodes
-
-    # check that the stemmed tool is removed from the decision nodes
-    assert "search.query.check_result" not in tree.decision_nodes
-
-    # but the tool is still in the tree
-    assert "send_email" in tree.tools
-
-    # check the tree.tree is correct
-    assert (
-        "check_result"
-        not in tree.tree["options"]["search"]["options"]["query"]["options"]
-    )

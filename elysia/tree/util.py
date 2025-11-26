@@ -341,7 +341,7 @@ class Node:
                 "available_at": option.unavailable_reason,
             }
             for option in options
-            if not option.available
+            if not option.available and option.unavailable_reason != ""
         ]
 
         if len(available_options) == 1:
