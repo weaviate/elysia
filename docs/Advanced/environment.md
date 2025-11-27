@@ -2,91 +2,92 @@
 
 The environment is a persistent object across all actions, tools and decisions performed within the Elysia decision tree. It can be used to store global information, such as retrieved objects or information that needs to be seen across all tools and actions.
 
+!!! note "Breakdown"
+    For example, you ask Elysia for "recent messages from the Communications collection", which prompts the decision agent to use the built-in `query` tool. Information is retrieved from the tool, and these individual JSON objects need some way of being referenced by the decision agent _after the tool is complete_. 
+    
+    Most agentic systems will add this to the conversation history, i.e. just append the tool output to the next turn in conversation, then the agent picks up where it left off. Instead, **Elysia dynamically builds an internal environment** which is constantly referenced by the decision agent. This means previous long-context decisions aren't necessary to be stored in the conversation history, and the environment can be modified if needed and passed around between different LLM calls.
+
+
 ## Overview
 
-The 'Environment' variable contains all objects returned from any tools called by the Elysia decision tree. In essence, it is a dictionary which is keyed by two variables:
+For a detailed view at the `Environment` class and its methods, [see the Environment reference page](../Reference/Objects.md#elysia.tree.objects.Environment).
 
-- `tool_name` (str): the name of the tool used to add this field to the environment
-- `name` (str): a subkey of `tool_name`, a unique `name` associated to the returns from that tool. E.g. a collection name from a retrieval.
+In essence, it contains a dictionary which stores JSON objects organised by the tools that added them to the environment, as well as associated metadata used to key the information. The top level key is the *tool name*, and under each tool name is a list of `EnvironmentItem`s, which have two attributes; `objects` and `metadata`.
 
-And when these items are accessed, it is a *list of dictionaries*, where each dictionary contains two subfields:
-
-- `objects` (list[dict])
-- `metadata` (dict)
-
-where each item in `objects` is a list of objects retrieved during the call of that tool. Each set of objects has its own corresponding metadata. 
-
-For example, if Elysia calls the 'Query' tool, then the `tool_name` is `"query"` and the `name` is the name of the collection queried. Each list of objects has metadata associated with the query used to retrieve the data. So each list of objects has unique metadata.
+- `objects` (list[dict]): contains multiple JSON objects (such as the results of a retrieval)
+- `metadata` (dict): contains information that relates to each of the objects as a whole (such as the name of the collection that was queried)
 
 <details closed>
-<summary>Environment Example</summary>
+<summary>Example</summary>
 
-Below is an example of what the environment looks like, after the tools `query` and `aggregate` have been called within this tree session.
+You ask Elysia for "the two most recent messages from the Communications collection", which calls the query tool. Then when the tool is run, the following objects are retrieved:
+
+```json
+[
+    {
+        "author": "John",
+        "content": "Hey Jane, it's John"
+    },
+    {
+        "author": "Jane",
+        "content": "Hey John, good to hear from you."
+    }
+]
+```
+When these are yielded out of the tool (more on that later), the environment will look like:
 ```python
 {
-    "query": {
-        "message_result": [
-            {
-                "objects": [
-                    {"message_id": 1, "message_content": "Hi this is an example message about frogs!"},
-                    {"message_id": 2, "message_content": "Hi this is also an example message about reindeer!"},
-                ], 
-                "metadata": {
-                    "collection_name": "example_email_messages_collection",
-                    "query_search_term": "animals"
+    "query": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "author": "John",
+                    "content": "Hey Jane, it's John"
+                },
+                {
+                    "author": "Jane",
+                    "content": "Hey John, good to hear from you."
                 }
-            },
-        ]
-    },
-    "aggregate": {
-        "pet_food_result": [
-            {
-                "objects": [
-                    {
-                        "average_price": 45.99, 
-                        "product_count": 150, 
-                    }
-                ],
-                "metadata": {
-                    "collection_name": "pet_food",
-                    "group_by": {"field": "animal", "value": "frog"} 
-                }
+            ],
+            metadata = {
+                "collection_name": "Communications",
+                "query_used": {"search_term": None, "sort_by": "created_at", "sort_order": "desc"}
             }
-        ]
-    }
+        )
+    ]
 }
 ```
-This is just an example and not exactly how the structure within Elysia's inbuilt query and aggregate tools behave (they have much more information and would be harder to follow).
-
-Note the levels of indexing the environment. 
-- The outer most level is the tool name that yielded the result (`"query"` and `"aggregate"`).
-- The next level is a `name` parameter associated with the `Result` that was yielded (`"message_result"` for query and `"pet_food_result"` for aggregate).
-- After the `name` key, there is a list of dictionaries. This list corresponds to a different result that was yielded within the same tool/name combination.
-- Each element of the list underneath `name` contains an `objects` and `metadata`, where the metadata is shared amongst all objects in this element.
-
+In the actual tool run, `metadata` from the query tool would contain more information. If another run of the `query` tool completed with the _same metadata_, then additional objects would be added under the same `EnvironmentItem`. However, if the query was completed with different metadata, such as from a different collection, then a separate `EnvironmentItem` would be added underneath `"query"` with new metadata.
 
 </details>
 
 
-## Interacting with the Environment
+## Interacting with the Environment within Tools
 
 For a full breakdown of all the methods, [see the Environment reference page](../Reference/Objects.md#elysia.tree.objects.Environment).
 
-### Automatic Assignment
+There are two ways to interact with the environment within tools:
+1. Yielding a `Result` object or a subclass of `Result` inside the tool (as an async generator), which is **automatic assignment**
+2. Using the **environment methods** to get, add, edit, and remove items from the environment
 
-When yielding a `Result` object from a Tool, the result's `to_json()` method will return a list of dictionaries which automatically gets created or appended to the objects field in `environment[tool_name][name]`. The metadata are added at the same point.
+### Automatic Assignment with Frontend Updates
 
-This calls the `.add()` method on the environment using the `Result` object.
+When yielding a `Result` object from a Tool, the result's `to_json()` method will return a list of dictionaries (the *objects*) which become the `.objects` attribute of the `EnvironmentItem` object. The metadata are added at the same point (`result.metadata`).
+
+Behind the scenes, this calls the `.add()` method on the environment on the `Result` object directly, when the decision tree receives the result after it is yielded out of the tool.
+
+**In addition** to modifying the environment, yielding a `Result` object will also send a payload from the decision tree (when using its `.async_run` method, which is an async generator function), with the objects and metadata of the result. This is used to update any attached frontend with this data.
+
+For example, if you just used the manual methods such as `.add()` or `.add_objects()`, then the frontend will not be updated with this data. But yielding a result will send a payload to the frontend with the data, so it can display it.
 
 
 <details closed>
-<summary>Environment Example (cont. pt. 1)</summary>
+<summary>Example</summary>
 
-From the `aggregate` tool, we can yield and initialise a `Result` back to the decision tree, where it is processed by the tree logic:
+We create a tool called `aggregate` that calculates summary statistics on some data. Within the tool, we initialise and yield a `Result` back to the decision tree:
 
 ```python
 yield Result(
-    name="pet_food_result",
     objects = [
         {
             "average_price": 12.52, 
@@ -104,43 +105,61 @@ And the updated environment looks like:
 
 ```python
 {
-    "query": {
-        "message_result": [...]
-    },
-    "aggregate": {
-        "pet_food_result": [
-            {
-                "objects": [
-                    {
-                        "average_price": 45.99, 
-                        "product_count": 150, 
-                    }
-                ],
-                "metadata": {
-                    "collection_name": "pet_food",
-                    "group_by": {"field": "animal", "value": "frog"} 
+    ..., # previous items in the environment
+    "aggregate": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "average_price": 12.52, 
+                    "product_count": 33,
                 }
-            },
-            {
-                "objects": [
-                    {
-                        "average_price": 12.52, 
-                        "product_count": 33,
-                    }
-                ],
-                "metadata": {
-                    "collection_name": "pet_food",
-                    "group_by": {"field": "animal", "value": "reindeer"} 
-                }
+            ],
+            metadata = {
+                "collection_name": "pet_food",
+                "group_by": {"field": "animal", "value": "reindeer"} 
             }
-        ]
-    }
+        )
+    ]
 }
 ```
-Notice how a new entry was not added to either the first or second level of the environment dictionary, but was instead appended to the existing entries under `aggregate -> pet_food_result`
 </details>
 
-### `.add()` and `.add_objects()`
+### Environment Methods
+
+By manipulating the environment object itself you can completely customise how the environment looks. Your tool can change the internal context of the decision tree, add new information, or remove old information.
+
+For example, you can update a re-occuring description of something in context whenever the tool is run with updated results.
+
+#### Accessing the Environment Variable
+
+Within a tool, **you can access the environment through the `tree_data`** variable via `tree_data.environment`, which gives you direct access to [Environment](../Reference/Objects.md#elysia.tree.objects.Environment). The `tree_data` variable is passed into every tool call.
+
+E.g., in your tool call (via the wrapper), you can access the environment like so:
+```python
+from elysia import tool
+from elysia.tree.objects import TreeData
+
+@tool
+def my_tool(tree_data: TreeData):
+    environment = tree_data.environment
+    ...
+```
+
+or within your `Tool` class, the `__call__` method must accept `tree_data: TreeData` as a parameter:
+```python
+class MyTool(Tool):
+    
+    ...
+
+    def __call__(self, tree_data: TreeData, ...):
+        environment = tree_data.environment
+        ...
+```
+see [advanced tool construction](advanced_tool_construction.md) for more details.
+
+The methods in `Environment` are detailed in [this reference page](../Reference/Objects.md#elysia.tree.objects.Environment), but some examples are detailed here:
+
+#### `.add()` and `.add_objects()`
 
 [See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.add)
 
@@ -152,12 +171,13 @@ The corresponding `to_json()` method in the `Result` is used to obtain the objec
 
 You can also have more control over which objects get added specifically by using
 ```python
-environment.add_objects(tool_name, name, objects, metadata)
+environment.add_objects(tool_name, objects, metadata)
 ```
-where `objects` is a list of dictionaries, `metadata` is a dictionary and `tool_name` and `name` are string identifiers.
+where `objects` is a list of dictionaries, `metadata` is a dictionary and `tool_name` is a string identifier (by default, the name of the tool that added this data, but in using `.add_objects`, you can specify a different name if you wish).
 
 <details closed>
-<summary>Environment Example (cont. pt. 2)</summary>
+<summary>Example (.add)</summary>
+
 If we were to do
 ```python
 frog_result = Result(
@@ -174,12 +194,7 @@ environment.add(tool_name="descriptor", result=frog_result)
 Then the environment would be updated to 
 ```python
 {
-    "query": {
-        "message_result": [...]
-    },
-    "aggregate": {
-        "pet_food_result": [...]
-    }
+    ... # previous items in the environment
     "descriptor": {
         "animal_description": [
             {
@@ -195,45 +210,36 @@ Then the environment would be updated to
     }
 }
 ```
-Even though we never interfaced with a tool called `descriptor`.
+Even though we never interfaced with a tool called `descriptor`. This almost the same as yielding the `Result` object directly.
 </details>
 
-### `.replace()`
-
-[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.replace)
-
-Change an item in the environment with another item 
-```python
-environment.replace(tool_name, name, objects, metadata, index)
-```
-either replace the entire list of items (objects + metadatas) or a single item at a particular index. `index` will only replace a particular item at that location, or if `None` (default) will replace the entire list.
-
 <details closed>
-<summary>Environment Example (cont. pt. 3)</summary>
-If we were to change the results from the `"descriptor"` to something else,
+<summary>Example (.add_objects)</summary>
+
+To replicate the same functionality as above (but without any custom `Result` objects), we can do
 ```python
-environment.replace(
+environment.add_objects(
     tool_name="descriptor", 
-    name="animal_description",
-    objects = [{"animal": "reindeer", "description": "Has a red nose"}]
+    objects = [
+        {
+            "animal": "frog",
+            "description": "Green and slimy"
+        }
+    ],
+    metadata = {}
 )
 ```
 Then the environment would be updated to 
 ```python
 {
-    "query": {
-        "message_result": [...]
-    },
-    "aggregate": {
-        "pet_food_result": [...]
-    }
+    ... # previous items in the environment
     "descriptor": {
         "animal_description": [
             {
                 "objects": [
                     {
-                        "animal": "reindeer",
-                        "description": "Has a red nose"
+                        "animal": "frog",
+                        "description": "Green and slimy"
                     }
                 ],
                 "metadata": {}
@@ -242,31 +248,285 @@ Then the environment would be updated to
     }
 }
 ```
+This is a simpler method than `.add()`, as it does not require a `Result` object.
 </details>
 
-### `.find()`
+#### `.append()`
 
-[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.find)
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.append)
 
 You can use
 ```python
-environment.find(tool_name, name, index)
+environment.append(tool_name, objects, metadata, metadata_key, metadata_value)
 ```
-Which is an easy way to retrieve objects from the environment associated with the `tool_name` and `name` string identifiers.
-`index` is a parameter which finds the corresponding location of an item for these identifiers. Defaults to `None`, in which case it returns a list of all items.
 
-This is essentially just an alias to `environment.environment[tool_name][name][index]`.
+This appends objects to _existing_ lists in the environment, rather than adding new `EnvironmentItem`s or creating new lists (which is `.add()` or `.add_objects()`).
 
-### `.remove()`
+<details closed>
+<summary>Example</summary>
+Say you have
+
+```python
+{
+    "query": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "animal": "frog",
+                    "price": 3.99
+                }
+            ],
+            metadata = {
+                "collection_name": "pet_food", 
+                "query_search_term": "animals"
+            }
+        )
+        ... # more items in the environment under "query"
+    ]
+}
+```
+and you want to append an object that matches the same `"collection_name"` of `"pet_food"`, you can do:
+
+```python
+environment.append(tool_name="query", objects=[{"animal": "reindeer", "price": 12.99}], metadata_key="collection_name", metadata_value="pet_food")
+```
+Then the environment would be updated to:
+```python
+{
+    "query": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "animal": "frog",
+                    "price": 3.99
+                },
+                {
+                    "animal": "reindeer",
+                    "price": 12.99
+                }
+            ],
+            metadata = {
+                "collection_name": "pet_food", 
+                "query_search_term": "animals"
+            }
+        ),
+        ...
+    ]
+}
+```
+</details>
+
+#### `.get()` and `.get_objects()`
+
+See the reference page for [get](../Reference/Objects.md#elysia.tree.objects.Environment.get) and [get_objects](../Reference/Objects.md#elysia.tree.objects.Environment.get_objects).
+
+```python
+environment.get(
+    tool_name: str
+)
+```
+In short, this retrieves items from the environment. The `.get()` method is a simple indexer of the environment dictionary, and `.get(tool_name)` is equivalent to `environment.environment.get(tool_name, None)`. It returns a list of `EnvironmentItem` objects (or `None` if the `tool_name` is not found in the environment).
+
+```python
+environment.get_objects(
+    tool_name: str,
+    metadata: dict | None = None,
+    metadata_key: str | None = None,
+    metadata_value: Any | None = None,
+)
+```
+
+The `.get_objects()` method is a more complex indexer of the environment. You can specify a set of `metadata` (a dictionary) to filter the objects of the environment. It will return _all objects_ for a single `tool_name` that match this metadata exactly.
+
+<details closed>
+<summary>Example (using `metadata`)</summary>
+
+If our environment is
+```python
+{
+    ..., # previous items in the environment
+    "aggregate": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "average_price": 12.52, 
+                    "product_count": 33,
+                }
+            ],
+            metadata = {
+                "collection_name": "pet_food",
+                "group_by": {"field": "animal", "value": "reindeer"} 
+            }
+        )
+    ]
+}
+```
+Then we can do
+```python
+environment.get_objects(
+    tool_name="aggregate",
+    metadata={
+        "collection_name": "pet_food",
+        "group_by": {"field": "animal", "value": "reindeer"} 
+    }
+)
+```
+This will return the list of `EnvironmentItem` objects that match this metadata exactly.
+</details>
+
+Similarly, you could specify only a single key of the metadata (`metadata_key`) and the expected value this key should be (`metadata_value`) and it will return all objects for a single `tool_name` that match this key, value pair exactly.
+
+<details closed>
+<summary>Example (using `metadata_key` and `metadata_value`)</summary>
+
+If our environment is
+```python
+{
+    "search": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "price": 8.43,
+                    "animal": "reindeer",
+                },
+                {
+                    "price": 1.49,
+                    "animal": "giraffe",
+                },
+                {
+                    "price": 2.99,
+                    "animal": "frog",
+                },
+                {
+                    "price": 2.13,
+                    "animal": "reindeer",
+                }
+            ],
+            metadata = {
+                "collection_name": "pet_food",
+                "filters": [ {"field": "price", "value": 10, "operator": "<"}]
+            }
+        ),
+        EnvironmentItem(
+            objects = [
+                {
+                    "average_price": 5.28, 
+                    "product_count": 2,
+                }
+            ],
+            metadata = {
+                "collection_name": "pet_food",
+                "group_by": {"field": "animal", "value": "reindeer"} 
+            }
+        )
+    ]
+}
+```
+Then we have two tools that have interacted with the same collection. They share a metadata key `collection_name`, so to retrieve both of these items we can do
+```python
+environment.get_objects(
+    tool_name="search",
+    metadata_key="collection_name",
+    metadata_value="pet_food"
+)
+```
+This will return the list of `EnvironmentItem` objects that match this metadata key-value pair, both objects above.
+</details>
+
+#### `.replace()`
+
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.replace)
+
+Change an item in the environment with another item 
+```python
+environment.replace(tool_name, objects, metadata, metadata_key, metadata_value)
+```
+
+This will replace the item in the environment that matches both the `tool_name`, and either the `metadata_key` and `metadata_value` pair, or the `metadata` dictionary, with the new `objects`. This will remove all existing `objects` and replace them with the new ones.
+
+<details closed>
+<summary>Example</summary>
+If our environment is
+
+```python
+{
+    ..., # previous items in the environment
+    "locations": [
+        EnvironmentItem(
+            objects = [
+                {
+                    "name": "Goblin Cave",
+                    "description": "A dark gloomy cave", 
+                    "current": True,
+                },
+                {
+                    "name": "Elysia Town",
+                    "description": "A bustling town full of people",
+                    "current": False,
+                }
+            ],
+            metadata = {
+                "id": "basic_locations",
+                "level": 1,
+            }
+        )
+    ]
+}
+```
+Then we can change the `"locations"` objects by:
+```python
+environment.replace(
+    tool_name="locations", 
+    metadata_key="id",
+    metadata_value="basic_locations",
+    objects = [
+        {
+            "name": "New City",
+            "description": "A big city", 
+            "current": True,
+        },
+    ]
+)
+```
+And this changes _every object_ in the environment that matches the `tool_name` and `metadata_key` and `metadata_value` pair. You can similarly use a full `metadata` to match the metadata exactly.
+
+If, for example, you wanted to only change certain properties, you could first `.get_objects()` and then modify them, and `.replace()` them back:
+
+```python
+locations = environment.get_objects(
+    tool_name="locations",
+    metadata_key="id",
+    metadata_value="basic_locations"
+)
+locations[0]["current"] = False
+locations[0]["current"] = True
+environment.replace(
+    tool_name="locations", 
+    metadata_key="id",
+    metadata_value="basic_locations",
+    objects = locations
+)
+```
+
+</details>
+
+#### `.remove()`
 
 [See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.remove)
 
-Items (objects + metadata) in the environment can be removed via
+Objects in the environment can be removed (the `.objects` attribute of an individual environment item) using the `.remove()` method.
 ```python
-environment.remove(tool_name, name, index)
+environment.remove(tool_name, metadata, metadata_key, metadata_value)
 ```
-which uses the `tool_name` and `name` string identifiers to find the corresponding item.
-The `index` parameter will remove the objects and metadata associated only with that position in the list. E.g., if `index=-1`, then the most recent entry in the list will be deleted. This defaults to `None`, in which case the entire set of objects for `tool_name` and `name` are removed. You can, of course, check the length of items beforehand via `len(environment.find(tool_name, name))` and use that to define the index. Will raise an `IndexError` if that index does not exist.
+which uses the `tool_name` and either the full `metadata` dictionary, or the `metadata_key` and `metadata_value` pair to find the corresponding item.
+
+The actual `EnvironmentItem` still exists, with its metadata, but the `.objects` attribute is an empty list.
+
+#### `.is_empty()`
+
+[See the reference page.](../Reference/Objects.md#elysia.tree.objects.Environment.is_empty)
+
+This method returns `True` if the environment is empty, and `False` otherwise. This includes objects removed from the `.remove()` method (empty lists). So if you had an environment of only empty lists of objects, it will still return `True`.
 
 ## The Hidden Environment
 

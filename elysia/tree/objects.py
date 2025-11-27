@@ -204,44 +204,14 @@ class Environment:
         Appends an object to a list of objects in the environment.
         Appends under the `"objects"` key of a given item in the environment.
         The item is specified by the metadata of the object. If no metadata is provided, the item is specified by the metadata key and value.
-
         If no item is found, an error is raised.
+
         Args:
             tool_name (str): The name of the tool called that the result belongs to.
             metadata (dict | None): The metadata of the objects to append to the environment.
             metadata_key (str | None): The key of the metadata to append to the environment.
             metadata_value (Any | None): The value of the metadata to append to the environment.
             objects (list[dict]): The objects to append to the environment.
-
-        For example, if you have
-        ```python
-        {
-            "query": [
-                {
-                    "metadata": {"collection_name": "pet_food", "query_search_term": "animals"},
-                    "objects": [{"animal": "frog"}]
-                }
-                ...
-            ]
-        }
-        ```
-        and you want to append an object that matches the same `"collection_name"` of `"pet_food"`, you can do:
-
-        ```python
-        environment.append(tool_name="query", objects=[{"animal": "reindeer"}], metadata_key="collection_name", metadata_value="pet_food")
-        ```
-        Then the environment would be updated to:
-        ```python
-        {
-            "query": [
-                {
-                    "metadata": {"collection_name": "pet_food", "query_search_term": "animals"},
-                    "objects": [{"animal": "frog"}, {"animal": "reindeer"}]
-                }
-                ...
-            ]
-        }
-        ```
         """
         if (
             metadata is not None
@@ -457,11 +427,7 @@ class Environment:
         Returns:
             list[EnvironmentItem] | None: The list of items for the given `tool_name`. `None` if the `tool_name` is not found in the environment.
         """
-
-        if tool_name not in self.environment:
-            return None
-
-        return self.environment[tool_name]
+        return self.environment.get(tool_name, None)
 
     def output_llm_metadata(self):
         out = ""
@@ -486,6 +452,7 @@ class Environment:
         return {
             tool_name: [item.to_json() for item in items]
             for tool_name, items in env_copy.items()
+            if len(items) > 0
         }
 
     def _hidden_to_json(self, remove_unserialisable: bool = False):
@@ -552,14 +519,6 @@ class Atlas(BaseModel):
 
 
 class CollectionData:
-    """
-    Store of data about the Weaviate collections that are used in the tree.
-    These are the output of the `preprocess` function.
-
-    You do not normally need to interact with this class directly.
-    Instead, do so via the `TreeData` class, which has corresponding methods to get the data in a variety of formats.
-    (Such as via the `output_full_metadata` method.)
-    """
 
     def __init__(
         self,

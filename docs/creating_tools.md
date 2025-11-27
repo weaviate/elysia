@@ -26,7 +26,7 @@ Then when calling the tree, the decision agent should use the tool if it recogni
 ```python
 response, objects = tree("What is 1238213 + 1238213?")
 print(response)
-```
+``` 
 ```
 'I will calculate the sum for you using the add tool. The sum of 1238213 + 1238213 is 2476426.'
 ```
@@ -34,15 +34,19 @@ print(response)
 And this is all you need to do to add a tool to Elysia! Some things to note:
 
 - Your tool must be an async function (must be defined via `async def` instead of `def`).
-- `tree.add_tool(add)` added this tool to the _root_ decision node (at the base of the tree). If you are using a tree with multiple branches, you can specify which branch it is added to via `tree.add_tool(add, branch_id=...)` where `...` should be replaced with the `branch_id`.
+- `tree.add_tool(add)` added this tool to the _root_ decision node (at the base of the tree). If you are using a tree with multiple branches, you can specify which node it is added to via `tree.add_tool(add, from_node_id=...)`.
 - You can add a tool to the tree automatically via customising the decorator function, e.g.
     ```python
-    @tool(tree=tree, branch_id="base")
+    @tool(tree=tree, from_node_id="node-id-here")
     async def add(x: int, y: int) -> int:
         return x + y    
     ```
-    which will automatically add it to a pre-defined tree (`tree`) at branch ID `"base"`.
+    which will automatically add it to a pre-defined tree (`tree`) coming from the node ID `"node-id-here"`.
 - Type hinting (e.g. declaring `x: int` and `y: int`) helps the LLM choose the correct input types to the function.
+
+To have more control over where the tool is positioned in the tree, you should define the tool without the `tree` argument, and then use the [`tree.add_tool()` method](Reference/Tree.md#elysia.tree.tree.Tree.add_tool) (combined with the [`.add_branch()` method](Reference/Tree.md#elysia.tree.tree.Tree.add_branch) if needed).
+
+To see the full list of optional arguments you can pass to the `@tool` decorator, see the [reference page](Reference/Objects.md#elysia.objects.tool).
 
 
 ## More Detail
@@ -61,7 +65,7 @@ async def calculate_two_numbers(x: int, y: int):
         "difference": x - y,
     }
     yield f"I just performed some calculations on {x} and {y}."
-```
+``` 
 
 This now returns _two_ items to the decision tree, a string and a dictionary. There is no limit to the amount of objects you can yield. 
 
@@ -93,7 +97,6 @@ Now the LLM should choose the operation in addition to the numbers. We also exte
 
 
 ## Advanced Features
-
 
 If your tool may error, then you can return or yield a custom Elysia `Error` object which will not cause a halt in the execution of the program. Instead, the error message will be logged in the decision tree for which the decision agent can judge whether the error is avoidable on another run of the tool. For example, if our decision agent tries to choose the wrong `operation` in the above `perform_mathematical_operations` tool, we can do something like this:
 ```python
@@ -130,16 +133,9 @@ async def some_tool(
     pass
 ```
 
-All optional arguments you can pass to the `@tool` decorator are:
-
-- `tree` ([`Tree`](Reference/Tree.md#elysia.tree.tree.Tree)): the tree that you will automatically add the tool to.
-- `branch_id` (`str`): the ID of the branch on the tree to add the tool to.
-- `status` (`str`): a custom message to display whilst the tool is running.
-- `end` (`bool`): when `True`, this tool can be the end of the conversation if the decision agent decides it should end after the completion of this tool.
-
 ## Environment Variables
 
-Environment variables (stored in `.env` and accessed via `os.getenv(...)` or `os.environ`) are passed down to tools - with some exceptions. Any environment variables whose keys end with the following strings:
+Environment variables (stored in `.env` and accessed via `os.getenv(...)` or `os.environ`) are passed down to tools UNLESS they are added to the `Settings` object (see below). Any environment variables whose keys end with the following strings:
 
 - `"api_key"`
 - `"apikey"`

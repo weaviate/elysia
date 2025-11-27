@@ -239,7 +239,8 @@ def tool(
     status: str | None = None,
     end: bool = False,
     tree: "Tree | None" = None,
-    branch_id: str | None = None,
+    from_node_id: str | None = None,
+    node_id: str | None = None,
 ) -> Tool: ...
 
 
@@ -250,7 +251,8 @@ def tool(
     status: str | None = None,
     end: bool = False,
     tree: "Tree | None" = None,
-    branch_id: str | None = None,
+    from_node_id: str | None = None,
+    node_id: str | None = None,
 ) -> Callable[[Callable], Tool]: ...
 
 
@@ -260,7 +262,8 @@ def tool(
     status: str | None = None,
     end: bool = False,
     tree: "Tree | None" = None,
-    branch_id: str | None = None,
+    from_node_id: str | None = None,
+    node_id: str | None = None,
 ) -> Callable[[Callable], Tool] | Tool:
     """
     Create a tool from a python function.
@@ -276,8 +279,10 @@ def tool(
             Optional, defaults to False.
         tree (Tree | None): The tree to add the tool to.
             Optional, defaults to None, which will not add the tool to the tree.
-        branch_id (str | None): The branch of the tree to add the tool to.
-            Optional, defaults to None, which will add the tool to the root branch.
+        from_node_id (str | None): The node of the tree to add the tool to (if `tree` is specified).
+            Optional, defaults to None, which will add the tool to the root node.
+        node_id (str | None): The ID of the tool as a node in the tree (if `tree` is specified).
+            Optional, defaults to None, which will add the tool to the root node.
 
     Returns:
         (Tool): The tool object which can be added to the tree (via `tree.add_tool(...)`).
@@ -499,7 +504,7 @@ def tool(
         tool_class = ToolClass()
 
         if tree is not None:
-            tree.add_tool(tool_class, branch_id=branch_id)
+            tree.add_tool(tool_class, from_node_id=from_node_id, node_id=node_id)
 
         return tool_class
 

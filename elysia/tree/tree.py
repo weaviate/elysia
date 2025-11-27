@@ -548,14 +548,14 @@ class Tree:
         Returns:
             (str): The node ID of the tool node created.
 
-        Example 1:
+        Example:
             To add a tool without any other setup, you can just call it directly.
             ```python
             tree.add_tool(Query)
             ```
             This will add the `Query` tool to the root node.
 
-        Example 2:
+        Example:
             A more complicated setup involves adding tools to branches (see the .add_branch() method for more details).
             ```python
             search_branch_id = tree.add_branch("search")

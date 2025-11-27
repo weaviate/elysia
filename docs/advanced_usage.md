@@ -1,4 +1,4 @@
-# Customising the Elysia Decision Tree
+# Less Basic Usage
 
 If you haven't followed [the basic guide](basic.md) yet, check that out first before you go into more detail here.
 
