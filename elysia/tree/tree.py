@@ -539,10 +539,9 @@ class Tree:
         The tool needs to be an instance of the Tool class.
 
         Args:
-            tool (Tool): The tool to add
+            tool (Tool | type[Tool] | str): The tool to add. If a string, then the tool should already have been registered in the tree.
+                (i.e. via a separate `.add_tool()` call with a Tool class).
             from_node_id (str): The ID of the node to add the tool to. If not specified, the tool will be added to the root node.
-            end (bool): Whether a new tree process can not spawn after this tool call. Optional, defaults to False.
-            status (str): The status message to be displayed when this tool is chosen. Optional, defaults to "Running {tool.name}...".
             node_id (str): The ID of the node created. If not specified, a new random node ID will be generated and returned.
             kwargs (any): Additional keyword arguments to pass to the initialisation of the tool
 
@@ -550,31 +549,36 @@ class Tree:
             (str): The node ID of the tool node created.
 
         Example 1:
-            To add a tool, `Query`, to a branch called 'search', you can do this:
+            To add a tool without any other setup, you can just call it directly.
             ```python
-            tree.add_tool(Query, branch_id="search")
+            tree.add_tool(Query)
             ```
-            This will add the `Query` tool to the branch 'search'.
-            If the branch 'search' doesn't exist, it will raise an error.
-            To add a branch, use the `.add_branch()` method.
-
+            This will add the `Query` tool to the root node.
 
         Example 2:
-            Assume your tree has a "search" branch with two tools: 'query' and 'aggregate'.
+            A more complicated setup involves adding tools to branches (see the .add_branch() method for more details).
+            ```python
+            search_branch_id = tree.add_branch("search")
+            query_node_id = tree.add_tool(Query, from_node_id=search_branch_id)
+            aggregate_node_id = tree.add_tool(Aggregate, from_node_id=search_branch_id)
+            ```
+            This adds two tools (Query, Aggregate) to the "search" branch.
             You can add a tool, `CheckResult`, after the 'query' tool like this:
             ```python
-            tree.add_tool(CheckResult, branch_id="search", from_tool_ids=["query"])
+            tree.add_tool(CheckResult, from_node_id=query_node_id)
             ```
             This will add the `CheckResult` tool to the "search" branch, after the 'query' tool.
-            So the "search" branch will still only have two options: 'query' and 'aggregate'.
-            But after 'query', there will be a new option for the `CheckResult` tool.
-
-        Example 3:
-            You can add a tool, `SendEmail`, to the base of the tree like this:
+            This essentially makes the Query tool a branch with a single option.
+            To add the same CheckResult tool to the Aggregate tool, you can do this:
             ```python
-            tree.add_tool(SendEmail, from_tool_ids=[], root=True)
+            tree.add_tool("check_result", from_node_id=aggregate_node_id)
             ```
-            It will add the `SendEmail` tool to the root branch, so can be called at the start of the decision process.
+            Where we assume "check_result" is the name property of the CheckResult tool.
+            You can add via
+            ```python
+            tree.add_tool(CheckResult, from_node_id=aggregate_node_id)
+            ```
+            which will do the same thing.
         """
 
         if not isinstance(tool, str):
@@ -670,6 +674,20 @@ class Tree:
 
         Args:
             node_id (str): The ID of the node to remove.
+
+        You can retrieve the node ID from either the returning of the `add_tool()` or `add_branch()` methods, or by cycling through the `self.nodes` dictionary.
+
+        Example:
+            ```python
+            node_id = tree.add_tool(Query)
+            tree.remove_node(node_id)
+            ```
+
+            ```python
+            for node in tree.nodes.values():
+                if node.name == "Query":
+                    tree.remove_node(node.id)
+            ```
         """
 
         if node_id not in self.nodes:
@@ -682,7 +700,7 @@ class Tree:
 
     def remove_tool(self, tool_name: str) -> None:
         """
-        Remove a Tool from a completely from the tree. Purges all instances of it across the tree.
+        Remove a Tool from a completely from the tree. Purges all instances of nodes with this tool across the tree.
 
         Args:
             tool_name (str): The name of the tool to remove.
@@ -716,15 +734,22 @@ class Tree:
     ) -> str:
         """
         Add a branch to the tree. Creates a new node in the tree corresponding to that branch.
+        Branches are a decision point in the tree, but they are not associated with a specific tool call.
+        They can be seen as a categorisation of different tools.
+        So if you have two similar tools that perform a 'search functionality for example, you could create a branch called 'Search' and add both tools to it.
+        The decision model will first choose a branch (giving it the same weight as tools), then in a separate call, choose a tool (or another branch) under that branch.
+        Tool nodes themselves _can_ also have multiple options afterwards, but they are associated with a function call when selected.
+        Branches are specifically _only_ used as categorisation.
 
-        args:
+        Args:
+            name (str): The name of the branch.
             instruction (str): The general instruction for the branch, what is this branch containing?
                 What kind of tools or actions are being decided on this branch?
                 Only displayed to the decision maker when this branch is chosen.
             description (str): A description of the branch, if it is to be chosen from a previous branch.
                 How does the model know whether to choose this branch or not?
-            node_id (str): The id of the node being added. If not specified, a new random node ID will be generated and returned.
-            from_node_id (str): The id of the node to add the branch to. If not specified, the branch will be the root node.
+            node_id (str): The id of the branch node being added. If not specified, a new random node ID will be generated and returned.
+            from_node_id (str): The id of the preceding node to add the branch to. If not specified, the branch will be the root node.
             status (str): The status message to be displayed when this branch is chosen.
         """
         if from_node_id is not None and description == "":
@@ -763,79 +788,113 @@ class Tree:
                 edges.append((node.id, option))
         return edges
 
-    # TODO: redo this with new refactor
-    # def view(
-    #     self,
-    #     indent: int = 0,
-    #     prefix: str = "",
-    #     max_width: int = 80,
-    #     tree_dict: dict | None = None,
-    # ):
-    #     """
-    #     Format a tree dictionary into a nice hierarchical text representation.
+    def view(
+        self,
+        node_id: str | None = None,
+        indent: int = 0,
+        prefix: str = "",
+        max_width: int = 80,
+    ) -> str:
+        """
+        Format the tree into a nice hierarchical text representation.
 
-    #     Args:
-    #         tree_dict: The tree dictionary to format
-    #         indent: Current indentation level
-    #         prefix: Prefix for the current line (for tree structure visualization)
-    #         max_width: Maximum width for text wrapping
+        Args:
+            node_id: The ID of the node to start from. If None, starts from root.
+            indent: Current indentation level
+            prefix: Prefix for the current line (for tree structure visualization)
+            max_width: Maximum width for text wrapping
 
-    #     Returns:
-    #         str: Formatted tree string
-    #     """
-    #     if tree_dict is None:
-    #         tree_dict = self.tree
+        Returns:
+            str: Formatted tree string
+        """
+        if node_id is None:
+            if self.root is None:
+                return "No root node found"
+            node_id = self.root
 
-    #     result = []
+        if node_id not in self.nodes:
+            return f"Node {node_id} not found"
 
-    #     name = tree_dict.get("name", "Unknown")
-    #     node_id = tree_dict.get("id", "")
-    #     description = tree_dict.get("description", "")
-    #     is_branch = tree_dict.get("branch", False)
+        node = self.nodes[node_id]
+        result = []
 
-    #     indent_str = "  " * indent
-    #     node_line = (
-    #         f"{indent_str}{prefix}📁 {name}"
-    #         if is_branch
-    #         else f"{indent_str}{prefix}🔧 {name}"
-    #     )
+        # Format the node name
+        indent_str = "  " * indent
+        icon = "📁" if node.branch else "🔧"
+        node_line = f"{indent_str}{prefix}{icon} {node.name}"
 
-    #     result.append(node_line)
+        # Add end indicator if applicable
+        if node.end:
+            node_line += " [END]"
 
-    #     if description:
-    #         desc_indent = len(indent_str) + 4  # Extra space for description
-    #         available_width = max_width - desc_indent
+        result.append(node_line)
 
-    #         wrapped_desc = textwrap.fill(
-    #             description,
-    #             width=available_width,
-    #             initial_indent="",
-    #             subsequent_indent="",
-    #         )
+        # Add description if present
+        if node.description or (
+            not node.branch
+            and node.name in self.tools
+            and self.tools[node.name].description
+        ):
+            desc_indent = len(indent_str) + 4
+            available_width = max_width - desc_indent
 
-    #         for i, line in enumerate(wrapped_desc.split("\n")):
-    #             if i == 0:
-    #                 result.append(f"{indent_str}    💬 {line}")
-    #             else:
-    #                 result.append(f"{indent_str}       {line}")
+            desc = (
+                node.description if node.branch else self.tools[node.name].description
+            )
+            desc = " ".join(desc.split())
+            desc = desc.strip()
 
-    #         result.append("")
+            wrapped_desc = textwrap.fill(
+                desc,
+                width=available_width,
+                initial_indent="",
+                subsequent_indent="",
+            )
 
-    #     options = tree_dict.get("options", {})
-    #     if options:
-    #         option_items = list(options.items())
-    #         for i, (key, option) in enumerate(option_items):
-    #             is_last = i == len(option_items) - 1
-    #             child_prefix = "└── " if is_last else "├── "
-    #             child_result = self.view(
-    #                 indent + 1, child_prefix, max_width, tree_dict=option
-    #             )
-    #             result.append(child_result)
+            for i, line in enumerate(wrapped_desc.split("\n")):
+                if i == 0:
+                    result.append(f"{indent_str}    📝 {line}")
+                else:
+                    result.append(f"{indent_str}      {line}")
 
-    #             if indent == 0 and not is_last:
-    #                 result.append("")
+        # Add instruction if present (for branches)
+        if node.instruction and node.branch:
+            inst_indent = len(indent_str) + 4
+            available_width = max_width - inst_indent
 
-    #     return "\n".join(result)
+            inst = " ".join(node.instruction.split())
+            inst = inst.strip()
+
+            wrapped_inst = textwrap.fill(
+                inst,
+                width=available_width,
+                initial_indent="",
+                subsequent_indent="",
+            )
+
+            for i, line in enumerate(wrapped_inst.split("\n")):
+                if i == 0:
+                    result.append(f"{indent_str}    💬 {line}")
+                else:
+                    result.append(f"{indent_str}      {line}")
+
+        # Add spacing after descriptions/instructions
+        if node.description or (node.instruction and node.branch):
+            result.append("")
+
+        # Recursively process child options
+        if node.options:
+            for i, option_id in enumerate(node.options):
+                is_last = i == len(node.options) - 1
+                child_prefix = "└── " if is_last else "├── "
+                child_result = self.view(option_id, indent + 1, child_prefix, max_width)
+                result.append(child_result)
+
+                # Add spacing between top-level children
+                if indent == 0 and not is_last:
+                    result.append("")
+
+        return "\n".join(result)
 
     @property
     def conversation_history(self):
