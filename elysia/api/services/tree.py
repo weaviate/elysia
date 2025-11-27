@@ -128,6 +128,7 @@ class TreeManager:
                     branch_initialisation=self.config.branch_initialisation,
                     low_memory=low_memory,
                     use_weaviate_collections=self.config.use_weaviate_collections,
+                    streaming=True,
                 ),
                 "last_request": datetime.datetime.now(),
                 "event": asyncio.Event(),
