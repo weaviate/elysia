@@ -531,6 +531,7 @@ class Tree:
         tool: type[Tool] | Tool | str,
         from_node_id: str | None = None,
         node_id: str | None = None,
+        description: str | None = None,
         **kwargs,
     ) -> str | None:
         """
@@ -543,6 +544,7 @@ class Tree:
                 (i.e. via a separate `.add_tool()` call with a Tool class).
             from_node_id (str): The ID of the node to add the tool to. If not specified, the tool will be added to the root node.
             node_id (str): The ID of the node created. If not specified, a new random node ID will be generated and returned.
+            description (str): The description of the tool. If not specified, the `tool.description` attribute will be used.
             kwargs (any): Additional keyword arguments to pass to the initialisation of the tool
 
         Returns:
@@ -647,6 +649,7 @@ class Tree:
             self.nodes[node_id] = Node(
                 id=node_id,
                 name=tool_instance.name,
+                description=description if description else tool_instance.description,
                 branch=False,
                 root=False,
                 options=[],
@@ -788,7 +791,7 @@ class Tree:
                 edges.append((node.id, option))
         return edges
 
-    def view(
+    def _view(
         self,
         node_id: str | None = None,
         indent: int = 0,
@@ -830,17 +833,11 @@ class Tree:
         result.append(node_line)
 
         # Add description if present
-        if node.description or (
-            not node.branch
-            and node.name in self.tools
-            and self.tools[node.name].description
-        ):
+        if node.description:
             desc_indent = len(indent_str) + 4
             available_width = max_width - desc_indent
 
-            desc = (
-                node.description if node.branch else self.tools[node.name].description
-            )
+            desc = node.description
             desc = " ".join(desc.split())
             desc = desc.strip()
 
@@ -887,7 +884,9 @@ class Tree:
             for i, option_id in enumerate(node.options):
                 is_last = i == len(node.options) - 1
                 child_prefix = "└── " if is_last else "├── "
-                child_result = self.view(option_id, indent + 1, child_prefix, max_width)
+                child_result = self._view(
+                    option_id, indent + 1, child_prefix, max_width
+                )
                 result.append(child_result)
 
                 # Add spacing between top-level children
@@ -895,6 +894,10 @@ class Tree:
                     result.append("")
 
         return "\n".join(result)
+
+    def view(self):
+        result = self._view()
+        print(result)
 
     @property
     def conversation_history(self):
@@ -1358,7 +1361,7 @@ class Tree:
                         ToolOption(
                             name=self.nodes[option].name,
                             available=True,
-                            description=self.tools[self.nodes[option].name].description,
+                            description=self.nodes[option].description,
                             inputs=[
                                 ToolInput(
                                     name=input_name,

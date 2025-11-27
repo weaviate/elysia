@@ -133,9 +133,9 @@ class TreeNode(BaseModel):
     id: str
     name: str
     is_branch: bool
-    description: Optional[str] = ""
-    instruction: Optional[str] = ""
-    is_root: Optional[bool] = False
+    description: str
+    instruction: Optional[str] = ""  # branch only
+    is_root: Optional[bool] = False  # branch only
 
 
 class TreeGraph(BaseModel):

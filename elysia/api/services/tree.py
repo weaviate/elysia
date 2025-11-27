@@ -417,7 +417,7 @@ class TreeManager:
         # attach root node
         tree.add_branch(
             name=root_node.name,
-            instruction=root_node.instruction,
+            instruction=root_node.instruction if root_node.instruction else "",
             description=root_node.description,
             node_id=root_node.id,
             from_node_id=None,
@@ -434,7 +434,7 @@ class TreeManager:
                 if node.is_branch:
                     tree.add_branch(
                         name=node.name,
-                        instruction=node.instruction,
+                        instruction=node.instruction if node.instruction else "",
                         description=node.description,
                         node_id=node.id,
                         from_node_id=edge[0],
