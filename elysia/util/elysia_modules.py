@@ -1,9 +1,11 @@
 from typing import Type, Callable
 from copy import copy, deepcopy
+from typing import AsyncGenerator
 
 import dspy
 from dspy.primitives.module import Module
 from dspy.signatures.signature import Signature, ensure_signature
+from dspy.streaming import StreamListener, StreamResponse
 from elysia.tree.objects import TreeData, Atlas
 from elysia.util.retrieve_feedback import retrieve_feedback
 from elysia.util.client import ClientManager
@@ -105,6 +107,51 @@ class AssertedModule(dspy.Module):
             if not success:
                 raise AssertionError(feedback)
         return prediction
+
+    async def aforward_streaming(
+        self, streamed_field: str, **kwargs
+    ) -> AsyncGenerator[dspy.Prediction | StreamResponse, None]:
+
+        found_pred = False
+        async for chunk in self.module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
+            if isinstance(chunk, StreamResponse):
+                yield chunk
+            elif isinstance(chunk, dspy.Prediction):
+                prediction = chunk
+                found_pred = True
+
+        if not found_pred:
+            raise AssertionError("No prediction found during streaming.")
+
+        success, feedback = self.assertion_function(prediction, kwargs)
+        history = dspy.History(messages=[])
+
+        if not success:
+            history.messages.append({**kwargs, **prediction})
+            for attempt in range(self.num_tries):
+                found_pred = False
+                async for chunk in self.asserted_module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
+                    if isinstance(chunk, StreamResponse):
+                        yield chunk
+                    elif isinstance(chunk, dspy.Prediction):
+                        prediction = chunk
+                        found_pred = True
+
+                if not found_pred:
+                    raise AssertionError("No prediction found during streaming.")
+
+                success, feedback = self.assertion_function(prediction, kwargs)
+                if success:
+                    break
+                else:
+                    history.messages.append(
+                        {**kwargs, "feedback": feedback, **prediction}
+                    )
+
+        if not success:
+            raise AssertionError(feedback)
+
+        yield prediction
 
 
 class ElysiaChainOfThought(Module):
@@ -427,13 +474,27 @@ class ElysiaChainOfThought(Module):
 
         return kwargs
 
-    def forward(self, **kwargs):
-        kwargs = self._add_tree_data_inputs(kwargs)
+    def forward(self, add_tree_data_inputs: bool = True, **kwargs):
+        kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         return self.predict(**kwargs)
 
-    async def aforward(self, **kwargs):
-        kwargs = self._add_tree_data_inputs(kwargs)
+    async def aforward(self, add_tree_data_inputs: bool = True, **kwargs):
+        kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         return await self.predict.acall(**kwargs)
+
+    async def aforward_streaming(
+        self, streamed_field: str, add_tree_data_inputs: bool = True, **kwargs
+    ) -> AsyncGenerator[StreamResponse, None]:
+        kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
+        stream_predict = dspy.streamify(
+            self.predict,
+            stream_listeners=[StreamListener(signature_field_name=streamed_field)],
+            is_async_program=True,
+            async_streaming=True,
+        )
+        output_stream = stream_predict(**kwargs)
+        async for chunk in output_stream:
+            yield chunk
 
     async def aforward_with_feedback_examples(
         self,
@@ -443,6 +504,7 @@ class ElysiaChainOfThought(Module):
         complex_lm: dspy.LM,
         num_base_lm_examples: int = 3,
         return_example_uuids: bool = False,
+        add_tree_data_inputs: bool = True,
         **kwargs,
     ) -> tuple[dspy.Prediction, list[str]] | dspy.Prediction:
         """
@@ -481,26 +543,46 @@ class ElysiaChainOfThought(Module):
         else:
             if return_example_uuids:
                 return (
-                    await self.aforward(lm=complex_lm, **kwargs),
+                    await self.aforward(
+                        lm=complex_lm,
+                        add_tree_data_inputs=add_tree_data_inputs,
+                        **kwargs,
+                    ),
                     uuids,
                 )
             else:
-                return await self.aforward(lm=complex_lm, **kwargs)
+                return await self.aforward(
+                    lm=complex_lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
+                )
 
         # Select the LM to use based on the number of examples
         if len(examples) < num_base_lm_examples:
             if return_example_uuids:
                 return (
-                    await optimized_module.aforward(lm=complex_lm, **kwargs),
+                    await optimized_module.aforward(
+                        lm=complex_lm,
+                        add_tree_data_inputs=add_tree_data_inputs,
+                        **kwargs,
+                    ),
                     uuids,
                 )
             else:
-                return await optimized_module.aforward(lm=complex_lm, **kwargs)
+                return await optimized_module.aforward(
+                    lm=complex_lm,
+                    add_tree_data_inputs=add_tree_data_inputs,
+                    **kwargs,
+                )
         else:
             if return_example_uuids:
                 return (
-                    await optimized_module.aforward(lm=base_lm, **kwargs),
+                    await optimized_module.aforward(
+                        lm=base_lm,
+                        add_tree_data_inputs=add_tree_data_inputs,
+                        **kwargs,
+                    ),
                     uuids,
                 )
             else:
-                return await optimized_module.aforward(lm=base_lm, **kwargs)
+                return await optimized_module.aforward(
+                    lm=base_lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
+                )

@@ -727,6 +727,7 @@ class TreeData:
         recursion_limit: int | None = None,
         settings: Settings | None = None,
         use_weaviate_collections: bool = True,
+        streaming: bool = False,
     ):
         if settings is None:
             self.settings = environment_settings
@@ -763,6 +764,8 @@ class TreeData:
             self.recursion_limit = 3
         else:
             self.recursion_limit = recursion_limit
+
+        self.streaming = streaming
 
         # -- Atlas --
         self.atlas = atlas

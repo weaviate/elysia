@@ -221,6 +221,30 @@ class Tracker:
             }
 
 
+class ViewEnvironment(Update):
+    """
+    Frontend update to represent when the decision agent looks at the environment.
+    """
+
+    def __init__(
+        self,
+        tool_name: str,
+        metadata_key: str,
+        metadata_value: Any,
+        environment_preview: list[dict],
+    ):
+        Update.__init__(
+            self,
+            "view_environment",
+            {
+                "tool_name": tool_name,
+                "metadata_key": metadata_key,
+                "metadata_value": metadata_value,
+                "environment_preview": environment_preview,
+            },
+        )
+
+
 class TreeUpdate:
     """
     Frontend update to represent what nodes have been updated.

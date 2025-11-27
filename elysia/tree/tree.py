@@ -6,6 +6,7 @@ from copy import deepcopy
 from typing import AsyncGenerator, Literal, Any
 
 import dspy
+from dspy.streaming import StreamResponse
 from pympler import asizeof
 from rich import print
 from rich.console import Console
@@ -57,7 +58,7 @@ from elysia.config import (
     load_base_lm,
     load_complex_lm,
 )
-from elysia.util.objects import Tracker, TrainingUpdate, TreeUpdate
+from elysia.util.objects import Tracker, TrainingUpdate, TreeUpdate, ViewEnvironment
 from elysia.util.parsing import remove_whitespace
 from elysia.util.collection import retrieve_all_collection_names
 
@@ -81,6 +82,7 @@ class Tree:
         preset_id: str | None = None,
         low_memory: bool = False,
         use_weaviate_collections: bool = True,
+        streaming: bool = False,
         settings: Settings | None = None,
     ) -> None:
         """
@@ -155,6 +157,7 @@ class Tree:
             recursion_limit=5,
             settings=self.settings,
             use_weaviate_collections=use_weaviate_collections,
+            streaming=streaming,
         )
 
         # initialise the timers
@@ -1391,13 +1394,21 @@ class Tree:
             )
 
             with ElysiaKeyManager(self.settings):
-                self.current_decision, results = await current_decision_node.decide(
+                async for result in current_decision_node.decide(
                     tree_data=self.tree_data,
                     base_lm=self.base_lm,
                     complex_lm=self.complex_lm,
                     options=options,
                     client_manager=client_manager,
-                )
+                ):
+                    if isinstance(result, (StreamResponse, ViewEnvironment)):
+                        yield await self.returner(
+                            result, self.prompt_to_query_id[user_prompt]
+                        )
+                    elif isinstance(result, Decision):
+                        self.current_decision = result
+                    elif isinstance(result, list):
+                        results = result
 
             for result in results:
                 action_result, _ = await self._evaluate_result(

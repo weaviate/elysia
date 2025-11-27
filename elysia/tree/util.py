@@ -1,12 +1,14 @@
+from math import e
 import uuid
 import json
+from typing import AsyncGenerator, overload
 
 # dspy requires a 'base' LM but this should not be used
 import dspy
+from dspy.streaming import StreamResponse
+
 import types
 from pydantic import BaseModel, ConfigDict
-from pympler import asizeof
-from logging import Logger
 
 from typing import Callable, Union, Any, Optional, Sequence
 
@@ -24,7 +26,13 @@ from elysia.objects import (
 )
 
 from elysia.tree.objects import TreeData
-from elysia.util.objects import TrainingUpdate, TreeUpdate, FewShotExamples
+from elysia.util.objects import (
+    TrainingUpdate,
+    TreeUpdate,
+    FewShotExamples,
+    ViewEnvironment,
+)
+
 from elysia.util.elysia_modules import ElysiaChainOfThought, AssertedModule
 from elysia.util.parsing import format_datetime
 from elysia.util.client import ClientManager
@@ -234,7 +242,7 @@ class Node:
 
     async def _execute_view_environment(
         self, kwargs: dict, tree_data: TreeData, inputs: dict, lm: dspy.LM
-    ) -> dspy.Prediction:
+    ) -> AsyncGenerator[StreamResponse | dspy.Prediction | ViewEnvironment, None]:
 
         history = dspy.History(messages=[])
         view_env_inputs = self._get_view_environment()["inputs"]
@@ -289,6 +297,13 @@ class Node:
             else:
                 environment = tree_data.environment.to_json()["environment"]
 
+            yield ViewEnvironment(
+                tool_name=tool_name,
+                metadata_key=metadata_key,
+                metadata_value=metadata_value,
+                environment_preview=environment[:5],
+            )
+
             environment_decision_executor = ElysiaChainOfThought(
                 DPWithEnvMetadataResponse,
                 tree_data=tree_data,
@@ -298,12 +313,18 @@ class Node:
                 reasoning=tree_data.settings.BASE_USE_REASONING,
             )
 
-            pred = await environment_decision_executor.predict.aforward(
+            async for chunk in environment_decision_executor.aforward_streaming(
+                streamed_field="reasoning",
                 environment=environment,
                 available_actions=kwargs["available_actions"],
                 history=history,
                 lm=lm,
-            )
+                add_tree_data_inputs=False,
+            ):
+                if isinstance(chunk, StreamResponse):
+                    yield chunk
+                elif isinstance(chunk, dspy.Prediction):
+                    pred = chunk
 
             chosen_function = pred.function_name
             inputs = pred.function_inputs
@@ -315,7 +336,7 @@ class Node:
                 **pred,
             }
 
-        return pred
+        yield pred
 
     async def decide(
         self,
@@ -324,7 +345,13 @@ class Node:
         complex_lm: dspy.LM,
         options: list[ToolOption],
         client_manager: ClientManager | None = None,
-    ) -> tuple[Decision, Sequence[Result | Update | Text | Error | TrainingUpdate]]:
+    ) -> AsyncGenerator[
+        Decision
+        | Sequence[Result | Update | Text | Error | TrainingUpdate | TreeUpdate]
+        | StreamResponse
+        | ViewEnvironment,
+        None,
+    ]:
 
         available_options = [
             {
@@ -347,15 +374,14 @@ class Node:
         if len(available_options) == 1:
             only_option = next(option for option in options if option.available)
             if only_option.inputs == []:
-                return (
-                    Decision(
-                        function_name=only_option.name,
-                        function_inputs={},
-                        reasoning="Only one option available, no inputs required.",
-                        end_actions=False,
-                    ),
-                    [],
+                yield Decision(
+                    function_name=only_option.name,
+                    function_inputs={},
+                    reasoning="Only one option available, no inputs required.",
+                    end_actions=False,
                 )
+                yield []
+                return
 
         # TODO: replace this with actual token counting
         env_token_limit_reached = (
@@ -383,14 +409,29 @@ class Node:
             self._tool_assertion,
         )
 
-        pred = await decision_executor.aforward(
-            instruction=self.instruction,
-            tree_count=tree_data.tree_count_string(),
-            environment_metadata=tree_data.environment.output_llm_metadata(),
-            available_actions=available_options,
-            unavailable_actions=unavailable_options,
-            lm=base_lm,
-        )
+        if tree_data.streaming:
+            async for chunk in decision_executor.aforward_streaming(
+                streamed_field="reasoning",
+                instruction=self.instruction,
+                tree_count=tree_data.tree_count_string(),
+                environment_metadata=tree_data.environment.output_llm_metadata(),
+                available_actions=available_options,
+                unavailable_actions=unavailable_options,
+                lm=base_lm,
+            ):
+                if isinstance(chunk, StreamResponse):
+                    yield chunk
+                elif isinstance(chunk, dspy.Prediction):
+                    pred = chunk
+        else:
+            pred = await decision_executor.aforward(
+                instruction=self.instruction,
+                tree_count=tree_data.tree_count_string(),
+                environment_metadata=tree_data.environment.output_llm_metadata(),
+                available_actions=available_options,
+                unavailable_actions=unavailable_options,
+                lm=base_lm,
+            )
 
         results = [
             TrainingUpdate(
@@ -407,7 +448,7 @@ class Node:
             )
         ]
         if pred.function_name == "view_environment":
-            pred = await self._execute_view_environment(
+            async for chunk in self._execute_view_environment(
                 kwargs={
                     "user_prompt": tree_data.user_prompt,
                     "instruction": self.instruction,
@@ -421,24 +462,24 @@ class Node:
                 tree_data=tree_data,
                 inputs=pred.function_inputs,
                 lm=base_lm,
-            )
+            ):
+                if isinstance(chunk, (StreamResponse, ViewEnvironment)):
+                    yield chunk
+                elif isinstance(chunk, dspy.Prediction):
+                    pred = chunk
 
-        return (
-            Decision(
-                function_name=pred.function_name,
-                function_inputs=self._get_function_inputs(
-                    llm_inputs=pred.function_inputs,
-                    real_inputs=next(
-                        option
-                        for option in options
-                        if pred.function_name == option.name
-                    ).inputs,
-                ),
-                reasoning=pred.reasoning,
-                end_actions=pred.end_actions,
+        yield Decision(
+            function_name=pred.function_name,
+            function_inputs=self._get_function_inputs(
+                llm_inputs=pred.function_inputs,
+                real_inputs=next(
+                    option for option in options if pred.function_name == option.name
+                ).inputs,
             ),
-            results,
+            reasoning=pred.reasoning,
+            end_actions=pred.end_actions,
         )
+        yield results
 
 
 class TreeReturner:
@@ -479,7 +520,7 @@ class TreeReturner:
 
     async def __call__(
         self,
-        result: Result | TreeUpdate | Update | Text | Error,
+        result: Result | TreeUpdate | Update | Text | Error | StreamResponse,
         query_id: str,
     ) -> dict[str, str | dict] | None:
 
@@ -488,6 +529,20 @@ class TreeReturner:
                 self.user_id, self.conversation_id, query_id
             )
             self.store.append(payload)
+            return payload
+
+        if isinstance(result, StreamResponse):
+            payload = {
+                "type": "stream",
+                "id": str(uuid.uuid4()),
+                "user_id": self.user_id,
+                "conversation_id": self.conversation_id,
+                "query_id": query_id,
+                "payload": {
+                    "type": result.signature_field_name,
+                    "chunk": result.chunk,
+                },
+            }
             return payload
 
         if isinstance(result, TreeUpdate):
