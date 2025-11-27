@@ -11,7 +11,9 @@ from pydantic import BaseModel
 
 BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
 
-from elysia.api.utils.tools import get_presets_weaviate
+from elysia.api.utils.tools import get_presets_weaviate, find_tool_metadata
+
+tool_metadata = find_tool_metadata()
 
 default_presets = [
     TreeGraph(
@@ -31,10 +33,30 @@ default_presets = [
                 ),
                 is_root=True,
             ),
-            "y12321": TreeNode(id="y12321", name="query", is_branch=False),
-            "z12321": TreeNode(id="z12321", name="aggregate", is_branch=False),
-            "a12321": TreeNode(id="a12321", name="cited_summarize", is_branch=False),
-            "b12321": TreeNode(id="b12321", name="text_response", is_branch=False),
+            "y12321": TreeNode(
+                id="y12321",
+                name="query",
+                is_branch=False,
+                description=tool_metadata["query"]["description"],
+            ),
+            "z12321": TreeNode(
+                id="z12321",
+                name="aggregate",
+                is_branch=False,
+                description=tool_metadata["aggregate"]["description"],
+            ),
+            "a12321": TreeNode(
+                id="a12321",
+                name="cited_summarize",
+                is_branch=False,
+                description=tool_metadata["cited_summarize"]["description"],
+            ),
+            "b12321": TreeNode(
+                id="b12321",
+                name="text_response",
+                is_branch=False,
+                description=tool_metadata["text_response"]["description"],
+            ),
         },
         edges=[
             ("x12343", "y12321"),
@@ -68,13 +90,29 @@ default_presets = [
                 instruction="Pick between doing a big query or a little aggregate bro.",
                 is_root=False,
             ),
-            "query": TreeNode(id="query", name="query", is_branch=False),
-            "aggregate": TreeNode(id="aggregate", name="aggregate", is_branch=False),
+            "query": TreeNode(
+                id="query",
+                name="query",
+                is_branch=False,
+                description=tool_metadata["query"]["description"],
+            ),
+            "aggregate": TreeNode(
+                id="aggregate",
+                name="aggregate",
+                is_branch=False,
+                description=tool_metadata["aggregate"]["description"],
+            ),
             "cited_summarize": TreeNode(
-                id="cited_summarize", name="cited_summarize", is_branch=False
+                id="cited_summarize",
+                name="cited_summarize",
+                is_branch=False,
+                description=tool_metadata["cited_summarize"]["description"],
             ),
             "text_response": TreeNode(
-                id="text_response", name="text_response", is_branch=False
+                id="text_response",
+                name="text_response",
+                is_branch=False,
+                description=tool_metadata["text_response"]["description"],
             ),
         },
         edges=[
@@ -154,19 +192,36 @@ default_presets = [
                 is_root=False,
             ),
             "tell_a_joke": TreeNode(
-                id="tell_a_joke", name="tell_a_joke", is_branch=False
+                id="tell_a_joke",
+                name="tell_a_joke",
+                is_branch=False,
+                description=tool_metadata["tell_a_joke"]["description"],
             ),
             "basic_linear_regression_tool": TreeNode(
                 id="basic_linear_regression_tool",
                 name="basic_linear_regression_tool",
                 is_branch=False,
+                description=tool_metadata["basic_linear_regression_tool"][
+                    "description"
+                ],
             ),
             "text_response": TreeNode(
-                id="text_response", name="text_response", is_branch=False
+                id="text_response",
+                name="text_response",
+                is_branch=False,
+                description=tool_metadata["text_response"]["description"],
             ),
-            "query": TreeNode(id="query", name="query", is_branch=False),
+            "query": TreeNode(
+                id="query",
+                name="query",
+                is_branch=False,
+                description=tool_metadata["query"]["description"],
+            ),
             "cited_summarize": TreeNode(
-                id="cited_summarize", name="cited_summarize", is_branch=False
+                id="cited_summarize",
+                name="cited_summarize",
+                is_branch=False,
+                description=tool_metadata["cited_summarize"]["description"],
             ),
         },
         edges=[

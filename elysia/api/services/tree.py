@@ -5,6 +5,7 @@ from typing import Any
 import uuid
 from dotenv import load_dotenv
 from weaviate.util import generate_uuid5
+from typing import AsyncGenerator
 
 # Load environment variables from .env file
 load_dotenv(override=True)
@@ -76,7 +77,7 @@ class TreeManager:
         agent_description: str | None = None,
         end_goal: str | None = None,
         branch_initialisation: BranchInitType | None = None,
-    ):
+    ) -> None:
         if config_id is not None:
             self.config.id = config_id
 
@@ -102,7 +103,7 @@ class TreeManager:
         self,
         conversation_id: str,
         low_memory: bool = False,
-    ):
+    ) -> None:
         """
         Add a tree to the TreeManager.
         The decision tree can be initialised with specific config options, such as style, agent description and end goal.
@@ -135,7 +136,7 @@ class TreeManager:
 
     async def save_tree_weaviate(
         self, conversation_id: str, client_manager: ClientManager
-    ):
+    ) -> None:
         """
         Save a tree to Weaviate to collection ELYSIA_TREES__.
         Creates the collection if it doesn't exist.
@@ -149,7 +150,7 @@ class TreeManager:
 
     async def check_tree_exists_weaviate(
         self, conversation_id: str, client_manager: ClientManager
-    ):
+    ) -> bool:
         """
         Check if a tree exists in a Weaviate instance.
         The collection ELYSIA_TREES__ must exist, returns False if it doesn't.
@@ -174,7 +175,7 @@ class TreeManager:
 
     async def load_tree_weaviate(
         self, conversation_id: str, client_manager: ClientManager
-    ):
+    ) -> list[dict]:
         """
         Load a tree from Weaviate.
         The conversation ID from the loaded tree is placed into the tree manager
@@ -206,7 +207,7 @@ class TreeManager:
 
     async def delete_tree_weaviate(
         self, conversation_id: str, client_manager: ClientManager
-    ):
+    ) -> None:
         """
         Delete a tree from the stored trees in Weaviate.
 
@@ -221,7 +222,7 @@ class TreeManager:
             client_manager=client_manager,
         )
 
-    def delete_tree_local(self, conversation_id: str):
+    def delete_tree_local(self, conversation_id: str) -> None:
         """
         Delete a tree from the TreeManager.
 
@@ -231,7 +232,7 @@ class TreeManager:
         if conversation_id in self.trees:
             del self.trees[conversation_id]
 
-    def tree_exists(self, conversation_id: str):
+    def tree_exists(self, conversation_id: str) -> bool:
         """
         Check if a tree exists in the TreeManager.
 
@@ -243,7 +244,7 @@ class TreeManager:
         """
         return conversation_id in self.trees
 
-    def get_tree(self, conversation_id: str):
+    def get_tree(self, conversation_id: str) -> Tree:
         """
         Get a tree from the TreeManager.
         Will raise a ValueError if the tree is not found.
@@ -261,7 +262,7 @@ class TreeManager:
 
         return self.trees[conversation_id]["tree"]
 
-    def get_event(self, conversation_id: str):
+    def get_event(self, conversation_id: str) -> asyncio.Event:
         """
         Get the asyncio.Event for a tree in the TreeManager.
         This is cleared when the tree is processing, and set when the tree is idle.
@@ -277,7 +278,7 @@ class TreeManager:
 
     def configure(
         self, conversation_id: str | None = None, replace: bool = False, **kwargs: Any
-    ):
+    ) -> None:
         """
         Configure the settings for a tree in the TreeManager.
 
@@ -294,7 +295,7 @@ class TreeManager:
         else:
             self.get_tree(conversation_id).settings.configure(replace=replace, **kwargs)
 
-    def change_style(self, style: str, conversation_id: str | None = None):
+    def change_style(self, style: str, conversation_id: str | None = None) -> None:
         """
         Change the style for a tree in the TreeManager.
         Or change the global style for all trees (if conversation_id is not supplied).
@@ -319,7 +320,7 @@ class TreeManager:
 
     def change_agent_description(
         self, agent_description: str, conversation_id: str | None = None
-    ):
+    ) -> None:
         """
         Change the agent description for a tree in the TreeManager.
         Or change the global agent description for all trees (if conversation_id is not supplied).
@@ -346,7 +347,9 @@ class TreeManager:
                 agent_description
             )
 
-    def change_end_goal(self, end_goal: str, conversation_id: str | None = None):
+    def change_end_goal(
+        self, end_goal: str, conversation_id: str | None = None
+    ) -> None:
         """
         Change the end goal for a tree in the TreeManager.
         Or change the global end goal for all trees (if conversation_id is not supplied).
@@ -371,7 +374,7 @@ class TreeManager:
 
     def change_branch_initialisation(
         self, branch_initialisation: BranchInitType, conversation_id: str | None = None
-    ):
+    ) -> None:
         """
         Change the branch initialisation for a tree in the TreeManager.
         Or change the global branch initialisation for all trees (if conversation_id is not supplied).
@@ -398,7 +401,7 @@ class TreeManager:
                 branch_initialisation
             )
 
-    def load_tree_graph(self, conversation_id: str, preset: TreeGraph):
+    def load_tree_graph(self, conversation_id: str, preset: TreeGraph) -> None:
         tree: Tree = self.get_tree(conversation_id)
         tree.clear_tree()
 
@@ -443,6 +446,7 @@ class TreeManager:
                     tree.add_tool(
                         tool=tool_classes[node.name],
                         from_node_id=edge[0],
+                        description=node.description,
                         node_id=node.id,
                     )
 
@@ -458,7 +462,7 @@ class TreeManager:
         training_route: str = "",
         collection_names: list[str] = [],
         client_manager: ClientManager | None = None,
-    ):
+    ) -> AsyncGenerator:
         """
         Process a tree in the TreeManager.
         This is an async generator which yields results from the tree.async_run() method.
@@ -504,7 +508,7 @@ class TreeManager:
             # set the event to idle
             self.trees[conversation_id]["event"].set()
 
-    def check_tree_timeout(self, conversation_id: str):
+    def check_tree_timeout(self, conversation_id: str) -> bool:
         """
         Check if a tree has been idle for the last tree_timeout.
 
@@ -528,10 +532,10 @@ class TreeManager:
 
         return False
 
-    def update_tree_last_request(self, conversation_id: str):
+    def update_tree_last_request(self, conversation_id: str) -> None:
         self.trees[conversation_id]["last_request"] = datetime.datetime.now()
 
-    def check_all_trees_timeout(self):
+    def check_all_trees_timeout(self) -> None:
         """
         Check all trees in the TreeManager and remove any that have not been active in the last tree_timeout.
         """

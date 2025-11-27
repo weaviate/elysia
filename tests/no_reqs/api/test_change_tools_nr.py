@@ -1,24 +1,14 @@
 import pytest
-import os
 from uuid import uuid4
 
-from elysia.api.utils.config import default_presets
-from weaviate.util import generate_uuid5
-from elysia.api.services.user import UserManager
 from elysia.api.api_types import (
     InitialiseTreeData,
     SaveConfigUserData,
     TreeNode,
     TreeGraph,
+    QueryData,
 )
-from elysia.api.routes.query import process
-from elysia.api.dependencies.common import get_user_manager
-from elysia.api.routes.init import initialise_user, initialise_tree
-from elysia.api.routes.user_config import (
-    update_frontend_config,
-    save_config_user,
-    get_current_user_config,
-)
+from elysia.api.services.tree import TreeManager, Tree
 from elysia.api.routes.tools import (
     get_available_tools,
     add_tool_preset,
@@ -29,9 +19,7 @@ from elysia.api.custom_tools import TellAJoke
 from elysia.api.dependencies.common import get_user_manager
 from elysia.api.routes.init import initialise_user, initialise_tree
 from elysia.api.routes.user_config import (
-    update_frontend_config,
     save_config_user,
-    get_current_user_config,
 )
 from elysia.api.routes.query import process
 
@@ -54,6 +42,7 @@ async def initialise_user_and_tree(user_id: str, conversation_id: str):
         user_id,
         user_manager,
     )
+    assert read_response(response)["error"] == ""
 
     response = await initialise_tree(
         user_id,
@@ -63,6 +52,7 @@ async def initialise_user_and_tree(user_id: str, conversation_id: str):
         ),
         user_manager,
     )
+    assert read_response(response)["error"] == ""
 
 
 @pytest.mark.asyncio
@@ -103,10 +93,30 @@ test_presets = [
                 ),
                 is_root=True,
             ),
-            "y12321": TreeNode(id="y12321", name="query", is_branch=False),
-            "z12321": TreeNode(id="z12321", name="aggregate", is_branch=False),
-            "a12321": TreeNode(id="a12321", name="cited_summarize", is_branch=False),
-            "b12321": TreeNode(id="b12321", name="text_response", is_branch=False),
+            "y12321": TreeNode(
+                id="y12321",
+                name="query",
+                is_branch=False,
+                description="query description",
+            ),
+            "z12321": TreeNode(
+                id="z12321",
+                name="aggregate",
+                is_branch=False,
+                description="aggregate description",
+            ),
+            "a12321": TreeNode(
+                id="a12321",
+                name="cited_summarize",
+                is_branch=False,
+                description="cited_summarize description",
+            ),
+            "b12321": TreeNode(
+                id="b12321",
+                name="text_response",
+                is_branch=False,
+                description="text_response description",
+            ),
         },
         edges=[
             ("x12343", "y12321"),
@@ -140,13 +150,29 @@ test_presets = [
                 instruction="Pick between doing a big query or a little aggregate bro.",
                 is_root=False,
             ),
-            "query": TreeNode(id="query", name="query", is_branch=False),
-            "aggregate": TreeNode(id="aggregate", name="aggregate", is_branch=False),
+            "query": TreeNode(
+                id="query",
+                name="query",
+                is_branch=False,
+                description="query description",
+            ),
+            "aggregate": TreeNode(
+                id="aggregate",
+                name="aggregate",
+                is_branch=False,
+                description="aggregate description",
+            ),
             "cited_summarize": TreeNode(
-                id="cited_summarize", name="cited_summarize", is_branch=False
+                id="cited_summarize",
+                name="cited_summarize",
+                is_branch=False,
+                description="cited_summarize description",
             ),
             "text_response": TreeNode(
-                id="text_response", name="text_response", is_branch=False
+                id="text_response",
+                name="text_response",
+                is_branch=False,
+                description="text_response description",
             ),
         },
         edges=[
@@ -169,7 +195,7 @@ test_presets = [
                 id="this_is_the_root_branch",
                 name="this_is_the_root_branch",
                 is_branch=True,
-                description="",
+                description="Root branch description",
                 instruction=(
                     "Choose a base-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -181,7 +207,7 @@ test_presets = [
                 id="this_is_the_second_branch",
                 name="this_is_the_second_branch",
                 is_branch=True,
-                description="",
+                description="Second branch description",
                 instruction=(
                     "Choose a secondary-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -193,7 +219,7 @@ test_presets = [
                 id="this_is_the_third_branch",
                 name="this_is_the_third_branch",
                 is_branch=True,
-                description="",
+                description="Third branch description",
                 instruction=(
                     "Choose a third-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -205,7 +231,7 @@ test_presets = [
                 id="this_is_the_fourth_branch",
                 name="this_is_the_fourth_branch",
                 is_branch=True,
-                description="",
+                description="Fourth branch description",
                 instruction=(
                     "Choose a fourth-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -217,7 +243,7 @@ test_presets = [
                 id="this_is_the_fifth_branch",
                 name="this_is_the_fifth_branch",
                 is_branch=True,
-                description="",
+                description="Fifth branch description",
                 instruction=(
                     "Choose a fifth-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -226,19 +252,31 @@ test_presets = [
                 is_root=False,
             ),
             "tell_a_joke": TreeNode(
-                id="tell_a_joke", name="tell_a_joke", is_branch=False
+                id="tell_a_joke",
+                name="tell_a_joke",
+                is_branch=False,
+                description="",
             ),
             "basic_linear_regression_tool": TreeNode(
                 id="basic_linear_regression_tool",
                 name="basic_linear_regression_tool",
                 is_branch=False,
+                description="",
             ),
             "text_response": TreeNode(
-                id="text_response", name="text_response", is_branch=False
+                id="text_response",
+                name="text_response",
+                is_branch=False,
+                description="",
             ),
-            "query": TreeNode(id="query", name="query", is_branch=False),
+            "query": TreeNode(
+                id="query", name="query", is_branch=False, description=""
+            ),
             "cited_summarize": TreeNode(
-                id="cited_summarize", name="cited_summarize", is_branch=False
+                id="cited_summarize",
+                name="cited_summarize",
+                is_branch=False,
+                description="",
             ),
         },
         edges=[
@@ -327,3 +365,87 @@ async def test_cycle(test_preset: TreeGraph):
     assert "presets" in response
     assert response["presets"] is not None
     assert len(response["presets"]) == 0
+
+
+class fake_websocket:
+    results = []
+
+    async def send_json(self, data: dict):
+        self.results.append(data)
+
+
+@pytest.mark.parametrize("test_preset", test_presets)
+@pytest.mark.asyncio
+async def test_in_tree(test_preset: TreeGraph):
+
+    # first we add the tool preset
+    user_id = f"test_add_tool_preset_{uuid4()}"
+    conversation_id = str(uuid4())
+    user_manager = get_user_manager()
+    await initialise_user_and_tree(user_id, conversation_id)
+
+    response = await save_config_user(
+        user_id=user_id,
+        config_id=f"test_add_tool_preset_{uuid4()}",
+        data=SaveConfigUserData(
+            name="test_add_tool_preset",
+            default=True,
+            config={},
+            frontend_config={"save_configs_to_weaviate": False},
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    user_local = await user_manager.get_user_local(user_id)
+    tree_graph_manager = user_local["tree_graph_manager"]
+    for preset in tree_graph_manager.presets:
+        tree_graph_manager.remove(preset.id)
+
+    response = await get_available_tools()
+    available_tools = read_response(response)["tools"]
+
+    response = await add_tool_preset(
+        user_id=user_id,
+        data=test_preset,
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    websocket = fake_websocket()
+
+    # then use this preset ID to query
+
+    query_id = str(uuid4())
+
+    out = await process(
+        QueryData(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            preset_id=test_preset.id,
+            query="hi!",
+            query_id=query_id,
+            collection_names=[],
+        ).model_dump(),
+        websocket,
+        get_user_manager(),
+    )
+    for res in websocket.results:
+        assert "error" not in res["type"], res["payload"]["text"]
+
+    # then let's get the tree to check what tools etc are ther
+    tree_manager: TreeManager = user_local["tree_manager"]
+    tree: Tree = tree_manager.get_tree(conversation_id)
+
+    for node_id in test_preset.nodes:
+        assert node_id in tree.nodes
+
+        preset_description = test_preset.nodes[node_id].description
+        tree_description = tree.nodes[node_id].description
+
+        if preset_description:
+            assert preset_description == tree_description
+        elif not test_preset.nodes[node_id].is_branch:
+            assert tree_description == available_tools[node_id]["description"]
