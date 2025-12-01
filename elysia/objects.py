@@ -527,9 +527,14 @@ class Return:
 
 class Text(Return):
     """
-    Frontend Return Type 1: Text
-    Objects is usually a one-element list containing a dict with a "text" key only.
-    But is not limited to this.
+    Object that the frontend is aware of.
+    Contains `objects` which is a list of dictionaries, each dictionary contains:
+        - `text`: A single text field (e.g. a paragraph, a page)
+        - `ref_ids`: A list of reference IDs, which are citations relevant to the above `text`
+    Contains `metadata` which can optionally have:
+        - `title`: A title for the text
+        - `author`: An author for the text
+        - `date`: A date for the text
     """
 
     def __init__(
@@ -601,6 +606,26 @@ class Text(Return):
 class Response(Text):
     def __init__(self, text: str, **kwargs):
         Text.__init__(self, "response", [{"text": text}], **kwargs)
+
+
+class StreamedReasoning(Return):
+    def __init__(self, chunk: str, last: bool = False):
+        Return.__init__(self, "streamed_reasoning", "reasoning")
+        self.chunk = chunk
+        self.last = last
+
+    def to_json(self):
+        return {"type": self.payload_type, "chunk": self.chunk, "last": self.last}
+
+    async def to_frontend(self, user_id: str, conversation_id: str, query_id: str):
+        return {
+            "type": self.frontend_type,
+            "id": self.frontend_type[:3] + "-" + str(uuid.uuid4()),
+            "user_id": user_id,
+            "conversation_id": conversation_id,
+            "query_id": query_id,
+            "payload": self.to_json(),
+        }
 
 
 class Update(Return):

@@ -6,10 +6,10 @@ import dspy
 from dspy.primitives.module import Module
 from dspy.signatures.signature import Signature, ensure_signature
 from dspy.streaming import StreamListener, StreamResponse
+
 from elysia.tree.objects import TreeData, Atlas
 from elysia.util.retrieve_feedback import retrieve_feedback
 from elysia.util.client import ClientManager
-
 
 elysia_meta_prompt = """
 You are part of an ensemble of agents that are working together to solve a task.

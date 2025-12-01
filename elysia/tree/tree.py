@@ -34,6 +34,7 @@ from elysia.objects import (
     Completed,
     Result,
     Return,
+    StreamedReasoning,
     Update,
     Text,
     Tool,
@@ -1401,7 +1402,7 @@ class Tree:
                     options=options,
                     client_manager=client_manager,
                 ):
-                    if isinstance(result, (StreamResponse, ViewEnvironment)):
+                    if isinstance(result, (StreamedReasoning, ViewEnvironment)):
                         yield await self.returner(
                             result, self.prompt_to_query_id[user_prompt]
                         )

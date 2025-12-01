@@ -1,6 +1,17 @@
 import dspy
 from typing import List
-from elysia.tools.text.objects import TextWithCitation
+from pydantic import BaseModel, Field
+
+
+class TextWithCitation(BaseModel):
+    text: str = Field(description="The text within the summary")
+    ref_ids: List[str] = Field(
+        description=(
+            "The ref_ids of the citations relevant to the text. "
+            "Can be an empty list if the text is not related to any of the citations."
+        ),
+        default_factory=list,
+    )
 
 
 class CitedSummarizingPrompt(dspy.Signature):

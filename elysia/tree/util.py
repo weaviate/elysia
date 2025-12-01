@@ -23,6 +23,7 @@ from elysia.objects import (
     Tool,
     Update,
     Status,
+    StreamedReasoning,
 )
 
 from elysia.tree.objects import TreeData
@@ -242,7 +243,7 @@ class Node:
 
     async def _execute_view_environment(
         self, kwargs: dict, tree_data: TreeData, inputs: dict, lm: dspy.LM
-    ) -> AsyncGenerator[StreamResponse | dspy.Prediction | ViewEnvironment, None]:
+    ) -> AsyncGenerator[StreamedReasoning | dspy.Prediction | ViewEnvironment, None]:
 
         history = dspy.History(messages=[])
         view_env_inputs = self._get_view_environment()["inputs"]
@@ -321,8 +322,11 @@ class Node:
                 lm=lm,
                 add_tree_data_inputs=False,
             ):
-                if isinstance(chunk, StreamResponse):
-                    yield chunk
+                if (
+                    isinstance(chunk, StreamResponse)
+                    and chunk.signature_field_name == "reasoning"
+                ):
+                    yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
 
@@ -348,7 +352,7 @@ class Node:
     ) -> AsyncGenerator[
         Decision
         | Sequence[Result | Update | Text | Error | TrainingUpdate | TreeUpdate]
-        | StreamResponse
+        | StreamedReasoning
         | ViewEnvironment,
         None,
     ]:
@@ -419,8 +423,11 @@ class Node:
                 unavailable_actions=unavailable_options,
                 lm=base_lm,
             ):
-                if isinstance(chunk, StreamResponse):
-                    yield chunk
+                if (
+                    isinstance(chunk, StreamResponse)
+                    and chunk.signature_field_name == "reasoning"
+                ):
+                    yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
         else:
@@ -464,7 +471,13 @@ class Node:
                 lm=base_lm,
             ):
                 if isinstance(chunk, (StreamResponse, ViewEnvironment)):
-                    yield chunk
+                    if isinstance(chunk, StreamResponse):
+                        if chunk.signature_field_name == "reasoning":
+                            yield StreamedReasoning(
+                                chunk=chunk.chunk, last=chunk.is_last_chunk
+                            )
+                    else:
+                        yield chunk
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
 
@@ -520,7 +533,7 @@ class TreeReturner:
 
     async def __call__(
         self,
-        result: Result | TreeUpdate | Update | Text | Error | StreamResponse,
+        result: Result | TreeUpdate | Update | Text | Error | StreamedReasoning,
         query_id: str,
     ) -> dict[str, str | dict] | None:
 
@@ -531,21 +544,13 @@ class TreeReturner:
             self.store.append(payload)
             return payload
 
-        if isinstance(result, StreamResponse):
-            payload = {
-                "type": "stream",
-                "id": str(uuid.uuid4()),
-                "user_id": self.user_id,
-                "conversation_id": self.conversation_id,
-                "query_id": query_id,
-                "payload": {
-                    "type": result.signature_field_name,
-                    "chunk": result.chunk,
-                },
-            }
+        elif isinstance(result, StreamedReasoning):
+            payload = await result.to_frontend(
+                self.user_id, self.conversation_id, query_id
+            )
             return payload
 
-        if isinstance(result, TreeUpdate):
+        elif isinstance(result, TreeUpdate):
             payload = await result.to_frontend(
                 self.user_id,
                 self.conversation_id,

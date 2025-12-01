@@ -6,8 +6,7 @@ import dspy.predict
 from elysia.util.elysia_modules import ElysiaChainOfThought
 
 # LLM
-from elysia.objects import Response, Tool
-from elysia.tools.text.objects import TextWithTitle, TextWithCitations
+from elysia.objects import Response, Tool, Text
 from elysia.tools.text.prompt_templates import (
     SummarizingPrompt,
     TextResponsePrompt,
@@ -69,9 +68,10 @@ class CitedSummarizer(Tool):
             lm=base_lm,
         )
 
-        yield TextWithCitations(
-            cited_texts=summary.cited_text,
-            title=summary.subtitle,
+        yield Text(
+            "text_with_citations",
+            objects=summary.cited_text,
+            metadata={"title": summary.subtitle},
         )
 
 
@@ -125,7 +125,11 @@ class Summarizer(Tool):
             lm=base_lm,
         )
 
-        yield TextWithTitle(text=summary.summary, title=summary.subtitle)
+        yield Text(
+            "text_with_title",
+            objects=[{"text": summary.summary}],
+            metadata={"title": summary.subtitle},
+        )
 
 
 class TextResponse(Tool):
