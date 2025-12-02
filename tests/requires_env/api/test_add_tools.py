@@ -37,6 +37,7 @@ def read_response(response: JSONResponse):
 Tests when we ARE saving configs to Weaviate.
 """
 
+
 test_presets = [
     TreeGraph(
         id="default",
@@ -55,10 +56,30 @@ test_presets = [
                 ),
                 is_root=True,
             ),
-            "y12321": TreeNode(id="y12321", name="query", is_branch=False),
-            "z12321": TreeNode(id="z12321", name="aggregate", is_branch=False),
-            "a12321": TreeNode(id="a12321", name="cited_summarize", is_branch=False),
-            "b12321": TreeNode(id="b12321", name="text_response", is_branch=False),
+            "y12321": TreeNode(
+                id="y12321",
+                name="query",
+                is_branch=False,
+                description="query description",
+            ),
+            "z12321": TreeNode(
+                id="z12321",
+                name="aggregate",
+                is_branch=False,
+                description="aggregate description",
+            ),
+            "a12321": TreeNode(
+                id="a12321",
+                name="cited_summarize",
+                is_branch=False,
+                description="cited_summarize description",
+            ),
+            "b12321": TreeNode(
+                id="b12321",
+                name="text_response",
+                is_branch=False,
+                description="text_response description",
+            ),
         },
         edges=[
             ("x12343", "y12321"),
@@ -92,13 +113,29 @@ test_presets = [
                 instruction="Pick between doing a big query or a little aggregate bro.",
                 is_root=False,
             ),
-            "query": TreeNode(id="query", name="query", is_branch=False),
-            "aggregate": TreeNode(id="aggregate", name="aggregate", is_branch=False),
+            "query": TreeNode(
+                id="query",
+                name="query",
+                is_branch=False,
+                description="query description",
+            ),
+            "aggregate": TreeNode(
+                id="aggregate",
+                name="aggregate",
+                is_branch=False,
+                description="aggregate description",
+            ),
             "cited_summarize": TreeNode(
-                id="cited_summarize", name="cited_summarize", is_branch=False
+                id="cited_summarize",
+                name="cited_summarize",
+                is_branch=False,
+                description="cited_summarize description",
             ),
             "text_response": TreeNode(
-                id="text_response", name="text_response", is_branch=False
+                id="text_response",
+                name="text_response",
+                is_branch=False,
+                description="text_response description",
             ),
         },
         edges=[
@@ -121,7 +158,7 @@ test_presets = [
                 id="this_is_the_root_branch",
                 name="this_is_the_root_branch",
                 is_branch=True,
-                description="",
+                description="Root branch description",
                 instruction=(
                     "Choose a base-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -133,7 +170,7 @@ test_presets = [
                 id="this_is_the_second_branch",
                 name="this_is_the_second_branch",
                 is_branch=True,
-                description="",
+                description="Second branch description",
                 instruction=(
                     "Choose a secondary-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -145,7 +182,7 @@ test_presets = [
                 id="this_is_the_third_branch",
                 name="this_is_the_third_branch",
                 is_branch=True,
-                description="",
+                description="Third branch description",
                 instruction=(
                     "Choose a third-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -157,7 +194,7 @@ test_presets = [
                 id="this_is_the_fourth_branch",
                 name="this_is_the_fourth_branch",
                 is_branch=True,
-                description="",
+                description="Fourth branch description",
                 instruction=(
                     "Choose a fourth-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -169,7 +206,7 @@ test_presets = [
                 id="this_is_the_fifth_branch",
                 name="this_is_the_fifth_branch",
                 is_branch=True,
-                description="",
+                description="Fifth branch description",
                 instruction=(
                     "Choose a fifth-level task based on the user's prompt and available information. "
                     "Decide based on the tools you have available as well as their descriptions. "
@@ -178,19 +215,31 @@ test_presets = [
                 is_root=False,
             ),
             "tell_a_joke": TreeNode(
-                id="tell_a_joke", name="tell_a_joke", is_branch=False
+                id="tell_a_joke",
+                name="tell_a_joke",
+                is_branch=False,
+                description="",
             ),
             "basic_linear_regression_tool": TreeNode(
                 id="basic_linear_regression_tool",
                 name="basic_linear_regression_tool",
                 is_branch=False,
+                description="",
             ),
             "text_response": TreeNode(
-                id="text_response", name="text_response", is_branch=False
+                id="text_response",
+                name="text_response",
+                is_branch=False,
+                description="",
             ),
-            "query": TreeNode(id="query", name="query", is_branch=False),
+            "query": TreeNode(
+                id="query", name="query", is_branch=False, description=""
+            ),
             "cited_summarize": TreeNode(
-                id="cited_summarize", name="cited_summarize", is_branch=False
+                id="cited_summarize",
+                name="cited_summarize",
+                is_branch=False,
+                description="",
             ),
         },
         edges=[

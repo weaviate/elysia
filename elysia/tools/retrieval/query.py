@@ -7,7 +7,7 @@ from rich.panel import Panel
 
 import dspy
 
-from elysia.util.elysia_modules import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaPrompt
 from elysia.objects import Response, Status, Tool, Error, Result, Return, Retrieval
 from elysia.tools.retrieval.chunk import AsyncCollectionChunker
 from elysia.tools.retrieval.objects import (
@@ -263,7 +263,7 @@ class Query(Tool):
                 ),
             )
 
-        query_generator = ElysiaChainOfThought(
+        query_generator = ElysiaPrompt(
             query_creator_prompt,
             tree_data=tree_data,
             environment=True,

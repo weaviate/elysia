@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from elysia.tree.tree import Tree
 from elysia.api.api_types import (
     AddFeedbackData,
     RemoveFeedbackData,
 )
 from elysia.api.dependencies.common import get_user_manager
 from elysia.api.services.user import UserManager
-from elysia.api.utils.feedback import (
-    create_feedback,
+from elysia.util.feedback import (
     feedback_metadata,
     remove_feedback,
 )
@@ -28,22 +28,16 @@ async def run_add_feedback(
     logger.debug(f"Query ID: {data.query_id}")
     logger.debug(f"Feedback: {data.feedback}")
 
-    tree = await user_manager.get_tree(data.user_id, data.conversation_id)
+    tree: Tree = await user_manager.get_tree(data.user_id, data.conversation_id)
     user = user_manager.users[data.user_id]
     client_manager: ClientManager = user["client_manager"]
 
-    async with client_manager.connect_to_async_client() as client:
-        try:
-            await create_feedback(
-                data.user_id,
-                data.conversation_id,
-                data.query_id,
-                data.feedback,
-                tree,
-                client,
-            )
-        except Exception as e:
-            return JSONResponse(content={"error": str(e)}, status_code=500)
+    try:
+        await tree.feedback(
+            data.feedback, query_id=data.query_id, client_manager=client_manager
+        )
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
     return JSONResponse(content={"error": ""}, status_code=200)
 

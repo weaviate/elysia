@@ -8,7 +8,7 @@ from dspy.signatures.signature import Signature, ensure_signature
 from dspy.streaming import StreamListener, StreamResponse
 
 from elysia.tree.objects import TreeData, Atlas
-from elysia.util.retrieve_feedback import retrieve_feedback
+from elysia.util.feedback import retrieve_feedback
 from elysia.util.client import ClientManager
 
 elysia_meta_prompt = """
@@ -112,6 +112,9 @@ class AssertedModule(dspy.Module):
         self, streamed_field: str, **kwargs
     ) -> AsyncGenerator[dspy.Prediction | StreamResponse, None]:
 
+        if not hasattr(self.module, "aforward_streaming"):
+            raise ValueError("Module has no attribute aforward_streaming!")
+
         found_pred = False
         async for chunk in self.module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
             if isinstance(chunk, StreamResponse):
@@ -153,8 +156,103 @@ class AssertedModule(dspy.Module):
 
         yield prediction
 
+    async def aforward_with_feedback_examples(
+        self,
+        **kwargs,
+    ) -> tuple[dspy.Prediction, list[str]]:
 
-class ElysiaChainOfThought(Module):
+        if not hasattr(self.module, "aforward_with_feedback_examples"):
+            raise ValueError(
+                "Module has no attribute aforward_with_feedback_examples, which is required if using "
+                "the experimental feature USE_FEEDBACK. This is likely an issue with the Elysia versioning/install. "
+                "Disable USE_FEEDBACK to prevent this error. "
+            )
+
+        prediction, uuids = await self.module.aforward_with_feedback_examples(**kwargs)  # type: ignore
+        success, feedback = self.assertion_function(prediction, kwargs)
+        history = dspy.History(messages=[])
+        if not success:
+            history.messages.append({**kwargs, **prediction})
+            for attempt in range(self.num_tries):
+                (
+                    prediction,
+                    uuids,
+                ) = await self.asserted_module.aforward_with_feedback_examples(
+                    feedback=feedback, history=history, lm=kwargs["lm"]
+                )  # type: ignore
+                success, feedback = self.assertion_function(prediction, kwargs)
+                if success:
+                    break
+                else:
+                    history.messages.append(
+                        {**kwargs, "feedback": feedback, **prediction}
+                    )
+            if not success:
+                raise AssertionError(feedback)
+
+        return prediction, uuids
+
+    async def aforward_streaming_with_feedback_examples(
+        self, streamed_field: str, **kwargs
+    ) -> AsyncGenerator[dspy.Prediction | StreamResponse | list[str], None]:
+
+        if not hasattr(self.module, "aforward_streaming_with_feedback_examples"):
+            raise ValueError(
+                "Module has no attribute aforward_streaming_with_feedback_examples, which is required if using "
+                "the experimental feature USE_FEEDBACK. This is likely an issue with the Elysia versioning/install. "
+                "Disable USE_FEEDBACK to prevent this error. "
+            )
+
+        found_pred = False
+        async for chunk in self.module.aforward_streaming_with_feedback_examples(
+            streamed_field=streamed_field, **kwargs
+        ):  # type: ignore
+            if isinstance(chunk, StreamResponse):
+                yield chunk
+            elif isinstance(chunk, dspy.Prediction):
+                prediction = chunk
+                found_pred = True
+            elif isinstance(chunk, list):
+                uuids = chunk
+
+        if not found_pred:
+            raise AssertionError("No prediction found during streaming.")
+
+        success, feedback = self.assertion_function(prediction, kwargs)
+        history = dspy.History(messages=[])
+
+        if not success:
+            history.messages.append({**kwargs, **prediction})
+            for attempt in range(self.num_tries):
+                found_pred = False
+                async for chunk in self.asserted_module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
+                    if isinstance(chunk, StreamResponse):
+                        yield chunk
+                    elif isinstance(chunk, dspy.Prediction):
+                        prediction = chunk
+                        found_pred = True
+                    elif isinstance(chunk, list):
+                        uuids = chunk
+
+                if not found_pred:
+                    raise AssertionError("No prediction found during streaming.")
+
+                success, feedback = self.assertion_function(prediction, kwargs)
+                if success:
+                    break
+                else:
+                    history.messages.append(
+                        {**kwargs, "feedback": feedback, **prediction}
+                    )
+
+        if not success:
+            raise AssertionError(feedback)
+
+        yield uuids
+        yield prediction
+
+
+class ElysiaPrompt(Module):
     """
     A custom reasoning DSPy module that reasons step by step in order to predict the output of a task.
     It will automatically include the most relevant inputs:
@@ -181,7 +279,7 @@ class ElysiaChainOfThought(Module):
     Example:
 
     ```python
-    my_module = ElysiaChainOfThought(
+    my_module = ElysiaPrompt(
         signature=...,
         tree_data=...,
         message_update=True,
@@ -431,7 +529,11 @@ class ElysiaChainOfThought(Module):
                 "Reasoning: Repeat relevant parts of the any context within your environment, "
                 "Evaluate all relevant information from the inputs, including any previous errors if applicable, "
                 "use this to think step by step in order to answer the query."
-                "Limit your reasoning to maximum 150 words. Only exceed this if the task is very complex."
+                "Limit your reasoning to maximum 150 words. Only exceed this if the task is very complex. "
+                "Your reasoning doubles up as communication to the user, so speak as if you are explaining tasks to them, "
+                "presenting the logical sequence as messaging. "
+                "Speak as if explaining your thoughts to a colleague, or an interviewer, who is monitoring how you solve problems. "
+                "So do not say 'the user', speak directly to them. Use gender-neutral pronouns. "
             )
             reasoning_prefix = "${reasoning}"
             reasoning_field: str = dspy.OutputField(
@@ -484,7 +586,7 @@ class ElysiaChainOfThought(Module):
 
     async def aforward_streaming(
         self, streamed_field: str, add_tree_data_inputs: bool = True, **kwargs
-    ) -> AsyncGenerator[StreamResponse, None]:
+    ) -> AsyncGenerator[StreamResponse | dspy.Prediction, None]:
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         stream_predict = dspy.streamify(
             self.predict,
@@ -502,8 +604,6 @@ class ElysiaChainOfThought(Module):
         client_manager: ClientManager,
         base_lm: dspy.LM,
         complex_lm: dspy.LM,
-        num_base_lm_examples: int = 3,
-        return_example_uuids: bool = False,
         add_tree_data_inputs: bool = True,
         **kwargs,
     ) -> tuple[dspy.Prediction, list[str]] | dspy.Prediction:
@@ -524,8 +624,6 @@ class ElysiaChainOfThought(Module):
             client_manager (ClientManager): The client manager to use.
             base_lm (dspy.LM): The base LM to (conditionally) use.
             complex_lm (dspy.LM): The complex LM to (conditionally) use.
-            num_base_lm_examples (int): The threshold number of examples to use the base LM.
-                When there are fewer examples than this, the complex LM will be used.
             **kwargs (Any): The keyword arguments to pass to the forward pass.
                 Important: All additional inputs to the DSPy module should be passed here as keyword arguments.
                 Also: Do not include `lm` in the kwargs, as this will be set automatically.
@@ -535,54 +633,107 @@ class ElysiaChainOfThought(Module):
         """
 
         examples, uuids = await retrieve_feedback(
-            client_manager, self.tree_data.user_prompt, feedback_model, n=10
+            client_manager,
+            self.tree_data.user_prompt,
+            feedback_model,
+            user_id=self.tree_data.user_id,
+            n=10,
         )
         if len(examples) > 0:
             optimizer = dspy.LabeledFewShot(k=10)
             optimized_module = optimizer.compile(self, trainset=examples)
         else:
-            if return_example_uuids:
-                return (
-                    await self.aforward(
-                        lm=complex_lm,
-                        add_tree_data_inputs=add_tree_data_inputs,
-                        **kwargs,
-                    ),
-                    uuids,
-                )
-            else:
-                return await self.aforward(
-                    lm=complex_lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
-                )
-
-        # Select the LM to use based on the number of examples
-        if len(examples) < num_base_lm_examples:
-            if return_example_uuids:
-                return (
-                    await optimized_module.aforward(
-                        lm=complex_lm,
-                        add_tree_data_inputs=add_tree_data_inputs,
-                        **kwargs,
-                    ),
-                    uuids,
-                )
-            else:
-                return await optimized_module.aforward(
+            return (
+                await self.aforward(
                     lm=complex_lm,
                     add_tree_data_inputs=add_tree_data_inputs,
                     **kwargs,
-                )
+                ),
+                uuids,
+            )
+
+        # Select the LM to use based on the number of examples
+        if len(examples) < self.tree_data.settings.NUM_FEEDBACK_EXAMPLES:
+            return (
+                await optimized_module.aforward(
+                    lm=complex_lm,
+                    add_tree_data_inputs=add_tree_data_inputs,
+                    **kwargs,
+                ),
+                uuids,
+            )
         else:
-            if return_example_uuids:
-                return (
-                    await optimized_module.aforward(
-                        lm=base_lm,
-                        add_tree_data_inputs=add_tree_data_inputs,
-                        **kwargs,
-                    ),
-                    uuids,
-                )
-            else:
-                return await optimized_module.aforward(
-                    lm=base_lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
-                )
+            return (
+                await optimized_module.aforward(
+                    lm=base_lm,
+                    add_tree_data_inputs=add_tree_data_inputs,
+                    **kwargs,
+                ),
+                uuids,
+            )
+
+    async def aforward_streaming_with_feedback_examples(
+        self,
+        streamed_field: str,
+        feedback_model: str,
+        client_manager: ClientManager,
+        base_lm: dspy.LM,
+        complex_lm: dspy.LM,
+        add_tree_data_inputs: bool = True,
+        **kwargs,
+    ) -> AsyncGenerator[dspy.Prediction | list[str] | StreamResponse, None]:
+        """
+        Use the forward pass of the module with feedback examples (streamed version).
+        Same as `aforward_with_feedback_examples` but is an async generator function.
+
+        Args:
+            streamed_field (str): The field in the dspy Module that will be streamed (must be a string output field).
+            feedback_model (str): The label of the feedback data to use as examples.
+                E.g., "decision" is the default name given to examples for the LM in the decision tree.
+                This is used to retrieve the examples from the feedback collection.
+            client_manager (ClientManager): The client manager to use.
+            base_lm (dspy.LM): The base LM to (conditionally) use.
+            complex_lm (dspy.LM): The complex LM to (conditionally) use.
+            **kwargs (Any): The keyword arguments to pass to the forward pass.
+                Important: All additional inputs to the DSPy module should be passed here as keyword arguments.
+                Also: Do not include `lm` in the kwargs, as this will be set automatically.
+
+        Yields:
+            (dspy.Prediction): The prediction from the forward pass.
+            (list): the UUIDs used as few-shot examples retrieved from the database.
+            (StreamResponse): The chunks from the streaming for the given streamed_field.
+        """
+
+        examples, uuids = await retrieve_feedback(
+            client_manager, self.tree_data.user_prompt, feedback_model, n=10
+        )
+        yield uuids
+        if len(examples) > 0:
+            optimizer = dspy.LabeledFewShot(k=10)
+            optimized_module = optimizer.compile(self, trainset=examples)
+        else:
+            async for result in self.aforward_streaming(
+                streamed_field,
+                lm=complex_lm,
+                add_tree_data_inputs=add_tree_data_inputs,
+                **kwargs,
+            ):
+                yield result
+
+        # Select the LM to use based on the number of examples
+        if len(examples) < self.tree_data.settings.NUM_FEEDBACK_EXAMPLES:
+            async for result in optimized_module.aforward_streaming(
+                streamed_field,
+                lm=complex_lm,
+                add_tree_data_inputs=add_tree_data_inputs,
+                **kwargs,
+            ):
+                yield result
+        else:
+            async for result in optimized_module.aforward_streaming(
+                streamed_field,
+                lm=base_lm,
+                add_tree_data_inputs=add_tree_data_inputs,
+                **kwargs,
+            ):
+                yield result

@@ -138,12 +138,12 @@ To display your objects without any mappings or display types, you can specify t
 
 ## Easy LLM calls with Elysia Chain of Thought
 
-An easy way to access attributes from the tree (if you are calling an LLM within the tool) is to use the custom `ElysiaChainOfThought` DSPy module with specific arguments. This automatically adds information from the `tree_data` to an LLM prompt as inputs in a DSPy signature, as well as some specific outputs deemed useful within the decision tree environment (and a chain of thought reasoning field output field).
+An easy way to access attributes from the tree (if you are calling an LLM within the tool) is to use the custom `ElysiaPrompt` DSPy module with specific arguments. This automatically adds information from the `tree_data` to an LLM prompt as inputs in a DSPy signature, as well as some specific outputs deemed useful within the decision tree environment (and a chain of thought reasoning field output field).
 
 To call this, you can do, for example
 ```python
-from elysia.util.elysia_modules import ElysiaChainOfThought
-my_module = ElysiaChainOfThought(
+from elysia.util.elysia_modules import ElysiaPrompt
+my_module = ElysiaPrompt(
     MyCustomSignature, # a dspy signature needing to be defined
     tree_data=tree_data, # tree_data input from the tool
     message_update: bool = True,
@@ -155,7 +155,7 @@ my_module = ElysiaChainOfThought(
 ```
 By setting the boolean flags for the different variables, you can control the inputs and outputs assigned, whereas some inputs are always included (such as user prompt).
 
-To use the augmented module via `ElysiaChainOfThought`, call the `.aforward()` method of the new module, passing all your *new* inputs as keyword arguments. You do not need to include keyword arguments for the other inputs, like the `environment` or `user_prompt`, they are automatically added, e.g.
+To use the augmented module via `ElysiaPrompt`, call the `.aforward()` method of the new module, passing all your *new* inputs as keyword arguments. You do not need to include keyword arguments for the other inputs, like the `environment` or `user_prompt`, they are automatically added, e.g.
 ```python
 my_module.aforward(input1=..., input2=..., lm=...)
 ```
@@ -191,7 +191,7 @@ Note that the `search` branch still has two options, but if the decision LLM cho
 
 ## Self Healing Errors
 
-You can yield an **[`Error`](../Reference/Objects.md#elysia.objects.Error)** object to 'return' an error from the tool to the decision tree. These errors are saved within the tree data and automatically added to the decision nodes as well as any LLM calls made with `ElysiaChainOfThought` called within that tool. The LLM is 'informed' about these errors via an input to the prompts. The LLM can choose to continue calling the tool again, in spite of the error (if it seems fixable), or it can use the information to end the conversation and inform the user of an error, or to try a different tool that will not error.
+You can yield an **[`Error`](../Reference/Objects.md#elysia.objects.Error)** object to 'return' an error from the tool to the decision tree. These errors are saved within the tree data and automatically added to the decision nodes as well as any LLM calls made with `ElysiaPrompt` called within that tool. The LLM is 'informed' about these errors via an input to the prompts. The LLM can choose to continue calling the tool again, in spite of the error (if it seems fixable), or it can use the information to end the conversation and inform the user of an error, or to try a different tool that will not error.
 
 The `Error` object is initialised with a single string argument, which should be informative and descriptive.
 
@@ -263,7 +263,7 @@ from elysia.objects import Response, Tool
 from elysia.tree.objects import TreeData
 from elysia.util.client import ClientManager
 from elysia.tools.text.prompt_templates import TextResponsePrompt
-from elysia.util.elysia_modules import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaPrompt
 
 class TextResponse(Tool):
     def __init__(self, **kwargs):
@@ -284,7 +284,7 @@ class TextResponse(Tool):
         client_manager: ClientManager | None = None,
         **kwargs
     ):
-        text_response = ElysiaChainOfThought(
+        text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
             environment=True,
@@ -299,7 +299,7 @@ class TextResponse(Tool):
         yield Response(text=output.response)
 ```
 
-The tool is simple, it is initialised and the descriptions are added to the Tool. Then the `__call__` method simply runs the text_response agent. Whilst the `TextResponsePrompt` is not shown here, it is a simple input -> output call, where different parts of the `tree_data` are used as inputs to the LLM to give it context before answering. The relevant information from the `tree_data` are automatically inserted into the prompt via the `ElysiaChainOfThought` custom DSPy module.
+The tool is simple, it is initialised and the descriptions are added to the Tool. Then the `__call__` method simply runs the text_response agent. Whilst the `TextResponsePrompt` is not shown here, it is a simple input -> output call, where different parts of the `tree_data` are used as inputs to the LLM to give it context before answering. The relevant information from the `tree_data` are automatically inserted into the prompt via the `ElysiaPrompt` custom DSPy module.
 
 
 **Note:** If using DSPy within your tool, make sure to always call `aforward` method on the module so that it can be used async.

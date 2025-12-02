@@ -3,7 +3,7 @@
 import dspy
 import dspy.predict
 
-from elysia.util.elysia_modules import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaPrompt
 
 # LLM
 from elysia.objects import Response, Tool, Text
@@ -54,7 +54,7 @@ class CitedSummarizer(Tool):
         client_manager: ClientManager | None = None,
         **kwargs,
     ):
-        summarizer = ElysiaChainOfThought(
+        summarizer = ElysiaPrompt(
             CitedSummarizingPrompt,
             tree_data=tree_data,
             reasoning=False,
@@ -70,7 +70,7 @@ class CitedSummarizer(Tool):
 
         yield Text(
             "text_with_citations",
-            objects=summary.cited_text,
+            objects=[t.model_dump() for t in summary.cited_text],
             metadata={"title": summary.subtitle},
         )
 
@@ -113,7 +113,7 @@ class Summarizer(Tool):
         client_manager: ClientManager | None = None,
         **kwargs,
     ):
-        summarizer = ElysiaChainOfThought(
+        summarizer = ElysiaPrompt(
             SummarizingPrompt,
             tree_data=tree_data,
             environment=True,
@@ -151,7 +151,7 @@ class TextResponse(Tool):
         client_manager: ClientManager | None = None,
         **kwargs,
     ):
-        text_response = ElysiaChainOfThought(
+        text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
             environment=True,

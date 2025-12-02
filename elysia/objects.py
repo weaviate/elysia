@@ -1,7 +1,8 @@
 import uuid
 import inspect
 import ast
-from typing import Any, AsyncGenerator, Callable, TYPE_CHECKING, overload
+from typing import Any, AsyncGenerator, Callable, TYPE_CHECKING, overload, Optional
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from elysia.tree.tree import Tree
@@ -394,7 +395,6 @@ def tool(
                 # parse docstring for inputs
                 if function.__doc__ and "Args:\n" in function.__doc__:
                     arg_text = function.__doc__.split("Args:\n")[1].split("\n\n")[0]
-                    args, types, descriptions = [], [], []
                     args = {}
                     current_description = ""
                     for line in arg_text.split("\n"):
@@ -440,9 +440,11 @@ def tool(
                             "description": args.get(input_key, {}).get(
                                 "description", ""
                             ),
-                            "type": args.get(input_key, {}).get("type", Any),
+                            "type": input_value
+                            or args.get(input_key, {}).get("type", Any),
                             "default": defaults_mapping.get(input_key, None),
-                            "required": defaults_mapping.get(input_key, True),
+                            "required": input_key
+                            not in defaults_mapping,  # no default = required
                         }
                         for input_key, input_value in self._original_function_args.items()
                         if input_key
@@ -525,6 +527,11 @@ class Return:
         self.payload_type = payload_type  # backend identifier
 
 
+class TextObject(BaseModel):
+    text: str
+    ref_ids: Optional[list[str]] = Field(default=[])
+
+
 class Text(Return):
     """
     Object that the frontend is aware of.
@@ -545,32 +552,30 @@ class Text(Return):
         display: bool = True,
     ):
         Return.__init__(self, "text", payload_type)
-        self.objects = objects
+        self.objects = [TextObject.model_validate(o) for o in objects]
         self.metadata = metadata
         self.text = self._concat_text(self.objects)
         self.display = display
 
-    def _concat_text(self, objects: list[dict]):
+    def _concat_text(self, objects: list[TextObject]):
         text = ""
         for i, obj in enumerate(objects):
-            if "text" in obj:
-                spacer = ""
-                if (
-                    not obj["text"].endswith(" ")
-                    and not obj["text"].endswith("\n")
-                    and i != len(objects) - 1
-                ):
-                    spacer += " "
+            spacer = ""
+            if (
+                not obj.text.endswith(" ")
+                and not obj.text.endswith("\n")
+                and i != len(objects) - 1
+            ):
+                spacer += " "
 
-                if (
-                    i != len(objects) - 1
-                    and "text" in objects[i + 1]
-                    and objects[i + 1]["text"].startswith("* ")
-                    and not obj["text"].endswith("\n")
-                ):
-                    spacer += "\n"
+            if (
+                i != len(objects) - 1
+                and objects[i + 1].text.startswith("* ")
+                and not obj.text.endswith("\n")
+            ):
+                spacer += "\n"
 
-                text += obj["text"] + spacer
+            text += obj.text + spacer
 
         text = text.replace("_REF_ID", "")
         text = text.replace("REF_ID", "")
@@ -581,7 +586,7 @@ class Text(Return):
         return {
             "type": self.payload_type,
             "metadata": self.metadata,
-            "objects": self.objects,
+            "objects": [o.model_dump() for o in self.objects],
         }
 
     async def to_frontend(

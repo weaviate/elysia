@@ -719,6 +719,7 @@ class TreeData:
         self,
         collection_data: CollectionData,
         atlas: Atlas,
+        user_id: str,
         user_prompt: str | None = None,
         conversation_history: list[dict] | None = None,
         environment: Environment | None = None,
@@ -733,6 +734,8 @@ class TreeData:
             self.settings = environment_settings
         else:
             self.settings = settings
+
+        self.user_id = user_id
 
         # -- Base Data --
         if user_prompt is None:
@@ -1122,12 +1125,19 @@ class TreeData:
         environment = Environment.from_json(json_data["environment"])
 
         tree_data = cls(
+            user_id=json_data["user_id"],
             collection_data=collection_data,
             atlas=atlas,
             environment=environment,
             settings=settings,
         )
         for item in json_data:
-            if item not in ["collection_data", "atlas", "environment", "settings"]:
+            if item not in [
+                "user_id",
+                "collection_data",
+                "atlas",
+                "environment",
+                "settings",
+            ]:
                 tree_data.set_property(item, json_data[item])
         return tree_data

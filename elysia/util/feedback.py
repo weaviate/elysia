@@ -1,22 +1,27 @@
 from datetime import datetime
 import json
+import dspy
+import random
 
 from weaviate.collections.classes.aggregate import (
     AggregateGroupByReturn,
 )
 from weaviate.classes.aggregate import GroupByAggregate
-from weaviate.classes.query import Filter, Metrics
+from weaviate.classes.query import Filter, Metrics, MetadataQuery
+from weaviate.classes.config import Configure
+from weaviate.client import WeaviateAsyncClient
 from weaviate.util import generate_uuid5
-
-from elysia.tree.tree import Tree
-from elysia.util.parsing import format_datetime
-from elysia.api.core.log import logger
 import weaviate.classes.config as wc
 
+from elysia.util.client import ClientManager
+from elysia.api.core.log import logger
 
-async def create_feedback_collection(client):
+
+async def create_feedback_collection(
+    client: WeaviateAsyncClient, collection_name="ELYSIA_FEEDBACK__"
+):
     await client.collections.create(
-        "ELYSIA_FEEDBACK__",
+        collection_name,
         properties=[
             # session data
             wc.Property(
@@ -104,43 +109,7 @@ async def create_feedback_collection(client):
             ),
             wc.Property(
                 name="action_information",
-                data_type=wc.DataType.OBJECT_ARRAY,
-                nested_properties=[
-                    wc.Property(
-                        name="collection_name",
-                        data_type=wc.DataType.TEXT,
-                    ),
-                    wc.Property(
-                        name="action_name",
-                        data_type=wc.DataType.TEXT,
-                    ),
-                    wc.Property(
-                        name="code",
-                        data_type=wc.DataType.OBJECT,
-                        nested_properties=[
-                            wc.Property(
-                                name="title",
-                                data_type=wc.DataType.TEXT,
-                            ),
-                            wc.Property(
-                                name="language",
-                                data_type=wc.DataType.TEXT,
-                            ),
-                            wc.Property(
-                                name="text",
-                                data_type=wc.DataType.TEXT,
-                            ),
-                        ],
-                    ),
-                    wc.Property(
-                        name="return_type",
-                        data_type=wc.DataType.TEXT,
-                    ),
-                    wc.Property(
-                        name="output_type",
-                        data_type=wc.DataType.TEXT,
-                    ),
-                ],
+                data_type=wc.DataType.TEXT,
             ),
             # metadata
             wc.Property(
@@ -166,8 +135,8 @@ async def create_feedback_collection(client):
             # dump training_updates as string
             wc.Property(name="training_updates", data_type=wc.DataType.TEXT),
         ],
-        vectorizer_config=[
-            wc.Configure.NamedVectors.text2vec_openai(
+        vector_config=[
+            wc.Configure.Vectors.text2vec_openai(
                 name="user_prompt",
                 model="text-embedding-3-small",
                 source_properties=["user_prompt"],
@@ -176,95 +145,31 @@ async def create_feedback_collection(client):
                 ),
             ),
         ],
+        multi_tenancy_config=Configure.multi_tenancy(
+            enabled=True,
+            auto_tenant_creation=True,
+            auto_tenant_activation=True,
+        ),
     )
-    logger.info("Feedback collection (ELYSIA_FEEDBACK__) created!")
+    logger.info(f"Feedback collection (ELYSIA_FEEDBACK__) created!")
 
 
-async def create_feedback(
-    user_id: str, conversation_id: str, query_id: str, feedback: int, tree: Tree, client
+async def view_feedback(
+    user_id: str,
+    conversation_id: str,
+    query_id: str,
+    client: WeaviateAsyncClient,
+    collection_name="ELYSIA_FEEDBACK__",
 ):
-    if not await client.collections.exists("ELYSIA_FEEDBACK__"):
-        await create_feedback_collection(client)
-
-    feedback_collection = client.collections.get("ELYSIA_FEEDBACK__")
-
-    history = tree.history[query_id]
-
-    # new_tasks_completed = []
-    # for task_prompt in history["tree_data"].tasks_completed:
-    #     new_tasks_completed.append({})
-    #     new_tasks_completed[-1]["prompt"] = task_prompt["prompt"]
-    #     new_tasks_completed[-1]["task"] = [
-    #         {
-    #             "task": h["task"],
-    #             "reasoning": h["reasoning"],
-    #             "todo": h["todo"],
-    #             "count": float(h["count"])
-    #         }
-    #     for h in task_prompt["tasks"]
-    #     ]
-
-    # ensure "action" is a bool in tasks_completed
-    for task_prompt in history["tree_data"].tasks_completed:
-        for task in task_prompt["task"]:
-            task["action"] = bool(task["action"])
-
-    date_now = datetime.now()
-    # date_now = date_now - timedelta(days=1)
-
-    properties = {
-        "user_id": user_id,
-        "conversation_id": conversation_id,
-        "query_id": query_id,
-        "feedback": int(feedback),
-        "modules_used": list(
-            set([h["module_name"] for h in history["training_updates"]])
-        ),
-        "user_prompt": history["tree_data"].user_prompt,
-        "conversation_history": history["tree_data"].conversation_history,
-        "tasks_completed": history["tree_data"].tasks_completed,
-        "route": history["decision_history"],
-        "action_information": history["action_information"],
-        "time_taken_seconds": history["time_taken_seconds"],
-        "decision_time": tree.tracker.get_average_time("decision_node"),
-        "base_lm_used": tree.base_lm.model,
-        "complex_lm_used": tree.complex_lm.model,
-        "feedback_datetime": format_datetime(date_now),
-        "feedback_date": format_datetime(
-            date_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        ),
-        "training_updates": json.dumps(history["training_updates"]),
-        "initialisation": history["initialisation"],
-    }
-
-    # uuid is generated based on the user_id, conversation_id, query_id ONLY
-    # so if the user re-selects the same feedback, it will be updated instead of added
-    session_uuid = generate_uuid5(
-        {
-            "user_id": user_id,
-            "conversation_id": conversation_id,
-            "query_id": query_id,
-        }
-    )
-
-    try:
-        if await feedback_collection.data.exists(session_uuid):
-            await feedback_collection.data.update(
-                properties=properties, uuid=session_uuid
-            )
-        else:
-            await feedback_collection.data.insert(
-                properties=properties, uuid=session_uuid
-            )
-    except Exception as e:
-        logger.exception(f"Whilst inserting feedback to the feedback collection")
-
-
-async def view_feedback(user_id: str, conversation_id: str, query_id: str, client):
-    if not await client.collections.exists("ELYSIA_FEEDBACK__"):
+    if not await client.collections.exists(collection_name):
         raise Exception("No feedback collection found")
 
-    feedback_collection = client.collections.get("ELYSIA_FEEDBACK__")
+    base_feedback_collection = client.collections.get(collection_name)
+    if not await base_feedback_collection.tenants.exists(user_id):
+        raise Exception("User ID not in feedback collection")
+
+    feedback_collection = base_feedback_collection.with_tenant(user_id)
+
     session_uuid = generate_uuid5(
         {
             "user_id": user_id,
@@ -280,11 +185,22 @@ async def view_feedback(user_id: str, conversation_id: str, query_id: str, clien
     return feedback_object.properties
 
 
-async def remove_feedback(user_id: str, conversation_id: str, query_id: str, client):
-    if not await client.collections.exists("ELYSIA_FEEDBACK__"):
+async def remove_feedback(
+    user_id: str,
+    conversation_id: str,
+    query_id: str,
+    client: WeaviateAsyncClient,
+    collection_name="ELYSIA_FEEDBACK__",
+):
+    if not await client.collections.exists(collection_name):
         raise Exception("No feedback collection found")
 
-    feedback_collection = client.collections.get("ELYSIA_FEEDBACK__")
+    base_feedback_collection = client.collections.get(collection_name)
+    if not await base_feedback_collection.tenants.exists(user_id):
+        raise Exception("User ID not in feedback collection")
+
+    feedback_collection = base_feedback_collection.with_tenant(user_id)
+
     session_uuid = generate_uuid5(
         {
             "user_id": user_id,
@@ -295,9 +211,13 @@ async def remove_feedback(user_id: str, conversation_id: str, query_id: str, cli
     await feedback_collection.data.delete_by_id(uuid=session_uuid)
 
 
-async def feedback_metadata(client, user_id: str):
+async def feedback_metadata(
+    client: WeaviateAsyncClient,
+    user_id: str,
+    collection_name="ELYSIA_FEEDBACK__",
+):
 
-    if not await client.collections.exists("ELYSIA_FEEDBACK__"):
+    if not await client.collections.exists(collection_name):
         return {
             "error": "",
             "total_feedback": 0,
@@ -309,7 +229,21 @@ async def feedback_metadata(client, user_id: str):
             "feedback_by_date": {},
         }
 
-    feedback_collection = client.collections.get("ELYSIA_FEEDBACK__")
+    base_feedback_collection = client.collections.get(collection_name)
+
+    if await base_feedback_collection.tenants.exists(user_id):
+        return {
+            "error": "",
+            "total_feedback": 0,
+            "feedback_by_value": {
+                "negative": 0,
+                "positive": 0,
+                "superpositive": 0,
+            },
+            "feedback_by_date": {},
+        }
+
+    feedback_collection = base_feedback_collection.with_tenant(user_id)
 
     all_aggregate = await feedback_collection.aggregate.over_all(total_count=True)
     total_feedback = all_aggregate.total_count
@@ -324,11 +258,10 @@ async def feedback_metadata(client, user_id: str):
     feedback_by_value = {}
     for feedback_name, feedback_value in feedback_values.items():
 
-        filters = Filter.by_property("feedback").equal(feedback_value)
-
         # by value
         agg_feedback_count_i = await feedback_collection.aggregate.over_all(
-            filters=filters, return_metrics=[Metrics("feedback").integer(count=True)]
+            filters=Filter.by_property("feedback").equal(feedback_value),
+            return_metrics=[Metrics("feedback").integer(count=True)],
         )
         feedback_by_value[feedback_name] = agg_feedback_count_i.properties[
             "feedback"
@@ -337,7 +270,7 @@ async def feedback_metadata(client, user_id: str):
         # by date
         agg_feedback_i = await feedback_collection.aggregate.over_all(
             group_by=GroupByAggregate(prop="feedback_date"),
-            filters=filters,
+            filters=Filter.by_property("feedback").equal(feedback_value),
             return_metrics=[Metrics("feedback").number(count=True)],
         )
 
@@ -392,13 +325,103 @@ async def feedback_metadata(client, user_id: str):
     }
 
 
-# if __name__ == "__main__":
-#     import os
-#     import weaviate
-#     from weaviate.classes.init import Auth
-#     client = weaviate.connect_to_weaviate_cloud(
-#         cluster_url = os.environ.get("WCD_URL"),
-#         auth_credentials = Auth.api_key(os.environ.get("WCD_API_KEY")),
-#         headers={"X-OpenAI-API-Key": os.environ.get("OPENAI_API_KEY")}
-#     )
-#     print(feedback_metadata(client))
+async def retrieve_feedback(
+    client_manager: ClientManager,
+    user_prompt: str,
+    model: str,
+    user_id: str,
+    n: int = 6,
+    collection_name: str = "ELYSIA_FEEDBACK__",
+):
+    """
+    Retrieve similar examples from the database.
+    """
+
+    # semantic search for similar examples
+    async with client_manager.connect_to_async_client() as client:
+
+        if not await client.collections.exists(collection_name):
+            return [], []
+
+        base_feedback_collection = client.collections.get(collection_name)
+
+        if not await base_feedback_collection.tenants.exists(user_id):
+            return [], []
+
+        feedback_collection = base_feedback_collection.with_tenant(user_id)
+
+        filters = Filter.all_of(
+            [
+                Filter.by_property("modules_used").contains_any([model]),
+                Filter.by_property("feedback").equal(2.0),
+            ]
+        )
+
+        # find superpositive examples
+        superpositive_feedback = await feedback_collection.query.near_text(
+            query=user_prompt,
+            filters=filters,
+            certainty=0.7,
+            limit=n,
+            return_metadata=MetadataQuery(distance=True, certainty=True),
+        )
+
+        if len(superpositive_feedback.objects) < n:
+
+            filters = Filter.all_of(
+                [
+                    Filter.by_property("modules_used").contains_any([model]),
+                    Filter.by_property("feedback").equal(1.0),
+                ]
+            )
+
+            # find positive examples
+            positive_feedback = await feedback_collection.query.near_text(
+                query=user_prompt,
+                filters=filters,
+                certainty=0.7,
+                limit=n,
+                return_metadata=MetadataQuery(distance=True, certainty=True),
+            )
+
+            feedback_objects = superpositive_feedback.objects
+            feedback_objects.extend(
+                positive_feedback.objects[: (n - len(superpositive_feedback.objects))]
+            )
+
+        else:
+            feedback_objects = superpositive_feedback.objects
+
+    # get training updates
+    training_updates = [
+        json.loads(f.properties["training_updates"])  # type: ignore
+        for f in feedback_objects
+    ]
+    uuids = [str(f.uuid) for f in feedback_objects]
+
+    relevant_updates = []
+    relevant_uuids = []
+    for i, update in enumerate(training_updates):
+        for inner_update in update:
+            if inner_update["module_name"] == model:
+                relevant_updates.append(inner_update)
+        relevant_uuids.append(uuids[i])
+
+    # take max n randomly selected updates
+    random.shuffle(relevant_updates)
+    relevant_updates = relevant_updates[:n]
+
+    examples = []
+    for update in relevant_updates:
+        examples.append(
+            dspy.Example(
+                {
+                    **{k: v for k, v in update["inputs"].items()},
+                    **{k: v for k, v in update["outputs"].items()},
+                }
+            ).with_inputs(
+                *update["inputs"].keys(),
+            )
+        )
+
+    return examples, relevant_uuids

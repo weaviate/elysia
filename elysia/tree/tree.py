@@ -6,13 +6,12 @@ from copy import deepcopy
 from typing import AsyncGenerator, Literal, Any
 
 import dspy
-from dspy.streaming import StreamResponse
-from pympler import asizeof
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
 
 import uuid
+from datetime import datetime
 
 # Weaviate
 import weaviate.classes.config as wc
@@ -60,8 +59,9 @@ from elysia.config import (
     load_complex_lm,
 )
 from elysia.util.objects import Tracker, TrainingUpdate, TreeUpdate, ViewEnvironment
-from elysia.util.parsing import remove_whitespace
 from elysia.util.collection import retrieve_all_collection_names
+from elysia.util.feedback import create_feedback_collection
+from elysia.util.parsing import format_datetime
 
 
 class Tree:
@@ -146,6 +146,7 @@ class Tree:
 
         # Define the inputs to prompts
         self.tree_data = TreeData(
+            user_id=self.user_id,
             environment=Environment(),
             collection_data=CollectionData(
                 collection_names=[], logger=self.settings.logger
@@ -1394,6 +1395,7 @@ class Tree:
                 ]
             )
 
+            results = []
             with ElysiaKeyManager(self.settings):
                 async for result in current_decision_node.decide(
                     tree_data=self.tree_data,
@@ -1408,15 +1410,15 @@ class Tree:
                         )
                     elif isinstance(result, Decision):
                         self.current_decision = result
-                    elif isinstance(result, list):
-                        results = result
+                    else:
+                        results.append(result)
 
-            for result in results:
-                action_result, _ = await self._evaluate_result(
-                    result, self.current_decision
-                )
-                if action_result is not None:
-                    yield action_result
+                for result in results:
+                    action_result, _ = await self._evaluate_result(
+                        result, self.current_decision
+                    )
+                    if action_result is not None:
+                        yield action_result
 
             self.tracker.end_tracking(
                 "decision_node",
@@ -1901,6 +1903,106 @@ class Tree:
         json_data = json.loads(response.properties["tree"])  # type: ignore
 
         return cls.import_from_json(json_data)
+
+    async def feedback(
+        self,
+        feedback_level: Literal[0, 1, 2],
+        collection_name: str = "ELYSIA_FEEDBACK__",
+        client_manager: ClientManager | None = None,
+        prompt: str | None = None,
+        query_id: str | None = None,
+    ):
+        """
+        Leave feedback on the an interaction with Elysia for this decision tree.
+        The feedback saves all inputs and outputs used for the decision agent and any supported tools to a Weaviate collection.
+
+        Args:
+            feedback_level (Literal[0, 1, 2]): the rating for the interaction. 0 = negative, 1=positive, 2=very positive
+            collection_name (str): the Weaviate collection name used to save feedback. Defaults to ELYSIA_FEEDBACK__.
+            prompt (str | None): The prompt to use to save the feedback for. If not provided, defaults to the last interaction.
+            query_id (str | None): The query ID to use to save the feedback for, as an alternative to the prompt.
+                If not provided, defaults to the last interaction.
+                Cannot use both `query_id` and `prompt`.
+        """
+        if client_manager is None:
+            client_manager = ClientManager(settings=self.settings)
+
+        if prompt and query_id and self.prompt_to_query_id[prompt] != query_id:
+            raise ValueError(
+                "Provided both `prompt` and `query_id` to `tree.feedback`, but they referenced different interactions"
+            )
+
+        if prompt:
+            query_id = self.prompt_to_query_id[prompt]
+
+        if not query_id and not prompt:
+            query_id = list(self.query_id_to_prompt.keys())[0]
+
+        async with client_manager.connect_to_async_client() as client:
+
+            if not await client.collections.exists(collection_name):
+                await create_feedback_collection(client)
+
+            base_feedback_collection = client.collections.get(collection_name)
+
+            if not await base_feedback_collection.tenants.exists(self.user_id):
+                await base_feedback_collection.tenants.create(self.user_id)
+
+            feedback_collection = base_feedback_collection.with_tenant(self.user_id)
+
+            history = self.history[query_id]
+
+            # ensure "action" is a bool in tasks_completed
+            for task_prompt in history["tree_data"].tasks_completed:
+                for task in task_prompt["task"]:
+                    task["action"] = bool(task["action"])
+
+            date_now = datetime.now()
+
+            properties = {
+                "user_id": self.user_id,
+                "conversation_id": self.conversation_id,
+                "query_id": query_id,
+                "feedback": int(feedback_level),
+                "modules_used": list(
+                    set([h["module_name"] for h in history["training_updates"]])
+                ),
+                "user_prompt": history["tree_data"].user_prompt,
+                "conversation_history": history["tree_data"].conversation_history,
+                "tasks_completed": history["tree_data"].tasks_completed,
+                "route": history["decision_history"],
+                "action_information": json.dumps(history["action_information"]),
+                "time_taken_seconds": history["time_taken_seconds"],
+                "decision_time": self.tracker.get_average_time("decision_node"),
+                "base_lm_used": self.base_lm.model,
+                "complex_lm_used": self.complex_lm.model,
+                "feedback_datetime": format_datetime(date_now),
+                "feedback_date": format_datetime(
+                    date_now.replace(hour=0, minute=0, second=0, microsecond=0)
+                ),
+                "training_updates": json.dumps(history["training_updates"]),
+                "initialisation": history["initialisation"],
+            }
+
+            # uuid is generated based on the user_id, conversation_id, query_id ONLY
+            # so if the user re-selects the same feedback, it will be updated instead of added
+            session_uuid = generate_uuid5(
+                {
+                    "user_id": self.user_id,
+                    "conversation_id": self.conversation_id,
+                    "query_id": query_id,
+                }
+            )
+
+            if await feedback_collection.data.exists(session_uuid):
+                await feedback_collection.data.update(
+                    properties=properties, uuid=session_uuid
+                )
+            else:
+                await feedback_collection.data.insert(
+                    properties=properties, uuid=session_uuid
+                )
+            return session_uuid
 
     def __call__(self, *args, **kwargs) -> tuple[str, list[dict]]:
         return self.run(*args, **kwargs)

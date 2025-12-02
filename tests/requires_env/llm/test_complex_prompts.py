@@ -118,8 +118,8 @@ async def test_query_with_chunking():
 
         assert "query" in all_decision_history
         env_key = (
-            "summarise_items"
-            if "summarise_items" in tree.tree_data.environment.environment
+            "query_postprocessing"
+            if "query_postprocessing" in tree.tree_data.environment.environment
             else "query"
         )
         assert env_key in tree.tree_data.environment.environment

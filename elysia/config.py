@@ -182,6 +182,7 @@ class Settings:
 
         # Experimental features
         self.USE_FEEDBACK = False
+        self.NUM_FEEDBACK_EXAMPLES = 4
         self.BASE_USE_REASONING = True
         self.COMPLEX_USE_REASONING = True
         self.ENV_TOKEN_LIMIT = 10_000
@@ -379,6 +380,8 @@ class Settings:
                   These are implemented via few-shot examples for the decision node.
                   They are collected in the 'feedback' collection (ELYSIA_FEEDBACK__).
                   Relevant examples are retrieved from the collection based on searching the collection via the user's prompt.
+                - `num_feedback_examples` (int): EXPERIMENTAL: How many feedback examples are required before using the smaller base LM.
+                  (if `use_feedback` is `True`)
                 - `base_use_reasoning` (bool): Whether to use reasoning output for the base model.
                   If True, the model will generate reasoning before coming to its solution.
                 - `complex_use_reasoning` (bool): Whether to use reasoning output for the complex model.
@@ -540,6 +543,10 @@ class Settings:
         if "use_feedback" in kwargs:
             self.USE_FEEDBACK = kwargs["use_feedback"]
             kwargs.pop("use_feedback")
+
+        if "num_feedback_examples" in kwargs:
+            self.NUM_FEEDBACK_EXAMPLES = kwargs["num_feedback_examples"]
+            kwargs.pop("num_feedback_examples")
 
         if "base_use_reasoning" in kwargs:
             self.BASE_USE_REASONING = kwargs["base_use_reasoning"]
@@ -936,8 +943,15 @@ def configure(**kwargs) -> None:
               These are implemented via few-shot examples for the decision node.
               They are collected in the 'feedback' collection (ELYSIA_FEEDBACK__).
               Relevant examples are retrieved from the collection based on searching the collection via the user's prompt.
-            - Additional API keys to set. E.g. `openai_apikey="..."`, if this argument ends with `apikey` or `api_key`,
-              it will be added to the `API_KEYS` dictionary.
+            - `num_feedback_examples` (int): EXPERIMENTAL: How many feedback examples are required before using the smaller base LM.
+              (if `use_feedback` is `True`)
+            - `base_use_reasoning` (bool): Whether to use reasoning output for the base model.
+               If True, the model will generate reasoning before coming to its solution.
+            - `complex_use_reasoning` (bool): Whether to use reasoning output for the complex model.
+              If True, the model will generate reasoning before coming to its solution.
+            - `env_token_limit` (int): The token limit for the environment. Defaults to 10_000.
+            - Additional API keys: Any argument ending with `apikey` or `api_key` will be added to the `API_KEYS` dictionary.
+              E.g. `openai_apikey="..."`
 
     """
     settings.configure(**kwargs)

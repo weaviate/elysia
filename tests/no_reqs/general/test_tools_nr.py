@@ -1,11 +1,7 @@
-import os
-from re import S
 import pytest
-import asyncio
-import dspy
 from dspy import LM
+from typing import Any
 from elysia.objects import Result
-from copy import deepcopy
 from elysia import Tool
 from elysia.tree.objects import TreeData
 from elysia.objects import Response, tool
@@ -13,8 +9,6 @@ from elysia.config import Settings, configure
 from elysia.tree.tree import Tree
 from elysia.tools.text.text import TextResponse
 from elysia.util.client import ClientManager
-from elysia.tools.retrieval.query import Query
-from elysia.tools.retrieval.aggregate import Aggregate
 
 configure(logging_level="CRITICAL")
 
@@ -268,11 +262,6 @@ class IncorrectToolInitialisation_call_non_async_generator(Tool):
         return True
 
 
-@tool
-async def example_async_decorator_tool():
-    return "This is a test response from the decorator tool"
-
-
 async def run_tree(
     user_prompt: str,
     collection_names: list[str],
@@ -412,6 +401,10 @@ def test_incorrect_tool_initialisation():
 @pytest.mark.asyncio
 async def test_example_decorator_tool():
 
+    @tool
+    async def example_async_decorator_tool():
+        return "This is a test response from the decorator tool"
+
     # Async tools should work
     tree = await run_tree(
         "Hello", [], [example_async_decorator_tool], remove_tools=True
@@ -444,14 +437,14 @@ def test_decorator_tool_typed_inputs():
     tree = Tree()
 
     @tool(tree=tree)
-    async def example_decorator_tool(x: int, y: int):
+    async def example_decorator_tool_typed_inputs(x: int, y: int, z):
         return x + y
 
-    assert "example_decorator_tool" in tree.tools
-    assert "x" in tree.tools["example_decorator_tool"].inputs
-    assert "y" in tree.tools["example_decorator_tool"].inputs
-    assert tree.tools["example_decorator_tool"].inputs["x"]["type"] is int
-    assert tree.tools["example_decorator_tool"].inputs["y"]["type"] is int
+    assert "example_decorator_tool_typed_inputs" in tree.tools
+    assert "x" in tree.tools["example_decorator_tool_typed_inputs"].inputs
+    assert "y" in tree.tools["example_decorator_tool_typed_inputs"].inputs
+    assert tree.tools["example_decorator_tool_typed_inputs"].inputs["x"]["type"] is int
+    assert tree.tools["example_decorator_tool_typed_inputs"].inputs["y"]["type"] is int
 
 
 def test_decorator_tool_typed_inputs_with_default_inputs():
@@ -459,17 +452,45 @@ def test_decorator_tool_typed_inputs_with_default_inputs():
     tree = Tree()
 
     @tool(tree=tree)
-    async def example_decorator_tool(x: int = 1, y: int = 2):
+    async def example_decorator_tool_typed_inputs_with_default_inputs(
+        x: int = 1, y: int = 2
+    ):
         return x + y
 
-    assert "example_decorator_tool" in tree.tools
+    assert "example_decorator_tool_typed_inputs_with_default_inputs" in tree.tools
 
-    assert "x" in tree.tools["example_decorator_tool"].inputs
-    assert "y" in tree.tools["example_decorator_tool"].inputs
-    assert tree.tools["example_decorator_tool"].inputs["x"]["type"] is int
-    assert tree.tools["example_decorator_tool"].inputs["y"]["type"] is int
-    assert tree.tools["example_decorator_tool"].inputs["x"]["default"] == 1
-    assert tree.tools["example_decorator_tool"].inputs["y"]["default"] == 2
+    assert (
+        "x"
+        in tree.tools["example_decorator_tool_typed_inputs_with_default_inputs"].inputs
+    )
+    assert (
+        "y"
+        in tree.tools["example_decorator_tool_typed_inputs_with_default_inputs"].inputs
+    )
+    assert (
+        tree.tools["example_decorator_tool_typed_inputs_with_default_inputs"].inputs[
+            "x"
+        ]["type"]
+        is int
+    )
+    assert (
+        tree.tools["example_decorator_tool_typed_inputs_with_default_inputs"].inputs[
+            "y"
+        ]["type"]
+        is int
+    )
+    assert (
+        tree.tools["example_decorator_tool_typed_inputs_with_default_inputs"].inputs[
+            "x"
+        ]["default"]
+        == 1
+    )
+    assert (
+        tree.tools["example_decorator_tool_typed_inputs_with_default_inputs"].inputs[
+            "y"
+        ]["default"]
+        == 2
+    )
 
 
 def test_decorator_tool_untyped_inputs():
@@ -477,29 +498,36 @@ def test_decorator_tool_untyped_inputs():
     tree = Tree()
 
     @tool(tree=tree)
-    async def example_decorator_tool(x, y):
+    async def example_decorator_tool_untyped_inputs(x, y):
         return x + y
 
-    assert "example_decorator_tool" in tree.tools
-    assert "x" in tree.tools["example_decorator_tool"].inputs
-    assert "y" in tree.tools["example_decorator_tool"].inputs
-    assert tree.tools["example_decorator_tool"].inputs["x"]["type"] == "Not specified"
-    assert tree.tools["example_decorator_tool"].inputs["y"]["type"] == "Not specified"
+    assert "example_decorator_tool_untyped_inputs" in tree.tools
+    assert "x" in tree.tools["example_decorator_tool_untyped_inputs"].inputs
+    assert "y" in tree.tools["example_decorator_tool_untyped_inputs"].inputs
+    assert (
+        tree.tools["example_decorator_tool_untyped_inputs"].inputs["x"]["type"] == Any
+    )
+    assert (
+        tree.tools["example_decorator_tool_untyped_inputs"].inputs["y"]["type"] == Any
+    )
 
 
 def test_decorator_with_elysia_inputs():
     tree = Tree()
 
     @tool(tree=tree)
-    async def example_decorator_tool(
+    async def example_decorator_tool_elysia_inputs(
         x: int, y: int, tree_data, base_lm, complex_lm, client_manager
     ):
         return x + y
 
-    assert "example_decorator_tool" in tree.tools
-    assert "x" in tree.tools["example_decorator_tool"].inputs
-    assert "y" in tree.tools["example_decorator_tool"].inputs
-    assert "tree_data" not in tree.tools["example_decorator_tool"].inputs
-    assert "base_lm" not in tree.tools["example_decorator_tool"].inputs
-    assert "complex_lm" not in tree.tools["example_decorator_tool"].inputs
-    assert "client_manager" not in tree.tools["example_decorator_tool"].inputs
+    assert "example_decorator_tool_elysia_inputs" in tree.tools
+    assert "x" in tree.tools["example_decorator_tool_elysia_inputs"].inputs
+    assert "y" in tree.tools["example_decorator_tool_elysia_inputs"].inputs
+    assert "tree_data" not in tree.tools["example_decorator_tool_elysia_inputs"].inputs
+    assert "base_lm" not in tree.tools["example_decorator_tool_elysia_inputs"].inputs
+    assert "complex_lm" not in tree.tools["example_decorator_tool_elysia_inputs"].inputs
+    assert (
+        "client_manager"
+        not in tree.tools["example_decorator_tool_elysia_inputs"].inputs
+    )

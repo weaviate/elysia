@@ -25,7 +25,7 @@ def test_create_tools_simple():
 
     tree = Tree()
 
-    @tool(tree=tree, branch_id="base")
+    @tool(tree=tree)
     async def add2(x: int, y: int) -> int:
         return x + y
 

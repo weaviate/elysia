@@ -34,7 +34,7 @@ from elysia.util.objects import (
     ViewEnvironment,
 )
 
-from elysia.util.elysia_modules import ElysiaChainOfThought, AssertedModule
+from elysia.util.elysia_modules import ElysiaPrompt, AssertedModule
 from elysia.util.parsing import format_datetime
 from elysia.util.client import ClientManager
 from elysia.tree.prompt_templates import (
@@ -45,7 +45,7 @@ from elysia.tree.prompt_templates import (
     DPWithEnvMetadataResponse,
 )
 from elysia.tools.text.prompt_templates import TextResponsePrompt
-from elysia.util.retrieve_feedback import retrieve_feedback
+from elysia.util.feedback import retrieve_feedback
 
 
 class ForcedTextResponse(Tool):
@@ -73,7 +73,7 @@ class ForcedTextResponse(Tool):
         client_manager: ClientManager | None = None,
         **kwargs,
     ):
-        text_response = ElysiaChainOfThought(
+        text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
             environment=True,
@@ -242,8 +242,16 @@ class Node:
         )
 
     async def _execute_view_environment(
-        self, kwargs: dict, tree_data: TreeData, inputs: dict, lm: dspy.LM
-    ) -> AsyncGenerator[StreamedReasoning | dspy.Prediction | ViewEnvironment, None]:
+        self,
+        kwargs: dict,
+        tree_data: TreeData,
+        inputs: dict,
+        base_lm: dspy.LM,
+        complex_lm: dspy.LM,
+        client_manager: ClientManager,
+    ) -> AsyncGenerator[
+        StreamedReasoning | dspy.Prediction | ViewEnvironment | list, None
+    ]:
 
         history = dspy.History(messages=[])
         view_env_inputs = self._get_view_environment()["inputs"]
@@ -279,33 +287,41 @@ class Node:
                 and tool_name
                 and tool_name in tree_data.environment.environment
             ):
-                environment = (
-                    tree_data.environment.get_objects(
+                environment = {
+                    tool_name: tree_data.environment.get_objects(
                         tool_name=tool_name,
                         metadata_key=metadata_key,
                         metadata_value=metadata_value,
                     )
-                    or tree_data.environment.to_json()["environment"]
-                )
+                } or tree_data.environment.to_json()["environment"]
             elif tool_name and tool_name in tree_data.environment.environment:
-                environment = [
-                    {
-                        "metadata": item.metadata,
-                        "objects": item.objects,
-                    }
-                    for item in tree_data.environment.get(tool_name) or []
-                ]
+                environment = {
+                    tool_name: [
+                        {
+                            "metadata": item.metadata,
+                            "objects": item.objects,
+                        }
+                        for item in tree_data.environment.get(tool_name) or []
+                    ]
+                }
             else:
                 environment = tree_data.environment.to_json()["environment"]
+
+            preview = [
+                i["objects"]
+                for i in (
+                    environment.get(tool_name or list(environment.keys())[0], []) or []
+                )
+            ][:5]
 
             yield ViewEnvironment(
                 tool_name=tool_name,
                 metadata_key=metadata_key,
                 metadata_value=metadata_value,
-                environment_preview=environment[:5],
+                environment_preview=preview,
             )
 
-            environment_decision_executor = ElysiaChainOfThought(
+            environment_decision_executor = ElysiaPrompt(
                 DPWithEnvMetadataResponse,
                 tree_data=tree_data,
                 collection_schemas=tree_data.use_weaviate_collections,
@@ -314,21 +330,64 @@ class Node:
                 reasoning=tree_data.settings.BASE_USE_REASONING,
             )
 
-            async for chunk in environment_decision_executor.aforward_streaming(
-                streamed_field="reasoning",
-                environment=environment,
-                available_actions=kwargs["available_actions"],
-                history=history,
-                lm=lm,
-                add_tree_data_inputs=False,
-            ):
-                if (
-                    isinstance(chunk, StreamResponse)
-                    and chunk.signature_field_name == "reasoning"
+            if tree_data.streaming:
+
+                if tree_data.settings.USE_FEEDBACK:
+                    aforward_fn = (
+                        environment_decision_executor.aforward_streaming_with_feedback_examples
+                    )
+
+                else:
+                    aforward_fn = environment_decision_executor.aforward_streaming
+
+                async for chunk in aforward_fn(
+                    streamed_field="reasoning",
+                    environment=environment,
+                    available_actions=kwargs["available_actions"],
+                    history=history,
+                    lm=base_lm,
+                    add_tree_data_inputs=False,
+                    base_lm=base_lm,
+                    complex_lm=complex_lm,
+                    client_manager=client_manager,
+                    feedback_model="decision",
                 ):
-                    yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
-                elif isinstance(chunk, dspy.Prediction):
-                    pred = chunk
+                    if (
+                        isinstance(chunk, StreamResponse)
+                        and chunk.signature_field_name == "reasoning"
+                    ):
+                        yield StreamedReasoning(
+                            chunk=chunk.chunk, last=chunk.is_last_chunk
+                        )
+                    elif isinstance(chunk, dspy.Prediction):
+                        pred = chunk
+                    elif isinstance(chunk, list):
+                        yield chunk
+            else:
+                if tree_data.settings.USE_FEEDBACK:
+                    pred, uuids = (
+                        await environment_decision_executor.aforward_with_feedback_examples(
+                            feedback_model="decision",
+                            client_manager=client_manager,
+                            streamed_field="reasoning",
+                            environment=environment,
+                            available_actions=kwargs["available_actions"],
+                            history=history,
+                            base_lm=base_lm,
+                            complex_lm=complex_lm,
+                            add_tree_data_inputs=False,
+                        )
+                    )
+                    yield uuids
+                else:
+                    pred = await environment_decision_executor.aforward(
+                        streamed_field="reasoning",
+                        environment=environment,
+                        available_actions=kwargs["available_actions"],
+                        history=history,
+                        lm=base_lm,
+                        add_tree_data_inputs=False,
+                    )
 
             chosen_function = pred.function_name
             inputs = pred.function_inputs
@@ -351,11 +410,19 @@ class Node:
         client_manager: ClientManager | None = None,
     ) -> AsyncGenerator[
         Decision
-        | Sequence[Result | Update | Text | Error | TrainingUpdate | TreeUpdate]
+        | Result
+        | Update
+        | Text
+        | Error
+        | TrainingUpdate
+        | TreeUpdate
         | StreamedReasoning
         | ViewEnvironment,
         None,
     ]:
+
+        if client_manager is None:
+            client_manager = ClientManager(settings=tree_data.settings)
 
         available_options = [
             {
@@ -384,7 +451,6 @@ class Node:
                     reasoning="Only one option available, no inputs required.",
                     end_actions=False,
                 )
-                yield []
                 return
 
         # TODO: replace this with actual token counting
@@ -398,7 +464,7 @@ class Node:
         else:
             signature = DPWithEnv
 
-        decision_executor = ElysiaChainOfThought(
+        decision_executor = ElysiaPrompt(
             signature,
             tree_data=tree_data,
             collection_schemas=tree_data.use_weaviate_collections,
@@ -414,7 +480,16 @@ class Node:
         )
 
         if tree_data.streaming:
-            async for chunk in decision_executor.aforward_streaming(
+
+            if tree_data.settings.USE_FEEDBACK:
+                aforward_fn = (
+                    decision_executor.aforward_streaming_with_feedback_examples
+                )
+
+            else:
+                aforward_fn = decision_executor.aforward_streaming
+
+            async for chunk in aforward_fn(
                 streamed_field="reasoning",
                 instruction=self.instruction,
                 tree_count=tree_data.tree_count_string(),
@@ -422,6 +497,10 @@ class Node:
                 available_actions=available_options,
                 unavailable_actions=unavailable_options,
                 lm=base_lm,
+                base_lm=base_lm,
+                complex_lm=complex_lm,
+                client_manager=client_manager,
+                feedback_model="decision",
             ):
                 if (
                     isinstance(chunk, StreamResponse)
@@ -430,34 +509,50 @@ class Node:
                     yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
+                elif isinstance(chunk, list):
+                    yield FewShotExamples(chunk)
         else:
-            pred = await decision_executor.aforward(
-                instruction=self.instruction,
-                tree_count=tree_data.tree_count_string(),
-                environment_metadata=tree_data.environment.output_llm_metadata(),
-                available_actions=available_options,
-                unavailable_actions=unavailable_options,
-                lm=base_lm,
-            )
 
-        results = [
-            TrainingUpdate(
-                module_name="decision",
-                inputs={
-                    "instruction": self.instruction,
-                    "tree_count": tree_data.tree_count_string(),
-                    "environment_metadata": tree_data.environment.output_llm_metadata(),
-                    "available_actions": available_options,
-                    "unavailable_actions": unavailable_options,
-                    **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
-                },
-                outputs={k: v for k, v in pred.__dict__["_store"].items()},
-            )
-        ]
+            if tree_data.settings.USE_FEEDBACK:
+                pred, uuids = await decision_executor.aforward_with_feedback_examples(
+                    instruction=self.instruction,
+                    tree_count=tree_data.tree_count_string(),
+                    environment_metadata=tree_data.environment.output_llm_metadata(),
+                    available_actions=available_options,
+                    unavailable_actions=unavailable_options,
+                    base_lm=base_lm,
+                    complex_lm=complex_lm,
+                    client_manager=client_manager,
+                    feedback_model="decision",
+                )
+                yield FewShotExamples(uuids)
+
+            else:
+                pred = await decision_executor.aforward(
+                    instruction=self.instruction,
+                    tree_count=tree_data.tree_count_string(),
+                    environment_metadata=tree_data.environment.output_llm_metadata(),
+                    available_actions=available_options,
+                    unavailable_actions=unavailable_options,
+                    lm=base_lm,
+                )
+
+        yield TrainingUpdate(
+            module_name="decision",
+            inputs={
+                "instruction": self.instruction,
+                "tree_count": tree_data.tree_count_string(),
+                "environment_metadata": tree_data.environment.output_llm_metadata(),
+                "available_actions": available_options,
+                "unavailable_actions": unavailable_options,
+                **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
+            },
+            outputs={k: v for k, v in pred.__dict__["_store"].items()},
+        )
+
         if pred.function_name == "view_environment":
             async for chunk in self._execute_view_environment(
                 kwargs={
-                    "user_prompt": tree_data.user_prompt,
                     "instruction": self.instruction,
                     "tree_count": tree_data.tree_count_string(),
                     "environment_metadata": tree_data.environment.output_llm_metadata(),
@@ -468,7 +563,9 @@ class Node:
                 },
                 tree_data=tree_data,
                 inputs=pred.function_inputs,
-                lm=base_lm,
+                base_lm=base_lm,
+                complex_lm=complex_lm,
+                client_manager=client_manager,
             ):
                 if isinstance(chunk, (StreamResponse, ViewEnvironment)):
                     if isinstance(chunk, StreamResponse):
@@ -480,6 +577,8 @@ class Node:
                         yield chunk
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
+                elif isinstance(chunk, list):
+                    yield FewShotExamples(chunk)
 
         yield Decision(
             function_name=pred.function_name,
@@ -492,7 +591,6 @@ class Node:
             reasoning=pred.reasoning,
             end_actions=pred.end_actions,
         )
-        yield results
 
 
 class TreeReturner:

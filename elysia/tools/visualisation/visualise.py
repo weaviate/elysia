@@ -1,6 +1,6 @@
 from logging import Logger
 from elysia.objects import Tool, Error
-from elysia.util.elysia_modules import ElysiaChainOfThought
+from elysia.util.elysia_modules import ElysiaPrompt
 from elysia.tools.visualisation.objects import (
     ChartResult,
     BarChart,
@@ -61,7 +61,7 @@ class Visualise(Tool):
                 "scatter_or_line": CreateScatterOrLineChart,
             }
 
-            create_chart = ElysiaChainOfThought(
+            create_chart = ElysiaPrompt(
                 type_mapping[chart_type],
                 tree_data=tree_data,
                 environment=True,
