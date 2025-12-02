@@ -682,43 +682,20 @@ class TreeData:
         use_weaviate_collections: bool = True,
         streaming: bool = False,
     ):
-        if settings is None:
-            self.settings = environment_settings
-        else:
-            self.settings = settings
-
+        self.settings = environment_settings if settings is None else settings
         self.user_id = user_id
 
         # -- Base Data --
-        if user_prompt is None:
-            self.user_prompt = ""
-        else:
-            self.user_prompt = user_prompt
-
-        if conversation_history is None:
-            self.conversation_history = []
-        else:
-            self.conversation_history = conversation_history
-
-        if environment is None:
-            self.environment = Environment()
-        else:
-            self.environment = environment
-
-        if tasks_completed is None:
-            self.tasks_completed = []
-        else:
-            self.tasks_completed = tasks_completed
-
-        if num_trees_completed is None:
-            self.num_trees_completed = 0
-        else:
-            self.num_trees_completed = num_trees_completed
-
-        if recursion_limit is None:
-            self.recursion_limit = 3
-        else:
-            self.recursion_limit = recursion_limit
+        self.user_prompt = "" if user_prompt is None else user_prompt
+        self.conversation_history = (
+            [] if conversation_history is None else conversation_history
+        )
+        self.environment = Environment() if environment is None else environment
+        self.tasks_completed = [] if tasks_completed is None else tasks_completed
+        self.num_trees_completed = (
+            0 if num_trees_completed is None else num_trees_completed
+        )
+        self.recursion_limit = 3 if recursion_limit is None else recursion_limit
 
         self.streaming = streaming
 

@@ -1095,14 +1095,7 @@ class Tree:
         return available_options, unavailable_options
 
     def _create_client_manager(self) -> ClientManager:
-        """Create a ClientManager with the current settings."""
-        return ClientManager(
-            wcd_url=self.settings.WCD_URL,
-            wcd_api_key=self.settings.WCD_API_KEY,
-            logger=self.settings.logger,
-            client_timeout=None,
-            **self.settings.API_KEYS,
-        )
+        return ClientManager(settings=self.settings)
 
     async def _initialize_run(
         self,
@@ -1111,7 +1104,6 @@ class Tree:
         collection_names: list[str],
         client_manager: ClientManager,
     ) -> str:
-        """Initialize a new run of the decision tree. Returns the query_id."""
         self.settings.logger.debug(f"Style: {self.tree_data.atlas.style}")
         self.settings.logger.debug(
             f"Agent description: {self.tree_data.atlas.agent_description}"
@@ -1432,6 +1424,7 @@ class Tree:
                 num_trees_completed=self.tree_data.num_trees_completed,
                 reasoning=self.current_decision.reasoning,
                 action=not self.nodes[next_node_id].branch,
+                inputs=self.current_decision.function_inputs,
             )
 
             yield (

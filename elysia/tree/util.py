@@ -229,6 +229,14 @@ class Node:
             if default_input_name not in llm_inputs:
                 llm_inputs[default_input_name] = default_inputs[default_input_name]
 
+        # any extra inputs are removed
+        real_input_names = [inp.name for inp in real_inputs]
+        llm_inputs = {
+            input_name: input_value
+            for input_name, input_value in llm_inputs.items()
+            if input_name in real_input_names
+        }
+
         return llm_inputs
 
     def _tool_assertion(self, pred: dspy.Prediction, kwargs: dict) -> tuple[bool, str]:
