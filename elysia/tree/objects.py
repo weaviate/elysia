@@ -143,9 +143,7 @@ class Environment:
                 If `None`, the entire environment is checked.
                 Defaults to `None`.
         """
-        tools_to_check = (
-            [tool_name] if tool_name else list(self.environment.keys())
-        )
+        tools_to_check = [tool_name] if tool_name else list(self.environment.keys())
 
         for name in tools_to_check:
             if name not in self.environment:
