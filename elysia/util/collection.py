@@ -55,54 +55,34 @@ async def async_get_collection_weaviate_data_types(client, collection_name: str)
     return {k: data_mapping[v] for k, v in data_types.items()}
 
 
-def convert_weaviate_list(list_object: list):
-    for i, value in enumerate(list_object):
-        if isinstance(value, str) and value.startswith("[") and value.endswith("]"):
-            list_object[i] = ast.literal_eval(value)
-
-        if isinstance(value, dict):
-            list_object[i] = convert_weaviate_object(value)
-        elif isinstance(value, list):
-            list_object[i] = convert_weaviate_list(value)
-        elif isinstance(value, datetime.datetime):
-            list_object[i] = format_datetime(value)
-        elif isinstance(value, UUID):
-            list_object[i] = str(value)
-        elif (
-            not isinstance(value, str)
-            and not isinstance(value, list)
-            and not isinstance(value, dict)
-            and not isinstance(value, float)
-            and not isinstance(value, int)
-            and not isinstance(value, bool)
-        ):
-            list_object[i] = str(value)
-
-    return list_object
+SERIALIZABLE_TYPES = (str, list, dict, float, int, bool)
 
 
-def convert_weaviate_object(dict_object: dict):
-    for key, value in dict_object.items():
+def _convert_value(value: Any) -> Any:
+    """Convert a single value to a serializable format."""
+    if isinstance(value, str) and value.startswith("[") and value.endswith("]"):
+        return ast.literal_eval(value)
+    if isinstance(value, datetime.datetime):
+        return format_datetime(value)
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, dict):
+        return convert_weaviate_object(value)
+    if isinstance(value, list):
+        return convert_weaviate_list(value)
+    if not isinstance(value, SERIALIZABLE_TYPES):
+        return str(value)
+    return value
 
-        if isinstance(value, datetime.datetime):
-            dict_object[key] = format_datetime(value)
-        elif isinstance(value, list):
-            dict_object[key] = convert_weaviate_list(value)
-        elif isinstance(value, dict):
-            dict_object[key] = convert_weaviate_object(value)
-        elif isinstance(value, UUID):
-            dict_object[key] = str(value)
-        elif (
-            not isinstance(value, str)
-            and not isinstance(value, list)
-            and not isinstance(value, dict)
-            and not isinstance(value, float)
-            and not isinstance(value, int)
-            and not isinstance(value, bool)
-        ):
-            dict_object[key] = str(value)
 
-    return dict_object
+def convert_weaviate_list(list_object: list) -> list:
+    """Recursively convert list items to serializable formats."""
+    return [_convert_value(value) for value in list_object]
+
+
+def convert_weaviate_object(dict_object: dict) -> dict:
+    """Recursively convert dict values to serializable formats."""
+    return {key: _convert_value(value) for key, value in dict_object.items()}
 
 
 async def paginated_collection(
@@ -150,35 +130,25 @@ async def paginated_collection(
             )
 
     else:
-        all_filters = []
+        # Build filters using operator lookup
+        operator_methods = {
+            "equal": "equal",
+            "greater_or_equal": "greater_or_equal",
+            "greater_than": "greater_than",
+            "less_or_equal": "less_or_equal",
+            "less_than": "less_than",
+            "not_equal": "not_equal",
+        }
 
+        all_filters = []
         for filter_name, filter_operator, filter_value in zip(
             filters, filter_operators, filter_values
         ):
-            if filter_operator == "equal":
-                all_filters.append(Filter.by_property(filter_name).equal(filter_value))
-            elif filter_operator == "greater_or_equal":
-                all_filters.append(
-                    Filter.by_property(filter_name).greater_or_equal(filter_value)
-                )
-            elif filter_operator == "greater_than":
-                all_filters.append(
-                    Filter.by_property(filter_name).greater_than(filter_value)
-                )
-            elif filter_operator == "less_or_equal":
-                all_filters.append(
-                    Filter.by_property(filter_name).less_or_equal(filter_value)
-                )
-            elif filter_operator == "less_than":
-                all_filters.append(
-                    Filter.by_property(filter_name).less_than(filter_value)
-                )
-            elif filter_operator == "not_equal":
-                all_filters.append(
-                    Filter.by_property(filter_name).not_equal(filter_value)
-                )
-            else:
+            if filter_operator not in operator_methods:
                 raise ValueError(f"Invalid filter operator: {filter_operator}")
+            prop_filter = Filter.by_property(filter_name)
+            method = getattr(prop_filter, operator_methods[filter_operator])
+            all_filters.append(method(filter_value))
 
         if filter_type == "all":
             main_filter = Filter.all_of(all_filters)

@@ -241,6 +241,42 @@ class Node:
             f"Your output MUST be one of the following: {available_option_names}",
         )
 
+    def _get_filtered_environment(
+        self,
+        tree_data: TreeData,
+        tool_name: str | None,
+        metadata_key: str | None,
+        metadata_value: Any | None,
+    ) -> dict:
+        """Get environment data filtered by tool name and/or metadata."""
+        env = tree_data.environment
+
+        # Full filter: tool_name + metadata_key + metadata_value
+        if (
+            metadata_key
+            and metadata_value
+            and tool_name
+            and tool_name in env.environment
+        ):
+            objects = env.get_objects(
+                tool_name=tool_name,
+                metadata_key=metadata_key,
+                metadata_value=metadata_value,
+            )
+            return {tool_name: objects} if objects else env.to_json()["environment"]
+
+        # Tool filter only
+        if tool_name and tool_name in env.environment:
+            return {
+                tool_name: [
+                    {"metadata": item.metadata, "objects": item.objects}
+                    for item in env.get(tool_name) or []
+                ]
+            }
+
+        # No filter - return full environment
+        return env.to_json()["environment"]
+
     async def _execute_view_environment(
         self,
         kwargs: dict,
@@ -281,38 +317,18 @@ class Node:
             metadata_key = function_inputs["metadata_key"]
             metadata_value = function_inputs["metadata_value"]
 
-            if (
-                metadata_key
-                and metadata_value
-                and tool_name
-                and tool_name in tree_data.environment.environment
-            ):
-                environment = {
-                    tool_name: tree_data.environment.get_objects(
-                        tool_name=tool_name,
-                        metadata_key=metadata_key,
-                        metadata_value=metadata_value,
-                    )
-                } or tree_data.environment.to_json()["environment"]
-            elif tool_name and tool_name in tree_data.environment.environment:
-                environment = {
-                    tool_name: [
-                        {
-                            "metadata": item.metadata,
-                            "objects": item.objects,
-                        }
-                        for item in tree_data.environment.get(tool_name) or []
-                    ]
-                }
-            else:
-                environment = tree_data.environment.to_json()["environment"]
+            environment = self._get_filtered_environment(
+                tree_data, tool_name, metadata_key, metadata_value
+            )
 
+            # Build preview of first 5 objects
+            first_key = tool_name or (
+                list(environment.keys())[0] if environment else None
+            )
+            preview_items = environment.get(first_key, []) if first_key else []
             preview = [
-                i["objects"]
-                for i in (
-                    environment.get(tool_name or list(environment.keys())[0], []) or []
-                )
-            ][:5]
+                item["objects"] for item in preview_items[:5] if isinstance(item, dict)
+            ]
 
             yield ViewEnvironment(
                 tool_name=tool_name,

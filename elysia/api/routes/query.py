@@ -95,21 +95,17 @@ async def process(data: dict, websocket: WebSocket, user_manager: UserManager):
             if asyncio.iscoroutine(yielded_result):
                 yielded_result = await yielded_result
             try:
-                if (
-                    yielded_result is not None
-                    and "type" in yielded_result
-                    and yielded_result["type"] != "training_update"
-                    and yielded_result["type"] != "timer"
-                    and yielded_result["type"] != "completed"
-                ):
+                if yielded_result is None or "type" not in yielded_result:
+                    continue
+
+                result_type = yielded_result["type"]
+                skip_types = {"training_update", "timer", "completed"}
+
+                if result_type not in skip_types:
                     await websocket.send_json(yielded_result)
 
-                # before the completed, send title of conversation
-                elif (
-                    yielded_result is not None
-                    and "type" in yielded_result
-                    and yielded_result["type"] == "completed"
-                ):
+                # Before the completed, send title of conversation
+                elif result_type == "completed":
                     tree: Tree = await user_manager.get_tree(
                         user_id=data["user_id"],
                         conversation_id=data["conversation_id"],
@@ -137,23 +133,15 @@ async def process(data: dict, websocket: WebSocket, user_manager: UserManager):
             # logger.debug(f"Sent message to client: {yielded_result}")
 
     except Exception as e:
-        logger.exception(f"Error in /query API")
+        logger.exception("Error in /query API")
         import traceback
 
-        if "conversation_id" in data:
-            error = error_payload(
-                text=f"{str(e)}\n{traceback.format_exc()}",
-                conversation_id=data["conversation_id"],
-                query_id=data["query_id"],
-            )
-            await websocket.send_json(error)
-        else:
-            error = error_payload(
-                text=f"{str(e)}\n{traceback.format_exc()}",
-                conversation_id="",
-                query_id="",
-            )
-            await websocket.send_json(error)
+        error = error_payload(
+            text=f"{str(e)}\n{traceback.format_exc()}",
+            conversation_id=data.get("conversation_id", ""),
+            query_id=data.get("query_id", ""),
+        )
+        await websocket.send_json(error)
 
 
 # Process endpoint

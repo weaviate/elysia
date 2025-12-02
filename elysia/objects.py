@@ -310,72 +310,43 @@ def tool(
             if v.default is not inspect.Parameter.empty
         }
 
-        def list_to_list_of_dicts(result: list) -> list[dict]:
-            objects = []
-            for obj in result:
-                if isinstance(obj, dict):
-                    objects.append(obj)
-                elif isinstance(obj, int | float | bool):
-                    objects.append(
-                        {
-                            "tool_result": obj,
-                        }
-                    )
-                elif isinstance(obj, list):
-                    objects.append(list_to_list_of_dicts(obj))
-                else:
-                    objects.append(
-                        {
-                            "tool_result": obj,
-                        }
-                    )
-            return objects
+        def normalize_to_dict(obj: Any) -> dict:
+            """Convert a value to a dict, wrapping primitives in tool_result."""
+            return obj if isinstance(obj, dict) else {"tool_result": obj}
+
+        def list_to_list_of_dicts(result: list) -> list:
+            """Recursively convert list items to dicts."""
+            return [
+                (
+                    list_to_list_of_dicts(obj)
+                    if isinstance(obj, list)
+                    else normalize_to_dict(obj)
+                )
+                for obj in result
+            ]
+
+        def make_result(objects: list[dict], inputs: dict) -> Result:
+            """Create a Result with standard metadata."""
+            return Result(
+                objects=objects,
+                metadata={"tool_name": function.__name__, "inputs_used": inputs},
+            )
 
         def return_mapping(result, inputs: dict):
-            if isinstance(result, Result | Text | Update | Status | Error):
+            # Pass through existing Elysia types
+            if isinstance(result, (Result, Text, Update, Status, Error)):
                 return result
-            elif isinstance(result, str):
+            # String -> Response
+            if isinstance(result, str):
                 return Response(result)
-            elif isinstance(result, int | float | bool):
-                return Result(
-                    objects=[
-                        {
-                            "tool_result": result,
-                        }
-                    ],
-                    metadata={
-                        "tool_name": function.__name__,
-                        "inputs_used": inputs,
-                    },
-                )
-            elif isinstance(result, dict):
-                return Result(
-                    objects=[result],
-                    metadata={
-                        "tool_name": function.__name__,
-                        "inputs_used": inputs,
-                    },
-                )
-            elif isinstance(result, list):
-                return Result(
-                    objects=list_to_list_of_dicts(result),
-                    metadata={
-                        "tool_name": function.__name__,
-                        "inputs_used": inputs,
-                    },
-                )
-            else:
-                return Result(
-                    objects=[
-                        {
-                            "tool_result": result,
-                        }
-                    ],
-                    metadata={
-                        "tool_name": function.__name__,
-                        "inputs_used": inputs,
-                    },
-                )
+            # Dict -> single-object Result
+            if isinstance(result, dict):
+                return make_result([result], inputs)
+            # List -> multi-object Result
+            if isinstance(result, list):
+                return make_result(list_to_list_of_dicts(result), inputs)
+            # Everything else -> wrapped in tool_result
+            return make_result([{"tool_result": result}], inputs)
 
         class ToolClass(Tool):
             def __init__(self, **kwargs):

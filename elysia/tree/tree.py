@@ -107,25 +107,15 @@ class Tree:
                 This is automatically set to the environment settings if not provided.
         """
         # Define base variables of the tree
-        if user_id is None:
-            self.user_id = str(uuid.uuid4())
-        else:
-            self.user_id = user_id
-
-        if conversation_id is None:
-            self.conversation_id = str(uuid.uuid4())
-        else:
-            self.conversation_id = conversation_id
-
+        self.user_id = user_id if user_id is not None else str(uuid.uuid4())
+        self.conversation_id = (
+            conversation_id if conversation_id is not None else str(uuid.uuid4())
+        )
         self.preset_id = preset_id
 
-        if settings is None:
-            self.settings = environment_settings
-        else:
-            assert isinstance(
-                settings, Settings
-            ), "settings must be an instance of Settings"
-            self.settings = settings
+        if settings is not None and not isinstance(settings, Settings):
+            raise TypeError("settings must be an instance of Settings")
+        self.settings = settings if settings is not None else environment_settings
 
         # Initialise some tree variables
         self.nodes: dict[str, Node] = {}
@@ -182,10 +172,8 @@ class Tree:
         self.history = {}
         self.training_updates = []
 
-        # -- Get the root node and construct the tree
+        # Get the root node
         self._get_root()
-        # self.tree = {}
-        # self._construct_tree(self.root, self.tree)
 
         # initialise the returner (for frontend)
         self.returner = TreeReturner(
@@ -288,7 +276,7 @@ class Tree:
         )
 
     def clear_tree(self) -> None:
-        self.nodes: dict[str, Node] = {}
+        self.nodes = {}
         self.root = None
 
     def set_branch_initialisation(self, initialisation: str | None) -> None:
@@ -355,85 +343,6 @@ class Tree:
 
         if self.root is None:
             raise ValueError("No root node found")
-
-    # def _construct_tree(
-    #     self, node_id: str | None, tree: dict, branch: bool = True
-    # ) -> dict:
-    #     if node_id is None:
-    #         raise ValueError("Node ID is None")
-
-    #     node = self.nodes[node_id]
-
-    #     # Ensure the order of the keys in each option is the same
-    #     key_order = [
-    #         "name",
-    #         "id",
-    #         "description",
-    #         "instruction",
-    #         "reasoning",
-    #         "branch",
-    #         "options",
-    #     ]
-
-    #     # Set the base node information
-    #     tree["name"] = node_id.capitalize().replace("_", " ")
-    #     tree["id"] = node_id
-    #     if node_id == self.root:
-    #         tree["description"] = ""
-    #     tree["instruction"] = remove_whitespace(
-    #         node.instruction.replace("\n", "")
-    #     )
-    #     tree["reasoning"] = ""
-    #     tree["branch"] = branch
-    #     tree["options"] = {}
-
-    #     # Order the top-level dictionary
-    #     tree = {key: tree[key] for key in key_order if key in tree}
-
-    #     # Initialize all options first with ordered dictionaries
-    #     for option in node.options:
-    #         tree["options"][option] = {
-    #             "description": remove_whitespace(
-    #                 str(node.options[option]["description"]).replace("\n", "")
-    #             )
-    #         }
-
-    #     # Then handle the recursive cases
-    #     for option in decision_node.options:
-    #         next_node: DecisionNode | None = decision_node.options[option]["next"]  # type: ignore
-    #         if (
-    #             decision_node.options[option]["action"] is not None
-    #             and next_node is None
-    #         ):
-    #             tree["options"][option]["name"] = option.capitalize().replace("_", " ")
-    #             tree["options"][option]["id"] = option
-    #             tree["options"][option]["instruction"] = ""
-    #             tree["options"][option]["reasoning"] = ""
-    #             tree["options"][option]["branch"] = False
-    #             tree["options"][option]["options"] = {}
-
-    #         elif next_node is not None:
-    #             tree["options"][option] = self._construct_tree(
-    #                 next_node.id,
-    #                 tree["options"][option],
-    #                 branch=decision_node.options[option]["action"] is None,
-    #             )
-    #         else:
-    #             tree["options"][option]["name"] = option.capitalize().replace("_", " ")
-    #             tree["options"][option]["id"] = option
-    #             tree["options"][option]["instruction"] = ""
-    #             tree["options"][option]["reasoning"] = ""
-    #             tree["options"][option]["branch"] = True
-    #             tree["options"][option]["options"] = {}
-
-    #         # Order each option's dictionary
-    #         tree["options"][option] = {
-    #             key: tree["options"][option][key]
-    #             for key in key_order
-    #             if key in tree["options"][option]
-    #         }
-
-    #     return tree
 
     async def set_collection_names(
         self,
@@ -763,8 +672,8 @@ class Tree:
         if from_node_id is not None and description == "":
             raise ValueError("Description is required for non-root branches.")
 
-        if from_node_id and description != "":
-            self.settings.logger.warning(f"Description is not used for root branches. ")
+        if from_node_id is None and description != "":
+            self.settings.logger.warning("Description is not used for root branches.")
 
         if node_id is None:
             node_id = str(uuid.uuid4())
@@ -928,8 +837,8 @@ class Tree:
 
     def create_conversation_title(self) -> str:
         """
+        Sync wrapper for create_conversation_title_async().
         Create a title for the tree using the base LM.
-        Also assigns the `conversation_title` attribute to the tree.
 
         Returns:
             (str): The title for the tree.
@@ -1185,6 +1094,120 @@ class Tree:
 
         return available_options, unavailable_options
 
+    def _create_client_manager(self) -> ClientManager:
+        """Create a ClientManager with the current settings."""
+        return ClientManager(
+            wcd_url=self.settings.WCD_URL,
+            wcd_api_key=self.settings.WCD_API_KEY,
+            logger=self.settings.logger,
+            client_timeout=None,
+            **self.settings.API_KEYS,
+        )
+
+    async def _initialize_run(
+        self,
+        user_prompt: str,
+        query_id: str | None,
+        collection_names: list[str],
+        client_manager: ClientManager,
+    ) -> str:
+        """Initialize a new run of the decision tree. Returns the query_id."""
+        self.settings.logger.debug(f"Style: {self.tree_data.atlas.style}")
+        self.settings.logger.debug(
+            f"Agent description: {self.tree_data.atlas.agent_description}"
+        )
+        self.settings.logger.debug(f"End goal: {self.tree_data.atlas.end_goal}")
+
+        query_id = query_id if query_id is not None else str(uuid.uuid4())
+        self.returner.add_prompt(user_prompt, query_id)
+
+        # Reset the tree (clear temporary data specific to the last user prompt)
+        self.soft_reset()
+
+        check_base_lm_settings(self.settings)
+        check_complex_lm_settings(self.settings)
+
+        # Initialise some objects
+        self.set_start_time()
+        self.query_id_to_prompt[query_id] = user_prompt
+        self.prompt_to_query_id[user_prompt] = query_id
+        self.tree_data.set_property("user_prompt", user_prompt)
+        self._update_conversation_history("user", user_prompt)
+        self.user_prompt = user_prompt
+
+        # Check and start clients if not already started
+        if client_manager.is_client:
+            await client_manager.start_clients()
+
+            # Initialise the collections
+            if self.tree_data.use_weaviate_collections:
+                if not collection_names:
+                    async with client_manager.connect_to_async_client() as client:
+                        collection_names = await retrieve_all_collection_names(client)
+                await self.set_collection_names(collection_names, client_manager)
+
+        if self.settings.LOGGING_LEVEL_INT <= 20:
+            print(
+                Panel.fit(
+                    user_prompt,
+                    title="User prompt",
+                    border_style="yellow",
+                    padding=(1, 1),
+                )
+            )
+
+        return query_id
+
+    def _build_tool_options(
+        self, available_options: list[str], unavailable_options: list[tuple[str, str]]
+    ) -> list[ToolOption]:
+        """Build ToolOption list from available and unavailable options."""
+        options = []
+        for option in available_options:
+            node = self.nodes[option]
+            if node.branch:
+                options.append(
+                    ToolOption(
+                        name=node.name,
+                        available=True,
+                        description=node.description,
+                        inputs=[],
+                    )
+                )
+            else:
+                options.append(
+                    ToolOption(
+                        name=node.name,
+                        available=True,
+                        description=node.description,
+                        inputs=[
+                            ToolInput(
+                                name=input_name,
+                                description=input_def.get("description", ""),
+                                type=input_def.get("type", Any),
+                                default=input_def.get("default", None),
+                                required=input_def.get("required", False),
+                            )
+                            for input_name, input_def in self.tools[
+                                node.name
+                            ].inputs.items()
+                        ],
+                    )
+                )
+
+        # Add unavailable options
+        options.extend(
+            ToolOption(
+                name=self.nodes[opt_id].name,
+                available=False,
+                description="",
+                unavailable_reason=reason,
+                inputs=[],
+            )
+            for opt_id, reason in unavailable_options
+        )
+        return options
+
     def log_token_usage(self) -> None:
         if not self.low_memory:
             avg_input_base = self.tracker.get_average_input_tokens("base_lm")
@@ -1242,69 +1265,14 @@ class Tree:
         Async version of .run() for running Elysia in an async environment.
         See .run() for full documentation.
         """
-
         if client_manager is None:
-            client_manager = ClientManager(
-                wcd_url=self.settings.WCD_URL,
-                wcd_api_key=self.settings.WCD_API_KEY,
-                logger=self.settings.logger,
-                client_timeout=None,
-                **self.settings.API_KEYS,
-            )
+            client_manager = self._create_client_manager()
 
-        # Some initial steps if this is the first run (no recursion yet)
+        # Initial setup for first run (not recursive call)
         if _first_run:
-
-            self.settings.logger.debug(f"Style: {self.tree_data.atlas.style}")
-            self.settings.logger.debug(
-                f"Agent description: {self.tree_data.atlas.agent_description}"
+            query_id = await self._initialize_run(
+                user_prompt, query_id, collection_names, client_manager
             )
-            self.settings.logger.debug(f"End goal: {self.tree_data.atlas.end_goal}")
-
-            if query_id is None:
-                query_id = str(uuid.uuid4())
-
-            self.returner.add_prompt(user_prompt, query_id)
-
-            # Reset the tree (clear temporary data specific to the last user prompt)
-            self.soft_reset()
-
-            check_base_lm_settings(self.settings)
-            check_complex_lm_settings(self.settings)
-
-            # Initialise some objects
-            self.set_start_time()
-            self.query_id_to_prompt[query_id] = user_prompt
-            self.prompt_to_query_id[user_prompt] = query_id
-            self.tree_data.set_property("user_prompt", user_prompt)
-            self._update_conversation_history("user", user_prompt)
-            self.user_prompt = user_prompt
-
-            # check and start clients if not already started
-            if client_manager.is_client:
-                await client_manager.start_clients()
-
-                # Initialise the collections
-                if self.tree_data.use_weaviate_collections:
-                    if collection_names == []:
-                        async with client_manager.connect_to_async_client() as client:
-                            collection_names = await retrieve_all_collection_names(
-                                client
-                            )
-                    await self.set_collection_names(
-                        collection_names,
-                        client_manager,
-                    )
-
-            if self.settings.LOGGING_LEVEL_INT <= 20:
-                print(
-                    Panel.fit(
-                        user_prompt,
-                        title="User prompt",
-                        border_style="yellow",
-                        padding=(1, 1),
-                    )
-                )
 
         # Start the tree at the root node
         if self.root is not None:
@@ -1350,50 +1318,7 @@ class Tree:
 
             self.tracker.start_tracking("decision_node")
             self.tree_data.set_current_task("elysia_decision_node")
-            options = []
-            for option in available_options:
-                if self.nodes[option].branch:
-                    options.append(
-                        ToolOption(
-                            name=self.nodes[option].name,
-                            available=True,
-                            description=self.nodes[option].description,
-                            inputs=[],
-                        )
-                    )
-                else:
-                    options.append(
-                        ToolOption(
-                            name=self.nodes[option].name,
-                            available=True,
-                            description=self.nodes[option].description,
-                            inputs=[
-                                ToolInput(
-                                    name=input_name,
-                                    description=input.get("description", ""),
-                                    type=input.get("type", Any),
-                                    default=input.get("default", None),
-                                    required=input.get("required", False),
-                                )
-                                for input_name, input in self.tools[
-                                    self.nodes[option].name
-                                ].inputs.items()
-                            ],
-                        )
-                    )
-
-            options.extend(
-                [
-                    ToolOption(
-                        name=self.nodes[option].name,
-                        available=False,
-                        description="",
-                        unavailable_reason=unavailable_reason,
-                        inputs=[],
-                    )
-                    for option, unavailable_reason in unavailable_options
-                ]
-            )
+            options = self._build_tool_options(available_options, unavailable_options)
 
             results = []
             with ElysiaKeyManager(self.settings):
