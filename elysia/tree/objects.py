@@ -911,37 +911,6 @@ class TreeData:
         Returns:
             (str): A separated and formatted string of the tasks completed so far in an LLM-parseable format.
         """
-        # out = ""
-        # for j, task_prompt in enumerate(self.tasks_completed):
-        #     out += f"<prompt_{j+1}>\n"
-        #     out += f"Prompt: {task_prompt['prompt']}\n"
-
-        #     for i, task in enumerate(task_prompt["task"]):
-        #         out += f"<task_{i+1}>\n"
-
-        #         if "action" in task and task["action"]:
-        #             out += (
-        #                 f"Chosen action: {task['task']} (this does not mean it has been completed, "
-        #                 "only that it was chosen, use the environment to judge if a task is completed)\n"
-        #             )
-        #         else:
-        #             out += f"Chosen subcategory: {task['task']} (this action has not been completed, this is only a subcategory)"
-
-        #         if "error" in task and task["error"]:
-        #             out += (
-        #                 f" (UNSUCCESSFUL) There was an error during this tool call. "
-        #                 "See the error messages for details. This action did not complete.\n"
-        #             )
-        #         else:
-        #             out += f" (SUCCESSFUL)\n"
-        #             for key in task:
-        #                 if key != "task" and key != "action":
-        #                     out += f"{key.capitalize()}: {task[key]}\n"
-
-        #         out += f"</task_{i+1}>\n"
-        #     out += f"</prompt_{j+1}>\n"
-
-        # return out
         out = ""
         for prompt in self.tasks_completed:
             if prompt["prompt"] == self.user_prompt:
