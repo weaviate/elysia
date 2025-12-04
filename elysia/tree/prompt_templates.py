@@ -89,26 +89,6 @@ class DPWithEnv(dspy.Signature):
         """.strip()
     )
 
-    # successive_actions: str = dspy.InputField(
-    #     description="""
-    #     Actions that stem from actions you can choose from.
-    #     In the format:
-    #     {
-    #         "action_1": {
-    #             "sub_action_1": {
-    #                 "sub_sub_action_1": {},
-    #                 "sub_sub_action_2": {},
-    #             },
-    #             "sub_action_2": {},
-    #         },
-    #         "action_2": {},
-    #     }
-    #     etc.
-    #     Do NOT choose sub_actions for `function_name`, only choose actions from `available_actions`.
-    #     Use this to inform your decision in how it will lead to future tools.
-    #     """.strip()
-    # )
-
     previous_errors: list[dict] = dspy.InputField(
         description="""
         A list of errors from previous actions, organized by the function_name where each error occurred.
@@ -267,26 +247,6 @@ class DPWithEnvMetadata(dspy.Signature):
         or inform the user what they need to do to complete the criteria.
         """.strip()
     )
-
-    # successive_actions: str = dspy.InputField(
-    #     description="""
-    #     Actions that stem from actions you can choose from.
-    #     In the format:
-    #     {
-    #         "action_1": {
-    #             "sub_action_1": {
-    #                 "sub_sub_action_1": {},
-    #                 "sub_sub_action_2": {},
-    #             },
-    #             "sub_action_2": {},
-    #         },
-    #         "action_2": {},
-    #     }
-    #     etc.
-    #     Do NOT choose sub_actions for `function_name`, only choose actions from `available_actions`.
-    #     Use this to inform your decision in how it will lead to future tools.
-    #     """.strip()
-    # )
 
     environment_metadata: str = dspy.InputField(
         description="""

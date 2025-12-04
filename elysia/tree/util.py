@@ -1,7 +1,6 @@
-from math import e
 import uuid
 import json
-from typing import AsyncGenerator, overload
+from typing import AsyncGenerator
 
 # dspy requires a 'base' LM but this should not be used
 import dspy
@@ -10,10 +9,10 @@ from dspy.streaming import StreamResponse
 import types
 from pydantic import BaseModel, ConfigDict
 
-from typing import Callable, Union, Any, Optional, Sequence
+from typing import Any, Optional
 
 from weaviate.util import generate_uuid5
-from weaviate.classes.query import MetadataQuery, Sort, Filter
+from weaviate.classes.query import MetadataQuery, Sort
 
 from elysia.objects import (
     Response,
@@ -22,7 +21,6 @@ from elysia.objects import (
     Text,
     Tool,
     Update,
-    Status,
     StreamedReasoning,
 )
 
@@ -45,7 +43,6 @@ from elysia.tree.prompt_templates import (
     DPWithEnvMetadataResponse,
 )
 from elysia.tools.text.prompt_templates import TextResponsePrompt
-from elysia.util.feedback import retrieve_feedback
 
 
 class ForcedTextResponse(Tool):
@@ -229,6 +226,14 @@ class Node:
             if default_input_name not in llm_inputs:
                 llm_inputs[default_input_name] = default_inputs[default_input_name]
 
+        # any extra inputs are removed
+        real_input_names = [inp.name for inp in real_inputs]
+        llm_inputs = {
+            input_name: input_value
+            for input_name, input_value in llm_inputs.items()
+            if input_name in real_input_names
+        }
+
         return llm_inputs
 
     def _tool_assertion(self, pred: dspy.Prediction, kwargs: dict) -> tuple[bool, str]:
@@ -240,6 +245,38 @@ class Node:
             f"You picked the action `{pred.function_name}` - that is not in `available_actions`! "
             f"Your output MUST be one of the following: {available_option_names}",
         )
+
+    def _get_filtered_environment(
+        self,
+        tree_data: TreeData,
+        tool_name: str | None,
+        metadata_key: str | None,
+        metadata_value: Any | None,
+    ) -> dict:
+        env = tree_data.environment
+
+        if (
+            metadata_key
+            and metadata_value
+            and tool_name
+            and tool_name in env.environment
+        ):
+            objects = env.get_objects(
+                tool_name=tool_name,
+                metadata_key=metadata_key,
+                metadata_value=metadata_value,
+            )
+            return {tool_name: objects} if objects else env.to_json()["environment"]
+
+        if tool_name and tool_name in env.environment:
+            return {
+                tool_name: [
+                    {"metadata": item.metadata, "objects": item.objects}
+                    for item in env.get(tool_name) or []
+                ]
+            }
+
+        return env.to_json()["environment"]
 
     async def _execute_view_environment(
         self,
@@ -281,38 +318,18 @@ class Node:
             metadata_key = function_inputs["metadata_key"]
             metadata_value = function_inputs["metadata_value"]
 
-            if (
-                metadata_key
-                and metadata_value
-                and tool_name
-                and tool_name in tree_data.environment.environment
-            ):
-                environment = {
-                    tool_name: tree_data.environment.get_objects(
-                        tool_name=tool_name,
-                        metadata_key=metadata_key,
-                        metadata_value=metadata_value,
-                    )
-                } or tree_data.environment.to_json()["environment"]
-            elif tool_name and tool_name in tree_data.environment.environment:
-                environment = {
-                    tool_name: [
-                        {
-                            "metadata": item.metadata,
-                            "objects": item.objects,
-                        }
-                        for item in tree_data.environment.get(tool_name) or []
-                    ]
-                }
-            else:
-                environment = tree_data.environment.to_json()["environment"]
+            environment = self._get_filtered_environment(
+                tree_data, tool_name, metadata_key, metadata_value
+            )
 
+            # Build preview of first 5 objects for ViewEnvironment object
+            first_key = tool_name or (
+                list(environment.keys())[0] if environment else None
+            )
+            preview_items = environment.get(first_key, []) if first_key else []
             preview = [
-                i["objects"]
-                for i in (
-                    environment.get(tool_name or list(environment.keys())[0], []) or []
-                )
-            ][:5]
+                item["objects"] for item in preview_items[:5] if isinstance(item, dict)
+            ]
 
             yield ViewEnvironment(
                 tool_name=tool_name,
@@ -401,6 +418,67 @@ class Node:
 
         yield pred
 
+    def _build_decision_kwargs(
+        self,
+        tree_data: TreeData,
+        available_options: list[dict],
+        unavailable_options: list[dict],
+        base_lm: dspy.LM,
+        complex_lm: dspy.LM,
+        client_manager: ClientManager,
+        feedback: bool,
+    ) -> dict:
+
+        if feedback:
+            return {
+                "instruction": self.instruction,
+                "tree_count": tree_data.tree_count_string(),
+                "environment_metadata": tree_data.environment.output_llm_metadata(),
+                "available_actions": available_options,
+                "unavailable_actions": unavailable_options,
+                "base_lm": base_lm,
+                "complex_lm": complex_lm,
+                "client_manager": client_manager,
+                "feedback_model": "decision",
+            }
+        else:
+            return {
+                "instruction": self.instruction,
+                "tree_count": tree_data.tree_count_string(),
+                "environment_metadata": tree_data.environment.output_llm_metadata(),
+                "available_actions": available_options,
+                "unavailable_actions": unavailable_options,
+                "lm": base_lm,
+            }
+
+    def _build_training_inputs(
+        self,
+        tree_data: TreeData,
+        available_options: list[dict],
+        unavailable_options: list[dict],
+        decision_executor,
+    ) -> dict:
+        return {
+            "instruction": self.instruction,
+            "tree_count": tree_data.tree_count_string(),
+            "environment_metadata": tree_data.environment.output_llm_metadata(),
+            "available_actions": available_options,
+            "unavailable_actions": unavailable_options,
+            **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
+        }
+
+    def _process_stream_chunk(self, chunk) -> tuple[Any | None, dspy.Prediction | None]:
+        if (
+            isinstance(chunk, StreamResponse)
+            and chunk.signature_field_name == "reasoning"
+        ):
+            return StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk), None
+        elif isinstance(chunk, dspy.Prediction):
+            return None, chunk
+        elif isinstance(chunk, list):
+            return FewShotExamples(chunk), None
+        return None, None
+
     async def decide(
         self,
         tree_data: TreeData,
@@ -420,31 +498,29 @@ class Node:
         | ViewEnvironment,
         None,
     ]:
-
         if client_manager is None:
             client_manager = ClientManager(settings=tree_data.settings)
 
+        # Build option lists
         available_options = [
             {
-                "name": option.name,
-                "description": option.description,
-                "inputs": [o.model_dump() for o in option.inputs],
+                "name": opt.name,
+                "description": opt.description,
+                "inputs": [o.model_dump() for o in opt.inputs],
             }
-            for option in options
-            if option.available
+            for opt in options
+            if opt.available
         ]
         unavailable_options = [
-            {
-                "name": option.name,
-                "available_at": option.unavailable_reason,
-            }
-            for option in options
-            if not option.available and option.unavailable_reason != ""
+            {"name": opt.name, "available_at": opt.unavailable_reason}
+            for opt in options
+            if not opt.available and opt.unavailable_reason
         ]
 
+        # Fast path: single option with no inputs
         if len(available_options) == 1:
-            only_option = next(option for option in options if option.available)
-            if only_option.inputs == []:
+            only_option = next(opt for opt in options if opt.available)
+            if not only_option.inputs:
                 yield Decision(
                     function_name=only_option.name,
                     function_inputs={},
@@ -453,6 +529,7 @@ class Node:
                 )
                 return
 
+        # Determine signature based on environment size
         # TODO: replace this with actual token counting
         env_token_limit_reached = (
             len(json.dumps(tree_data.environment._unhidden_to_json()))
@@ -464,129 +541,91 @@ class Node:
         else:
             signature = DPWithEnv
 
-        decision_executor = ElysiaPrompt(
-            signature,
-            tree_data=tree_data,
-            collection_schemas=tree_data.use_weaviate_collections,
-            tasks_completed=True,
-            message_update=False,
-            impossible=False,
-            reasoning=tree_data.settings.BASE_USE_REASONING,
-            environment=not env_token_limit_reached,
-        )
         decision_executor = AssertedModule(
-            decision_executor,
+            ElysiaPrompt(
+                signature,
+                tree_data=tree_data,
+                collection_schemas=tree_data.use_weaviate_collections,
+                tasks_completed=True,
+                message_update=False,
+                impossible=False,
+                reasoning=tree_data.settings.BASE_USE_REASONING,
+                environment=not env_token_limit_reached,
+            ),
             self._tool_assertion,
         )
 
+        kwargs = self._build_decision_kwargs(
+            tree_data,
+            available_options,
+            unavailable_options,
+            base_lm,
+            complex_lm,
+            client_manager,
+            tree_data.settings.USE_FEEDBACK,
+        )
+
+        pred = None
         if tree_data.streaming:
-
-            if tree_data.settings.USE_FEEDBACK:
-                aforward_fn = (
-                    decision_executor.aforward_streaming_with_feedback_examples
-                )
-
-            else:
-                aforward_fn = decision_executor.aforward_streaming
-
-            async for chunk in aforward_fn(
-                streamed_field="reasoning",
-                instruction=self.instruction,
-                tree_count=tree_data.tree_count_string(),
-                environment_metadata=tree_data.environment.output_llm_metadata(),
-                available_actions=available_options,
-                unavailable_actions=unavailable_options,
-                lm=base_lm,
-                base_lm=base_lm,
-                complex_lm=complex_lm,
-                client_manager=client_manager,
-                feedback_model="decision",
-            ):
-                if (
-                    isinstance(chunk, StreamResponse)
-                    and chunk.signature_field_name == "reasoning"
-                ):
-                    yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
-                elif isinstance(chunk, dspy.Prediction):
-                    pred = chunk
-                elif isinstance(chunk, list):
-                    yield FewShotExamples(chunk)
+            aforward_fn = (
+                decision_executor.aforward_streaming_with_feedback_examples
+                if tree_data.settings.USE_FEEDBACK
+                else decision_executor.aforward_streaming
+            )
+            async for chunk in aforward_fn(streamed_field="reasoning", **kwargs):
+                yield_val, pred_val = self._process_stream_chunk(chunk)
+                if yield_val is not None:
+                    yield yield_val
+                if pred_val is not None:
+                    pred = pred_val
         else:
-
             if tree_data.settings.USE_FEEDBACK:
                 pred, uuids = await decision_executor.aforward_with_feedback_examples(
-                    instruction=self.instruction,
-                    tree_count=tree_data.tree_count_string(),
-                    environment_metadata=tree_data.environment.output_llm_metadata(),
-                    available_actions=available_options,
-                    unavailable_actions=unavailable_options,
-                    base_lm=base_lm,
-                    complex_lm=complex_lm,
-                    client_manager=client_manager,
-                    feedback_model="decision",
+                    **kwargs
                 )
                 yield FewShotExamples(uuids)
-
             else:
-                pred = await decision_executor.aforward(
-                    instruction=self.instruction,
-                    tree_count=tree_data.tree_count_string(),
-                    environment_metadata=tree_data.environment.output_llm_metadata(),
-                    available_actions=available_options,
-                    unavailable_actions=unavailable_options,
-                    lm=base_lm,
-                )
+                pred = await decision_executor.aforward(**kwargs)
 
+        if pred is None:
+            raise ValueError("No prediction was returned from decision executor")
+
+        training_inputs = self._build_training_inputs(
+            tree_data, available_options, unavailable_options, decision_executor
+        )
         yield TrainingUpdate(
             module_name="decision",
-            inputs={
-                "instruction": self.instruction,
-                "tree_count": tree_data.tree_count_string(),
-                "environment_metadata": tree_data.environment.output_llm_metadata(),
-                "available_actions": available_options,
-                "unavailable_actions": unavailable_options,
-                **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
-            },
-            outputs={k: v for k, v in pred.__dict__["_store"].items()},
+            inputs=training_inputs,
+            outputs=dict(pred.__dict__["_store"]),
         )
 
         if pred.function_name == "view_environment":
+            view_kwargs = {**training_inputs, **dict(pred)}
             async for chunk in self._execute_view_environment(
-                kwargs={
-                    "instruction": self.instruction,
-                    "tree_count": tree_data.tree_count_string(),
-                    "environment_metadata": tree_data.environment.output_llm_metadata(),
-                    "available_actions": available_options,
-                    "unavailable_actions": unavailable_options,
-                    **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
-                    **pred,
-                },
+                kwargs=view_kwargs,
                 tree_data=tree_data,
                 inputs=pred.function_inputs,
                 base_lm=base_lm,
                 complex_lm=complex_lm,
                 client_manager=client_manager,
             ):
-                if isinstance(chunk, (StreamResponse, ViewEnvironment)):
-                    if isinstance(chunk, StreamResponse):
-                        if chunk.signature_field_name == "reasoning":
-                            yield StreamedReasoning(
-                                chunk=chunk.chunk, last=chunk.is_last_chunk
-                            )
-                    else:
-                        yield chunk
+                if (
+                    isinstance(chunk, StreamResponse)
+                    and chunk.signature_field_name == "reasoning"
+                ):
+                    yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
+                elif isinstance(chunk, ViewEnvironment):
+                    yield chunk
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
                 elif isinstance(chunk, list):
                     yield FewShotExamples(chunk)
 
+        target_option = next(opt for opt in options if pred.function_name == opt.name)
         yield Decision(
             function_name=pred.function_name,
             function_inputs=self._get_function_inputs(
-                llm_inputs=pred.function_inputs,
-                real_inputs=next(
-                    option for option in options if pred.function_name == option.name
-                ).inputs,
+                pred.function_inputs, target_option.inputs
             ),
             reasoning=pred.reasoning,
             end_actions=pred.end_actions,

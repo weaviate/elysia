@@ -227,12 +227,6 @@ class Settings:
         for item in settings:
             setattr(self, item, settings[item])
 
-        # self.logger = logging.getLogger("rich")
-        # self.logger.setLevel(self.LOGGING_LEVEL)
-        # for handler in self.logger.handlers[:]:
-        #     self.logger.removeHandler(handler)
-        # self.logger.addHandler(RichHandler(rich_tracebacks=True, markup=True))
-
     @classmethod
     def from_smart_setup(cls):
         settings = cls()
@@ -419,8 +413,6 @@ class Settings:
             kwargs.pop("base_model")
             kwargs.pop("base_provider")
 
-            # self.load_base_dspy_model()
-
         if "complex_model" in kwargs:
             if "complex_provider" not in kwargs:
                 raise ValueError(
@@ -443,122 +435,57 @@ class Settings:
             kwargs.pop("complex_model")
             kwargs.pop("complex_provider")
 
-            # self.load_complex_dspy_model()
+        # Simple attribute mappings: kwarg_name -> attribute_name
+        simple_mappings = {
+            "model_api_base": "MODEL_API_BASE",
+            "wcd_url": "WCD_URL",
+            "wcd_api_key": "WCD_API_KEY",
+            "weaviate_is_local": "WEAVIATE_IS_LOCAL",
+            "local_weaviate_port": "LOCAL_WEAVIATE_PORT",
+            "local_weaviate_grpc_port": "LOCAL_WEAVIATE_GRPC_PORT",
+            "weaviate_is_custom": "WEAVIATE_IS_CUSTOM",
+            "custom_http_host": "CUSTOM_HTTP_HOST",
+            "custom_http_port": "CUSTOM_HTTP_PORT",
+            "custom_http_secure": "CUSTOM_HTTP_SECURE",
+            "custom_grpc_host": "CUSTOM_GRPC_HOST",
+            "custom_grpc_port": "CUSTOM_GRPC_PORT",
+            "custom_grpc_secure": "CUSTOM_GRPC_SECURE",
+            "weaviate_url": "WCD_URL",  # alias
+            "weaviate_api_key": "WCD_API_KEY",  # alias
+        }
 
-        if "model_api_base" in kwargs:
-            self.MODEL_API_BASE = kwargs["model_api_base"]
-            kwargs.pop("model_api_base")
+        for kwarg_name, attr_name in simple_mappings.items():
+            if kwarg_name in kwargs:
+                setattr(self, attr_name, kwargs.pop(kwarg_name))
 
-        if "wcd_url" in kwargs:
-            self.WCD_URL = kwargs["wcd_url"]
-            kwargs.pop("wcd_url")
+        # Handle logging level (supports both naming conventions)
+        log_level = kwargs.pop("logging_level", None) or kwargs.pop("logger_level", None)
+        if log_level:
+            self.LOGGING_LEVEL = log_level
+            self.LOGGING_LEVEL_INT = logging.getLevelNamesMapping()[log_level]
+            self.logger.setLevel(log_level)
+            # Clean up related keys that might also be present
+            kwargs.pop("logging_level_int", None)
+            kwargs.pop("logger_level_int", None)
 
-        if "wcd_api_key" in kwargs:
-            self.WCD_API_KEY = kwargs["wcd_api_key"]
-            kwargs.pop("wcd_api_key")
-
-        if "weaviate_is_local" in kwargs:
-            self.WEAVIATE_IS_LOCAL = kwargs["weaviate_is_local"]
-            kwargs.pop("weaviate_is_local")
-
-        if "local_weaviate_port" in kwargs:
-            self.LOCAL_WEAVIATE_PORT = kwargs["local_weaviate_port"]
-            kwargs.pop("local_weaviate_port")
-
-        if "local_weaviate_grpc_port" in kwargs:
-            self.LOCAL_WEAVIATE_GRPC_PORT = kwargs["local_weaviate_grpc_port"]
-            kwargs.pop("local_weaviate_grpc_port")
-
-        # Custom connection settings
-        if "weaviate_is_custom" in kwargs:
-            self.WEAVIATE_IS_CUSTOM = kwargs["weaviate_is_custom"]
-            kwargs.pop("weaviate_is_custom")
-
-        if "custom_http_host" in kwargs:
-            self.CUSTOM_HTTP_HOST = kwargs["custom_http_host"]
-            kwargs.pop("custom_http_host")
-
-        if "custom_http_port" in kwargs:
-            self.CUSTOM_HTTP_PORT = kwargs["custom_http_port"]
-            kwargs.pop("custom_http_port")
-
-        if "custom_http_secure" in kwargs:
-            self.CUSTOM_HTTP_SECURE = kwargs["custom_http_secure"]
-            kwargs.pop("custom_http_secure")
-
-        if "custom_grpc_host" in kwargs:
-            self.CUSTOM_GRPC_HOST = kwargs["custom_grpc_host"]
-            kwargs.pop("custom_grpc_host")
-
-        if "custom_grpc_port" in kwargs:
-            self.CUSTOM_GRPC_PORT = kwargs["custom_grpc_port"]
-            kwargs.pop("custom_grpc_port")
-
-        if "custom_grpc_secure" in kwargs:
-            self.CUSTOM_GRPC_SECURE = kwargs["custom_grpc_secure"]
-            kwargs.pop("custom_grpc_secure")
-
-        if "weaviate_url" in kwargs:
-            self.WCD_URL = kwargs["weaviate_url"]
-            kwargs.pop("weaviate_url")
-
-        if "weaviate_api_key" in kwargs:
-            self.WCD_API_KEY = kwargs["weaviate_api_key"]
-            kwargs.pop("weaviate_api_key")
-
-        if "logging_level" in kwargs or "logger_level" in kwargs:
-
-            self.LOGGING_LEVEL = (
-                kwargs["logging_level"]
-                if "logging_level" in kwargs
-                else kwargs["logger_level"]
-            )
-            self.LOGGING_LEVEL_INT = logging.getLevelNamesMapping()[self.LOGGING_LEVEL]
-            self.logger.setLevel(self.LOGGING_LEVEL)
-            if "logging_level" in kwargs:
-                kwargs.pop("logging_level")
-            if "logger_level" in kwargs:
-                kwargs.pop("logger_level")
-            if "logging_level_int" in kwargs:
-                kwargs.pop("logging_level_int")
-            if "logger_level_int" in kwargs:
-                kwargs.pop("logger_level_int")
-
-        if "logging_level_int" in kwargs or "logger_level_int" in kwargs:
-
-            self.LOGGING_LEVEL_INT = (
-                kwargs["logging_level_int"]
-                if "logging_level_int" in kwargs
-                else kwargs["logger_level_int"]
-            )
-            self.LOGGING_LEVEL = {
-                v: k for k, v in logging.getLevelNamesMapping().items()
-            }[self.LOGGING_LEVEL_INT]
+        log_level_int = kwargs.pop("logging_level_int", None) or kwargs.pop("logger_level_int", None)
+        if log_level_int:
+            self.LOGGING_LEVEL_INT = log_level_int
+            self.LOGGING_LEVEL = {v: k for k, v in logging.getLevelNamesMapping().items()}[log_level_int]
             self.logger.setLevel(self.LOGGING_LEVEL)
 
-        if "settings_id" in kwargs:
-            self.SETTINGS_ID = kwargs["settings_id"]
-            kwargs.pop("settings_id")
-
-        if "use_feedback" in kwargs:
-            self.USE_FEEDBACK = kwargs["use_feedback"]
-            kwargs.pop("use_feedback")
-
-        if "num_feedback_examples" in kwargs:
-            self.NUM_FEEDBACK_EXAMPLES = kwargs["num_feedback_examples"]
-            kwargs.pop("num_feedback_examples")
-
-        if "base_use_reasoning" in kwargs:
-            self.BASE_USE_REASONING = kwargs["base_use_reasoning"]
-            kwargs.pop("base_use_reasoning")
-
-        if "complex_use_reasoning" in kwargs:
-            self.COMPLEX_USE_REASONING = kwargs["complex_use_reasoning"]
-            kwargs.pop("complex_use_reasoning")
-
-        if "env_token_limit" in kwargs:
-            self.ENV_TOKEN_LIMIT = kwargs["env_token_limit"]
-            kwargs.pop("env_token_limit")
+        # More simple attribute mappings
+        additional_mappings = {
+            "settings_id": "SETTINGS_ID",
+            "use_feedback": "USE_FEEDBACK",
+            "num_feedback_examples": "NUM_FEEDBACK_EXAMPLES",
+            "base_use_reasoning": "BASE_USE_REASONING",
+            "complex_use_reasoning": "COMPLEX_USE_REASONING",
+            "env_token_limit": "ENV_TOKEN_LIMIT",
+        }
+        for kwarg_name, attr_name in additional_mappings.items():
+            if kwarg_name in kwargs:
+                setattr(self, attr_name, kwargs.pop(kwarg_name))
 
         if "api_keys" in kwargs and isinstance(kwargs["api_keys"], dict):
             for key, value in kwargs["api_keys"].items():

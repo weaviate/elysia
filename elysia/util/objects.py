@@ -58,50 +58,41 @@ class Tracker:
     def start_tracking(self, tracker_name: str):
         self.trackers[tracker_name]["timer"]["start_time"] = time.perf_counter()
 
+    def _add_to_tracker(self, model_type: str, field: str, value: int | float) -> None:
+        """Add value to a tracker field, initializing to 0 if None."""
+        model_data = self.trackers["models"][model_type]
+        model_data[field] = (model_data[field] or 0) + value
+
     def update_lm_costs(self, lm: dspy.LM | None = None, model_type: str = "base_lm"):
+        if lm is None:
+            return
 
-        if lm is not None:
+        # Check how many new calls have been made
+        model_data = self.trackers["models"][model_type]
+        prev_calls = model_data["calls"]
+        total_calls = len(lm.history)
+        model_data["calls"] = total_calls
+        num_calls = total_calls - prev_calls
 
-            # check how many calls have been made
-            prev_calls = self.trackers["models"][model_type]["calls"]
-            total_calls = len(lm.history)
-            self.trackers["models"][model_type]["calls"] = total_calls
-            num_calls = total_calls - prev_calls
+        if num_calls == 0:
+            return
 
-            if num_calls == 0:
-                return
+        # Process only new history entries
+        history = lm.history[-num_calls:]
 
-            history = lm.history[-num_calls:]
+        # Sum tokens and cost in a single pass
+        input_tokens = sum(
+            h.get("usage", {}).get("prompt_tokens", 0) for h in history
+        )
+        output_tokens = sum(
+            h.get("usage", {}).get("completion_tokens", 0) for h in history
+        )
+        cost = sum(h.get("cost", 0) or 0 for h in history)
 
-            input_tokens = 0
-            for h in history:
-                if "usage" in h and "prompt_tokens" in h["usage"]:
-                    input_tokens += h["usage"]["prompt_tokens"]
-
-            output_tokens = 0
-            for h in history:
-                if "usage" in h and "completion_tokens" in h["usage"]:
-                    output_tokens += h["usage"]["completion_tokens"]
-
-            cost = 0
-            for h in history:
-                if "cost" in h and h["cost"] is not None:
-                    cost += h["cost"]
-
-            if self.trackers["models"][model_type]["input_tokens"] is None:
-                self.trackers["models"][model_type]["input_tokens"] = input_tokens
-            else:
-                self.trackers["models"][model_type]["input_tokens"] += input_tokens
-
-            if self.trackers["models"][model_type]["output_tokens"] is None:
-                self.trackers["models"][model_type]["output_tokens"] = output_tokens
-            else:
-                self.trackers["models"][model_type]["output_tokens"] += output_tokens
-
-            if self.trackers["models"][model_type]["cost"] is None:
-                self.trackers["models"][model_type]["cost"] = cost
-            else:
-                self.trackers["models"][model_type]["cost"] += cost
+        # Update tracker fields
+        self._add_to_tracker(model_type, "input_tokens", input_tokens)
+        self._add_to_tracker(model_type, "output_tokens", output_tokens)
+        self._add_to_tracker(model_type, "cost", cost)
 
     def end_tracking(
         self,
@@ -153,50 +144,36 @@ class Tracker:
             }
         }
 
-    def get_num_calls(self, model_type: str):
+    def get_num_calls(self, model_type: str) -> int:
         return self.trackers["models"][model_type]["calls"]
 
-    def get_average_time(self, tracker_name: str):
+    def get_average_time(self, tracker_name: str) -> float:
         return self.trackers[tracker_name]["timer"]["avg_time"]
 
-    def get_total_input_tokens(self, model_type: str):
+    def get_total_input_tokens(self, model_type: str) -> int | None:
         return self.trackers["models"][model_type]["input_tokens"]
 
-    def get_total_output_tokens(self, model_type: str):
+    def get_total_output_tokens(self, model_type: str) -> int | None:
         return self.trackers["models"][model_type]["output_tokens"]
 
-    def get_total_cost(self, model_type: str):
+    def get_total_cost(self, model_type: str) -> float | None:
         return self.trackers["models"][model_type]["cost"]
 
-    def get_average_input_tokens(self, model_type: str):
-        return (
-            (
-                self.trackers["models"][model_type]["input_tokens"]
-                / self.trackers["models"][model_type]["calls"]
-            )
-            if self.trackers["models"][model_type]["input_tokens"] is not None
-            else 0
-        )
+    def _get_average_metric(self, model_type: str, field: str) -> float:
+        """Calculate average for a given field, returning 0 if no data."""
+        model_data = self.trackers["models"][model_type]
+        value = model_data[field]
+        calls = model_data["calls"]
+        return (value / calls) if value is not None and calls > 0 else 0
 
-    def get_average_output_tokens(self, model_type: str):
-        return (
-            (
-                self.trackers["models"][model_type]["output_tokens"]
-                / self.trackers["models"][model_type]["calls"]
-            )
-            if self.trackers["models"][model_type]["output_tokens"] is not None
-            else 0
-        )
+    def get_average_input_tokens(self, model_type: str) -> float:
+        return self._get_average_metric(model_type, "input_tokens")
 
-    def get_average_cost(self, model_type: str):
-        return (
-            (
-                self.trackers["models"][model_type]["cost"]
-                / self.trackers["models"][model_type]["calls"]
-            )
-            if self.trackers["models"][model_type]["cost"] is not None
-            else 0
-        )
+    def get_average_output_tokens(self, model_type: str) -> float:
+        return self._get_average_metric(model_type, "output_tokens")
+
+    def get_average_cost(self, model_type: str) -> float:
+        return self._get_average_metric(model_type, "cost")
 
     def reset_trackers(self):
         for tracker in self.trackers:

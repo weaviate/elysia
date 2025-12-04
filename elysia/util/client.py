@@ -142,77 +142,25 @@ class ClientManager:
         else:
             self.client_timeout = client_timeout
 
-        if settings is None:
-            self.settings = environment_settings
-        else:
-            self.settings = settings
+        # Use provided values or fall back to environment settings
+        self.settings = settings if settings is not None else environment_settings
+        self.logger = logger if logger is not None else self.settings.logger
 
-        if logger is None:
-            self.logger = self.settings.logger
-        else:
-            self.logger = logger
+        # Connection parameters with settings fallback
+        self.wcd_url = wcd_url if wcd_url is not None else self.settings.WCD_URL
+        self.wcd_api_key = wcd_api_key if wcd_api_key is not None else self.settings.WCD_API_KEY
+        self.weaviate_is_local = weaviate_is_local if weaviate_is_local is not None else self.settings.WEAVIATE_IS_LOCAL
+        self.weaviate_is_custom = weaviate_is_custom if weaviate_is_custom is not None else self.settings.WEAVIATE_IS_CUSTOM
+        self.local_weaviate_port = local_weaviate_port if local_weaviate_port is not None else self.settings.LOCAL_WEAVIATE_PORT
+        self.local_weaviate_grpc_port = local_weaviate_grpc_port if local_weaviate_grpc_port is not None else self.settings.LOCAL_WEAVIATE_GRPC_PORT
 
-        # Set the weaviate url and api key
-        if wcd_url is None:
-            self.wcd_url = self.settings.WCD_URL
-        else:
-            self.wcd_url = wcd_url
-
-        if wcd_api_key is None:
-            self.wcd_api_key = self.settings.WCD_API_KEY
-        else:
-            self.wcd_api_key = wcd_api_key
-
-        if weaviate_is_local is None:
-            self.weaviate_is_local = self.settings.WEAVIATE_IS_LOCAL
-        else:
-            self.weaviate_is_local = weaviate_is_local
-
-        if weaviate_is_custom is None:
-            self.weaviate_is_custom = self.settings.WEAVIATE_IS_CUSTOM
-        else:
-            self.weaviate_is_custom = weaviate_is_custom
-
-        if local_weaviate_port is None:
-            self.local_weaviate_port = self.settings.LOCAL_WEAVIATE_PORT
-        else:
-            self.local_weaviate_port = local_weaviate_port
-
-        if local_weaviate_grpc_port is None:
-            self.local_weaviate_grpc_port = self.settings.LOCAL_WEAVIATE_GRPC_PORT
-        else:
-            self.local_weaviate_grpc_port = local_weaviate_grpc_port
-
-        # Custom connection parameters
-        if custom_http_host is None:
-            self.custom_http_host = self.settings.CUSTOM_HTTP_HOST
-        else:
-            self.custom_http_host = custom_http_host
-
-        if custom_http_port is None:
-            self.custom_http_port = self.settings.CUSTOM_HTTP_PORT
-        else:
-            self.custom_http_port = custom_http_port
-
-        if custom_http_secure is None:
-            self.custom_http_secure = self.settings.CUSTOM_HTTP_SECURE
-        else:
-            self.custom_http_secure = custom_http_secure
-
-        if custom_grpc_host is None:
-            self.custom_grpc_host = self.settings.CUSTOM_GRPC_HOST
-        else:
-            self.custom_grpc_host = custom_grpc_host
-
-        if custom_grpc_port is None:
-            self.custom_grpc_port = self.settings.CUSTOM_GRPC_PORT
-        else:
-            self.custom_grpc_port = custom_grpc_port
-
-        if custom_grpc_secure is None:
-            self.custom_grpc_secure = self.settings.CUSTOM_GRPC_SECURE
-        else:
-            self.custom_grpc_secure = custom_grpc_secure
+        # Custom connection parameters with settings fallback
+        self.custom_http_host = custom_http_host if custom_http_host is not None else self.settings.CUSTOM_HTTP_HOST
+        self.custom_http_port = custom_http_port if custom_http_port is not None else self.settings.CUSTOM_HTTP_PORT
+        self.custom_http_secure = custom_http_secure if custom_http_secure is not None else self.settings.CUSTOM_HTTP_SECURE
+        self.custom_grpc_host = custom_grpc_host if custom_grpc_host is not None else self.settings.CUSTOM_GRPC_HOST
+        self.custom_grpc_port = custom_grpc_port if custom_grpc_port is not None else self.settings.CUSTOM_GRPC_PORT
+        self.custom_grpc_secure = custom_grpc_secure if custom_grpc_secure is not None else self.settings.CUSTOM_GRPC_SECURE
 
         self.query_timeout = query_timeout
         self.insert_timeout = insert_timeout

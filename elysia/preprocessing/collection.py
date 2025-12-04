@@ -74,24 +74,18 @@ async def _summarise_collection(
             lm=lm,
         )
 
-    summary_concat = ""
-    for sentence in [
+    # Concatenate summary sentences, adding punctuation if needed
+    sentences = [
         prediction.overall_summary,
         prediction.relationships,
         prediction.structure,
         prediction.irregularities,
-    ]:
-        if (
-            sentence.endswith(".")
-            or sentence.endswith("?")
-            or sentence.endswith("!")
-            or sentence.endswith("\n")
-        ):
-            summary_concat += f"{sentence} "
-        else:
-            summary_concat += f"{sentence}."
-
-    return summary_concat, prediction.field_descriptions
+    ]
+    summary_parts = [
+        f"{s} " if s.endswith((".", "?", "!", "\n")) else f"{s}."
+        for s in sentences
+    ]
+    return "".join(summary_parts), prediction.field_descriptions
 
 
 async def _evaluate_field_statistics(

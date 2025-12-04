@@ -231,7 +231,7 @@ async def feedback_metadata(
 
     base_feedback_collection = client.collections.get(collection_name)
 
-    if await base_feedback_collection.tenants.exists(user_id):
+    if not await base_feedback_collection.tenants.exists(user_id):
         return {
             "error": "",
             "total_feedback": 0,

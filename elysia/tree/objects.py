@@ -73,20 +73,61 @@ class Environment:
         environment: dict[str, list[EnvironmentItem]] | None = None,
         hidden_environment: dict[str, Any] = {},
     ):
-        if environment is None:
-            environment = {}
-        self.environment = environment
+        self.environment = environment if environment is not None else {}
         self.hidden_environment = hidden_environment
 
+    @staticmethod
+    def _validate_metadata_params(
+        metadata: dict | None,
+        metadata_key: str | None,
+        metadata_value: Any | None,
+        require_one: bool = True,
+    ) -> None:
+        """Validate metadata parameter combinations used across Environment methods."""
+        has_metadata = metadata is not None
+        has_key = metadata_key is not None
+        has_value = metadata_value is not None
+
+        if has_metadata and (has_key or has_value):
+            raise ValueError(
+                "Cannot provide both metadata and metadata_key/metadata_value"
+            )
+        if has_key and not has_value:
+            raise ValueError("Must provide metadata_value if metadata_key is provided")
+        if has_value and not has_key:
+            raise ValueError("Must provide metadata_key if metadata_value is provided")
+        if require_one and not has_metadata and not (has_key and has_value):
+            raise ValueError(
+                "Must provide either metadata or metadata_key/metadata_value"
+            )
+
+    def _find_item_by_metadata(
+        self,
+        tool_name: str,
+        metadata: dict | None = None,
+        metadata_key: str | None = None,
+        metadata_value: Any | None = None,
+    ) -> EnvironmentItem | None:
+        if tool_name not in self.environment:
+            return None
+
+        for item in self.environment[tool_name]:
+            if metadata is not None and item.metadata == metadata:
+                return item
+            if (
+                metadata_key is not None
+                and metadata_key in item.metadata
+                and item.metadata[metadata_key] == metadata_value
+            ):
+                return item
+        return None
+
     def clear(self, include_hidden: bool = False):
-        """
-        Clears the environment.
-        """
         self.environment = {}
         if include_hidden:
             self.hidden_environment = {}
 
-    def is_empty(self, tool_name: str | None = None):
+    def is_empty(self, tool_name: str | None = None) -> bool:
         """
         Check if the environment is empty.
 
@@ -98,27 +139,14 @@ class Environment:
                 If `None`, the entire environment is checked.
                 Defaults to `None`.
         """
+        tools_to_check = [tool_name] if tool_name else list(self.environment.keys())
 
-        if tool_name:
-            if tool_name not in self.environment:
-                return True
-            else:
-                empty = True
-                for item in self.environment[tool_name]:
-                    if len(item.objects) > 0:
-                        empty = False
-                        break
-                return empty
-        else:
-            empty = True
-            for tool_name in self.environment.keys():
-                for item in self.environment[tool_name]:
-                    if len(item.objects) > 0:
-                        empty = False
-                        break
-                if not empty:
-                    break
-            return empty
+        for name in tools_to_check:
+            if name not in self.environment:
+                continue
+            if any(len(item.objects) > 0 for item in self.environment[name]):
+                return False
+        return True
 
     def add(self, tool_name: str, result: Result, include_duplicates: bool = False):
         """
@@ -172,25 +200,18 @@ class Environment:
         """
         if tool_name not in self.environment:
             self.environment[tool_name] = [
-                EnvironmentItem(
-                    metadata=metadata,
-                    objects=objects,
-                )
+                EnvironmentItem(metadata=metadata, objects=objects)
             ]
-        else:
-            found_item = False
-            for item in self.environment[tool_name]:
-                if item.metadata == metadata:
-                    item.objects.extend(objects)
-                    found_item = True
-                    break
-            if not found_item:
-                self.environment[tool_name].append(
-                    EnvironmentItem(
-                        metadata=metadata,
-                        objects=objects,
-                    )
-                )
+            return
+
+        for item in self.environment[tool_name]:
+            if item.metadata == metadata:
+                item.objects.extend(objects)
+                return
+
+        self.environment[tool_name].append(
+            EnvironmentItem(metadata=metadata, objects=objects)
+        )
 
     def append(
         self,
@@ -213,44 +234,19 @@ class Environment:
             metadata_value (Any | None): The value of the metadata to append to the environment.
             objects (list[dict]): The objects to append to the environment.
         """
-        if (
-            metadata is not None
-            and metadata_key is not None
-            and metadata_value is not None
-        ):
-            raise ValueError(
-                "Cannot provide both metadata and metadata_key/metadata_value"
-            )
-        elif metadata is None and (metadata_key is None or metadata_value is None):
-            raise ValueError(
-                "Must provide either metadata or metadata_key/metadata_value"
-            )
-        elif metadata_key is not None and metadata_value is None:
-            raise ValueError("Must provide metadata_value if metadata_key is provided")
-        elif metadata_key is None and metadata_value is not None:
-            raise ValueError("Must provide metadata_key if metadata_value is provided")
+        self._validate_metadata_params(metadata, metadata_key, metadata_value)
 
-        if metadata:
-            for item in self.environment[tool_name]:
-                if item.metadata == metadata:
-                    item.objects.extend(objects)
-                    return
-            raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata}"
+        item = self._find_item_by_metadata(
+            tool_name, metadata, metadata_key, metadata_value
+        )
+        if item is None:
+            descriptor = (
+                str(metadata) if metadata else f"{metadata_key} = {metadata_value}"
             )
-
-        elif metadata_key:
-            for item in self.environment[tool_name]:
-                if (
-                    metadata_key in item.metadata
-                    and item.metadata[metadata_key] == metadata_value
-                ):
-                    item.objects.extend(objects)
-                    return
-
             raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
+                f"No item found in the environment for the given metadata: {descriptor}"
             )
+        item.objects.extend(objects)
 
     def remove(
         self,
@@ -269,40 +265,26 @@ class Environment:
             metadata_key (str | None): The key of the metadata to remove.
             metadata_value (Any | None): The value of the metadata to remove.
         """
-        if (
-            metadata is not None
-            and metadata_key is not None
-            and metadata_value is not None
-        ):
-            raise ValueError(
-                "Cannot provide both metadata and metadata_key/metadata_value"
-            )
-        elif metadata_key is not None and metadata_value is None:
-            raise ValueError("Must provide metadata_value if metadata_key is provided")
-        elif metadata_key is None and metadata_value is not None:
-            raise ValueError("Must provide metadata_key if metadata_value is provided")
+        self._validate_metadata_params(
+            metadata, metadata_key, metadata_value, require_one=False
+        )
 
-        if metadata:
-            for item in self.environment[tool_name]:
-                if item.metadata == metadata:
-                    item.objects = []
-                    return
-            raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata}"
-            )
-        elif metadata_key:
-            for item in self.environment[tool_name]:
-                if (
-                    metadata_key in item.metadata
-                    and item.metadata[metadata_key] == metadata_value
-                ):
-                    item.objects = []
-                    return
-            raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
-            )
-        else:
+        # If no metadata specified, remove all items for the tool
+        if metadata is None and metadata_key is None:
             self.environment[tool_name] = []
+            return
+
+        item = self._find_item_by_metadata(
+            tool_name, metadata, metadata_key, metadata_value
+        )
+        if item is None:
+            descriptor = (
+                str(metadata) if metadata else f"{metadata_key} = {metadata_value}"
+            )
+            raise ValueError(
+                f"No item found in the environment for the given metadata: {descriptor}"
+            )
+        item.objects = []
 
     def replace(
         self,
@@ -322,45 +304,22 @@ class Environment:
             metadata_key (str | None): The key of the metadata to replace the existing objects with.
             metadata_value (Any | None): The value of the metadata to replace the existing objects with.
         """
+        self._validate_metadata_params(metadata, metadata_key, metadata_value)
 
-        if (
-            metadata is not None
-            and metadata_key is not None
-            and metadata_value is not None
-        ):
-            raise ValueError(
-                "Cannot provide both metadata and metadata_key/metadata_value"
-            )
-        elif metadata_key is not None and metadata_value is None:
-            raise ValueError("Must provide metadata_value if metadata_key is provided")
-        elif metadata_key is None and metadata_value is not None:
-            raise ValueError("Must provide metadata_key if metadata_value is provided")
-        elif metadata is None and (metadata_key is None or metadata_value is None):
-            raise ValueError(
-                "Must provide either metadata or metadata_key/metadata_value"
-            )
-        elif tool_name and tool_name not in self.environment:
+        if tool_name not in self.environment:
             raise ValueError(f"Tool name {tool_name} not found in environment")
 
-        if metadata:
-            for item in self.environment[tool_name]:
-                if item.metadata == metadata:
-                    item.objects = objects
-                    return
-            raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata}"
+        item = self._find_item_by_metadata(
+            tool_name, metadata, metadata_key, metadata_value
+        )
+        if item is None:
+            descriptor = (
+                str(metadata) if metadata else f"{metadata_key} = {metadata_value}"
             )
-        elif metadata_key:
-            for item in self.environment[tool_name]:
-                if (
-                    metadata_key in item.metadata
-                    and item.metadata[metadata_key] == metadata_value
-                ):
-                    item.objects = objects
-                    return
             raise ValueError(
-                f"No item found in the environment for the given metadata: {metadata_key} = {metadata_value}"
+                f"No item found in the environment for the given metadata: {descriptor}"
             )
+        item.objects = objects
 
     def get_objects(
         self,
@@ -379,43 +338,25 @@ class Environment:
         Returns:
             list[dict] | None: The list of objects for the given `tool_name`. `None` if the `tool_name` is not found in the environment, or no objects are found for the given metadata.
         """
-        if (
-            metadata is not None
-            and metadata_key is not None
-            and metadata_value is not None
-        ):
-            raise ValueError(
-                "Cannot provide both metadata and metadata_key/metadata_value"
-            )
-        elif metadata_key is not None and metadata_value is None:
-            raise ValueError("Must provide metadata_value if metadata_key is provided")
-        elif metadata_key is None and metadata_value is not None:
-            raise ValueError("Must provide metadata_key if metadata_value is provided")
-        elif metadata is None and (metadata_key is None or metadata_value is None):
-            raise ValueError(
-                "Must provide either metadata or metadata_key/metadata_value"
-            )
+        self._validate_metadata_params(metadata, metadata_key, metadata_value)
 
         if tool_name not in self.environment:
             return None
 
-        if metadata:
-            for item in self.environment[tool_name]:
-                if item.metadata == metadata:
-                    return item.objects
-            return None
+        # For exact metadata match, return single item's objects
+        if metadata is not None:
+            item = self._find_item_by_metadata(tool_name, metadata=metadata)
+            return item.objects if item else None
 
-        elif metadata_key:
-            objects = []
-            for item in self.environment[tool_name]:
-                if (
-                    metadata_key in item.metadata
-                    and item.metadata[metadata_key] == metadata_value
-                ):
-                    objects.extend(item.objects)
-            if not objects:
-                return None
-            return objects
+        # For key-value match, collect all matching objects
+        objects = []
+        for item in self.environment[tool_name]:
+            if (
+                metadata_key in item.metadata
+                and item.metadata[metadata_key] == metadata_value
+            ):
+                objects.extend(item.objects)
+        return objects if objects else None
 
     def get(self, tool_name: str) -> list[EnvironmentItem] | None:
         """
@@ -720,57 +661,28 @@ class TreeData:
         collection_data: CollectionData,
         atlas: Atlas,
         user_id: str,
-        user_prompt: str | None = None,
-        conversation_history: list[dict] | None = None,
+        user_prompt: str = "",
+        conversation_history: list[dict] = [],
         environment: Environment | None = None,
-        tasks_completed: list[dict] | None = None,
-        num_trees_completed: int | None = None,
-        recursion_limit: int | None = None,
+        tasks_completed: list[dict] = [],
+        num_trees_completed: int = 0,
+        recursion_limit: int = 3,
         settings: Settings | None = None,
         use_weaviate_collections: bool = True,
         streaming: bool = False,
     ):
-        if settings is None:
-            self.settings = environment_settings
-        else:
-            self.settings = settings
-
-        self.user_id = user_id
 
         # -- Base Data --
-        if user_prompt is None:
-            self.user_prompt = ""
-        else:
-            self.user_prompt = user_prompt
-
-        if conversation_history is None:
-            self.conversation_history = []
-        else:
-            self.conversation_history = conversation_history
-
-        if environment is None:
-            self.environment = Environment()
-        else:
-            self.environment = environment
-
-        if tasks_completed is None:
-            self.tasks_completed = []
-        else:
-            self.tasks_completed = tasks_completed
-
-        if num_trees_completed is None:
-            self.num_trees_completed = 0
-        else:
-            self.num_trees_completed = num_trees_completed
-
-        if recursion_limit is None:
-            self.recursion_limit = 3
-        else:
-            self.recursion_limit = recursion_limit
+        self.user_prompt = user_prompt
+        self.conversation_history = conversation_history
+        self.environment = Environment() if environment is None else environment
+        self.tasks_completed = tasks_completed
+        self.num_trees_completed = num_trees_completed
+        self.recursion_limit = recursion_limit
+        self.settings = environment_settings if settings is None else settings
 
         self.streaming = streaming
-
-        # -- Atlas --
+        self.user_id = user_id
         self.atlas = atlas
 
         # -- Collection Data --
@@ -810,99 +722,93 @@ class TreeData:
     def soft_reset(self):
         self.previous_reasoning = {}
 
-    def _update_task(self, task_dict, key, value):
-        if value is not None:
-            if key in task_dict:
-                # If key already exists, append to it
-                if isinstance(value, str):
-                    task_dict[key] += "\n" + value
-                elif isinstance(value, int) or isinstance(value, float):
-                    task_dict[key] += value
-                elif isinstance(value, list):
-                    task_dict[key].extend(value)
-                elif isinstance(value, dict):
-                    task_dict[key].update(value)
-                elif isinstance(value, bool):
-                    task_dict[key] = value
-            elif key not in task_dict:
-                # If key does not exist, create it
-                task_dict[key] = value
+    def _update_task(self, task_dict: dict, key: str, value: Any) -> None:
+        if value is None:
+            return
+
+        if key not in task_dict:
+            task_dict[key] = value
+            return
+
+        # Merge/replace based on type
+        existing = task_dict[key]
+        if isinstance(value, str):
+            task_dict[key] = f"{existing}\n{value}"
+        elif isinstance(value, (int, float)):
+            task_dict[key] = existing + value
+        elif isinstance(value, list):
+            existing.extend(value)
+        elif isinstance(value, dict):
+            existing.update(value)
+        else:
+            task_dict[key] = value
+
+    def _create_new_task_entry(
+        self, task: str, num_trees_completed: int, **kwargs
+    ) -> dict:
+        new_task = {"task": task, "iteration": num_trees_completed}
+        for key, value in kwargs.items():
+            self._update_task(new_task, key, value)
+        return new_task
 
     def update_tasks_completed(
         self, prompt: str, task: str, num_trees_completed: int, **kwargs
     ):
-        # search to see if the current prompt already has an entry for this task
-        prompt_found = False
-        task_found = False
+        # Search for existing prompt and task entries
+        prompt_entry = None
+        task_index = None
         iteration_found = False
 
-        for i, task_prompt in enumerate(self.tasks_completed):
+        for task_prompt in self.tasks_completed:
             if task_prompt["prompt"] == prompt:
-                prompt_found = True
+                prompt_entry = task_prompt
                 for j, task_j in enumerate(task_prompt["task"]):
                     if task_j["task"] == task:
-                        task_found = True
-                        task_i = j  # position of the task in the prompt
-
+                        task_index = j
                     if task_j["iteration"] == num_trees_completed:
                         iteration_found = True
+                break
 
-        # If the prompt is not found, add it to the list
-        if not prompt_found:
-            self.tasks_completed.append({"prompt": prompt, "task": [{}]})
-            self.tasks_completed[-1]["task"][0]["task"] = task
-            self.tasks_completed[-1]["task"][0]["iteration"] = num_trees_completed
-            for kwarg in kwargs:
-                self._update_task(
-                    self.tasks_completed[-1]["task"][0], kwarg, kwargs[kwarg]
-                )
+        # Case 1: New prompt - add new prompt entry with task
+        if prompt_entry is None:
+            new_task = self._create_new_task_entry(task, num_trees_completed, **kwargs)
+            self.tasks_completed.append({"prompt": prompt, "task": [new_task]})
             return
 
-        # If the prompt is found but the task is not, add it to the list
-        if prompt_found and not task_found:
-            self.tasks_completed[-1]["task"].append({})
-            self.tasks_completed[-1]["task"][-1]["task"] = task
-            self.tasks_completed[-1]["task"][-1]["iteration"] = num_trees_completed
-            for kwarg in kwargs:
-                self._update_task(
-                    self.tasks_completed[-1]["task"][-1], kwarg, kwargs[kwarg]
-                )
+        # Case 2: Existing prompt, but need new task entry (new task or new iteration)
+        if task_index is None or not iteration_found:
+            new_task = self._create_new_task_entry(task, num_trees_completed, **kwargs)
+            prompt_entry["task"].append(new_task)
             return
 
-        # task already exists in this query, but the iteration is new
-        if prompt_found and task_found and not iteration_found:
-            self.tasks_completed[-1]["task"].append({})
-            self.tasks_completed[-1]["task"][-1]["task"] = task
-            self.tasks_completed[-1]["task"][-1]["iteration"] = num_trees_completed
-            for kwarg in kwargs:
-                self._update_task(
-                    self.tasks_completed[-1]["task"][-1], kwarg, kwargs[kwarg]
-                )
-            return
-
-        # If the prompt is found and the task is found, update the task
-        if prompt_found and task_found:
-            for kwarg in kwargs:
-                self._update_task(
-                    self.tasks_completed[-1]["task"][task_i], kwarg, kwargs[kwarg]
-                )
+        # Case 3: Update existing task entry
+        for key, value in kwargs.items():
+            self._update_task(prompt_entry["task"][task_index], key, value)
 
     def set_current_task(self, task: str):
         self.current_task = task
 
-    def get_errors(self):
+    def get_errors(self) -> dict | list:
         if self.current_task == "elysia_decision_node":
             return self.errors
-        elif self.current_task is None or self.current_task not in self.errors:
+        if self.current_task is None or self.current_task not in self.errors:
             return []
-        else:
-            return self.errors[self.current_task]
+        return self.errors[self.current_task]
 
-    def clear_error(self, task: str):
+    def clear_error(self, task: str) -> None:
         if task in self.errors:
             self.errors[task] = []
 
-    def tasks_completed_string(self):
+    @staticmethod
+    def _format_input_value(key: str, value: Any) -> str:
+        if isinstance(value, str):
+            return f"{key}='{value}'"
+        elif isinstance(value, dict):
+            return f"{key}={json.dumps(value)}"
+        else:
+            return f"{key}={value}"
+
+    def tasks_completed_string(self) -> str:
         """
         Output a nicely formatted string of the tasks completed so far, designed to be used in the LLM prompt.
         This is where the outputs of the `llm_message` fields are displayed.
@@ -911,45 +817,37 @@ class TreeData:
         Returns:
             (str): A separated and formatted string of the tasks completed so far in an LLM-parseable format.
         """
-        out = ""
-        for prompt in self.tasks_completed:
-            if prompt["prompt"] == self.user_prompt:
-                out += "Actions called for this current user prompt:\n"
-            else:
-                out += f"Actions called for the previous prompt ({prompt['prompt']}):\n"
-            for task in prompt["task"]:
-                if "inputs" in task:
-                    input_list = []
-                    for key, value in task["inputs"].items():
-                        if isinstance(value, str):
-                            input_list.append(f"{key}='{value}'")
-                        elif isinstance(value, int) or isinstance(value, float):
-                            input_list.append(f"{key}={value}")
-                        elif isinstance(value, list):
-                            input_list.append(f"{key}={value}")
-                        elif isinstance(value, dict):
-                            input_list.append(f"{key}={json.dumps(value)}")
-                        else:
-                            input_list.append(f"{key}={str(value)}")
-                    inputs = ", ".join(input_list)
-                else:
-                    inputs = ""
-                if "error" in task and task["error"]:
-                    error = " [ERRORED] "
-                else:
-                    error = ""
-                out += f"\t- {task['task']}({inputs}){error}:\n"
+        lines = []
+        for prompt_data in self.tasks_completed:
+            is_current = prompt_data["prompt"] == self.user_prompt
+            header = (
+                "Actions called for this current user prompt:"
+                if is_current
+                else f"Actions called for the previous prompt ({prompt_data['prompt']}):"
+            )
+            lines.append(header)
 
-                if task.get("num_items", None):
-                    out += f"{task['num_items']} object{'s' if task['num_items']>1 else ''} added to environment"
-                if prompt["prompt"] == self.user_prompt:
-                    if "reasoning" in task:
-                        reasoning = task["reasoning"]
-                    else:
-                        reasoning = ""
-                    out += f"\t  Reasoning: {reasoning}\n"
+            for task in prompt_data["task"]:
+                # Format inputs
+                inputs = ", ".join(
+                    self._format_input_value(k, v)
+                    for k, v in task.get("inputs", {}).items()
+                )
+                error_flag = " [ERRORED] " if task.get("error") else ""
+                lines.append(f"\t- {task['task']}({inputs}){error_flag}:")
 
-        return out
+                # Add item count if present
+                num_items = task.get("num_items")
+                if num_items:
+                    plural = "s" if num_items > 1 else ""
+                    lines.append(f"{num_items} object{plural} added to environment")
+
+                # Add reasoning for current prompt
+                if is_current:
+                    reasoning = task.get("reasoning", "")
+                    lines.append(f"\t  Reasoning: {reasoning}")
+
+        return "\n".join(lines)
 
     async def set_collection_names(
         self, collection_names: list[str], client_manager: ClientManager

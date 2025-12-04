@@ -126,21 +126,16 @@ class ConversationRetrieval(Retrieval):
                 self.metadata,
                 client_manager,
             )
-            # Check if all message_id values can be converted to int for sorting
-            can_sort_as_int = True
-            for x in items_in_conversation:
-                try:
-                    int(x[self.mapping["message_id"]])
-                except (ValueError, TypeError, KeyError):
-                    can_sort_as_int = False
-                    break
+            # Sort by message_id - try numeric sort first, fall back to string sort
+            message_id_key = self.mapping["message_id"]
 
-            if can_sort_as_int:
-                items_in_conversation.sort(
-                    key=lambda x: int(x[self.mapping["message_id"]])
-                )
-            else:
-                items_in_conversation.sort(key=lambda x: x[self.mapping["message_id"]])
+            def sort_key(x):
+                try:
+                    return (0, int(x[message_id_key]))  # Numeric sort
+                except (ValueError, TypeError, KeyError):
+                    return (1, x.get(message_id_key, ""))  # String sort
+
+            items_in_conversation.sort(key=sort_key)
 
             returned_objects.append(
                 {

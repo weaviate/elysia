@@ -101,90 +101,49 @@ def remove_whitespace(text: str) -> str:
     return " ".join(text.split())
 
 
+def _extract_aggregate_values(prop, aggregations: list[tuple[str, str]]) -> list[dict]:
+    """Extract non-None aggregation values from a property."""
+    values = []
+    for attr_name, agg_name in aggregations:
+        value = getattr(prop, attr_name, None)
+        if value is not None:
+            values.append({"value": value, "field": None, "aggregation": agg_name})
+    return values
+
+
 def format_aggregation_property(prop):
     if isinstance(prop, AggregateText):
-        out = {"type": "text", "values": []}
-        for top_occurence in prop.top_occurrences:
-            out["values"].append(
-                {
-                    "value": top_occurence.count,
-                    "field": top_occurence.value,
-                    "aggregation": "count",
-                }
-            )
-        return out
+        return {
+            "type": "text",
+            "values": [
+                {"value": occ.count, "field": occ.value, "aggregation": "count"}
+                for occ in prop.top_occurrences
+            ],
+        }
 
-    elif isinstance(prop, AggregateNumber):
-        out = {"type": "number", "values": []}
+    if isinstance(prop, AggregateNumber):
+        aggregations = [
+            ("count", "count"),
+            ("maximum", "maximum"),
+            ("mean", "mean"),
+            ("median", "median"),
+            ("minimum", "minimum"),
+            ("mode", "mode"),
+            ("sum_", "sum"),
+        ]
+        return {"type": "number", "values": _extract_aggregate_values(prop, aggregations)}
 
-        if prop.count is not None:
-            out["values"].append(
-                {"value": prop.count, "field": None, "aggregation": "count"}
-            )
+    if isinstance(prop, AggregateDate):
+        aggregations = [
+            ("count", "count"),
+            ("maximum", "maximum"),
+            ("median", "median"),
+            ("minimum", "minimum"),
+            ("mode", "mode"),
+        ]
+        return {"type": "date", "values": _extract_aggregate_values(prop, aggregations)}
 
-        if prop.maximum is not None:
-            out["values"].append(
-                {"value": prop.maximum, "field": None, "aggregation": "maximum"}
-            )
-
-        if prop.mean is not None:
-            out["values"].append(
-                {"value": prop.mean, "field": None, "aggregation": "mean"}
-            )
-
-        if prop.median is not None:
-            out["values"].append(
-                {"value": prop.median, "field": None, "aggregation": "median"}
-            )
-
-        if prop.minimum is not None:
-            out["values"].append(
-                {"value": prop.minimum, "field": None, "aggregation": "minimum"}
-            )
-
-        if prop.mode is not None:
-            out["values"].append(
-                {"value": prop.mode, "field": None, "aggregation": "mode"}
-            )
-
-        if prop.sum_ is not None:
-            out["values"].append(
-                {"value": prop.sum_, "field": None, "aggregation": "sum"}
-            )
-
-        return out
-
-    elif isinstance(prop, AggregateDate):
-        out = {"type": "date", "values": []}
-
-        if prop.count is not None:
-            out["values"].append(
-                {"value": prop.count, "field": None, "aggregation": "count"}
-            )
-
-        if prop.maximum is not None:
-            out["values"].append(
-                {"value": prop.maximum, "field": None, "aggregation": "maximum"}
-            )
-
-        if prop.median is not None:
-            out["values"].append(
-                {"value": prop.median, "field": None, "aggregation": "median"}
-            )
-
-        if prop.minimum is not None:
-            out["values"].append(
-                {"value": prop.minimum, "field": None, "aggregation": "minimum"}
-            )
-
-        if prop.mode is not None:
-            out["values"].append(
-                {"value": prop.mode, "field": None, "aggregation": "mode"}
-            )
-
-        return out
-    else:
-        return {"type": "unknown", "values": []}
+    return {"type": "unknown", "values": []}
 
 
 def format_aggregation_response(response):
