@@ -583,7 +583,8 @@ class ElysiaPrompt(Module):
 
         Args:
             add_tree_data_inputs (bool): Optional. Whether to add the tree data inputs to the kwargs.
-                When enabled, this adds the inputs set up on initialisation (e.g. `
+                When enabled, this adds the inputs set up on initialisation (e.g. `message_update`, `reasoning`, etc).
+                If disabled, only the normal inputs to the signature are passed (and the fields will be missing in the forward pass).
                 Defaults to True.
             **kwargs: Additional keyword arguments to pass to the signature (normal inputs to the signature).
 
@@ -599,8 +600,10 @@ class ElysiaPrompt(Module):
         Calls the LLM asynchronously.
 
         Args:
-            add_tree_data_inputs (bool, optional): Whether to add the tree data inputs to the kwargs.
-            Defaults to True.
+            add_tree_data_inputs (bool): Optional. Whether to add the tree data inputs to the kwargs.
+                When enabled, this adds the inputs set up on initialisation (e.g. `message_update`, `reasoning`, etc).
+                If disabled, only the normal inputs to the signature are passed (and the fields will be missing in the forward pass).
+                Defaults to True.
             **kwargs: Additional keyword arguments to pass to the signature.
 
         Returns:
@@ -612,6 +615,23 @@ class ElysiaPrompt(Module):
     async def aforward_streaming(
         self, streamed_field: str, add_tree_data_inputs: bool = True, **kwargs
     ) -> AsyncGenerator[StreamResponse | dspy.Prediction, None]:
+        """
+        Performs an asynchronous forward pass to the signature with streaming enabled.
+
+        Args:
+            streamed_field (str): The name of the field to stream.
+                If given as e.g. `"reasoning"`, then this method will yield `StreamResponse`s whose `chunk` attributes are text pieces of the reasoning field.
+                The field given must be a string output type, otherwise this will error.
+            add_tree_data_inputs (bool): Optional. Whether to add the tree data inputs to the kwargs.
+                When enabled, this adds the inputs set up on initialisation (e.g. `message_update`, `reasoning`, etc).
+                If disabled, only the normal inputs to the signature are passed (and the fields will be missing in the forward pass).
+                Defaults to True.
+            **kwargs: Additional keyword arguments to pass to the signature.
+
+        Returns:
+            AsyncGenerator[StreamResponse | dspy.Prediction, None]: The prediction from the signature.
+        """
+
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         stream_predict = dspy.streamify(
             self.predict,
@@ -633,7 +653,9 @@ class ElysiaPrompt(Module):
         **kwargs,
     ) -> tuple[dspy.Prediction, list[str]] | dspy.Prediction:
         """
-        Use the forward pass of the module with feedback examples.
+        Performs an asynchronous forward pass to the signature with few-shot learning via feedback examples.
+        This requires connection to a Weaviate instance (via the `client_manager`) to retrieve examples from a collection.
+
         This will first retrieve examples from the feedback collection, and use those as few-shot examples to run the module.
         It retrieves based from vectorising and searching on the user's prompt, finding similar prompts from the feedback collection.
         This is an EXPERIMENTAL feature, and may not work as expected.
@@ -708,7 +730,7 @@ class ElysiaPrompt(Module):
         **kwargs,
     ) -> AsyncGenerator[dspy.Prediction | list[str] | StreamResponse, None]:
         """
-        Use the forward pass of the module with feedback examples (streamed version).
+        Performs an asynchronous forward pass to the signature with few-shot learning via feedback examples AND streaming.
         Same as `aforward_with_feedback_examples` but is an async generator function.
 
         Args:
