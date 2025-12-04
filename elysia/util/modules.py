@@ -311,7 +311,7 @@ class ElysiaPrompt(Module):
             tree_data (TreeData): Required. The tree data from the Elysia decision tree.
                 Used to input the current state of the tree into the prompt.
                 If you are using this module as part of a tool, the `tree_data` is an input to the tool call.
-            reasoning (bool): Whether to include a reasoning input (chain of thought).
+            reasoning (bool): Whether to include a reasoning input (chain of thought). Recommended for improved accuracy.
             impossible (bool): Whether to include a boolean flag indicating whether the task is impossible.
                 This is useful for stopping the tree from continuing and returning to the base of the decision tree.
                 For example, the model judges a query impossible to execute, or the user has not provided enough information.
@@ -323,6 +323,7 @@ class ElysiaPrompt(Module):
                 - `"full"` means the environment in its entirety will always be included in the prompt. Not recommended as this can hit context limits and cause errors.
                 - `"metadata"` means the environment metadata only is displayed. This includes metadatas from the results themselves and how many objects of each type are in the environment.
                 - `"dynamic"` means the environment metadata is displayed when a token limit is reached, and the full environment is shown otherwise. Recommended.
+                  Additionally, if the decision agent has used a 'view_environment' tool to inspect the most relevant parts of the environment, these viewed objects will be passed down to this LM call instead.
                   The token limit is controlled by the `env_token_limit` parameter of the `Settings` class, configurable via the `.configure(env_token_limit=...)` method of `Settings`.
                 - `"none"` means the environment is never included in the prompt
             collection_schemas (bool): Whether to include a collection schema input.

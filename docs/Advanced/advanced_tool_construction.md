@@ -146,11 +146,11 @@ from elysia.util.modules import ElysiaPrompt
 my_module = ElysiaPrompt(
     MyCustomSignature, # a dspy signature needing to be defined
     tree_data=tree_data, # tree_data input from the tool
-    message_update: bool = True,
-    environment: bool = False,
-    collection_schemas: bool = False,
-    tasks_completed: bool = False,
-    collection_names: list[str] = [],
+    message_update = True,
+    environment_level = "full",
+    collection_schemas False,
+    tasks_completed = False,
+    collection_names = [],
 )
 ```
 By setting the boolean flags for the different variables, you can control the inputs and outputs assigned, whereas some inputs are always included (such as user prompt).
@@ -287,7 +287,7 @@ class TextResponse(Tool):
         text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
-            environment=True,
+            environment_level = "dynamic",
             tasks_completed=True,
             message_update=False,
         )
