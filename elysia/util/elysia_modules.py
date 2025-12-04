@@ -703,15 +703,17 @@ class ElysiaPrompt(Module):
             (list): the UUIDs used as few-shot examples retrieved from the database.
             (StreamResponse): The chunks from the streaming for the given streamed_field.
         """
-
         examples, uuids = await retrieve_feedback(
-            client_manager, self.tree_data.user_prompt, feedback_model, n=10
+            client_manager,
+            self.tree_data.user_prompt,
+            feedback_model,
+            user_id=self.tree_data.user_id,
+            n=10,
         )
         yield uuids
-        if len(examples) > 0:
-            optimizer = dspy.LabeledFewShot(k=10)
-            optimized_module = optimizer.compile(self, trainset=examples)
-        else:
+
+        # No examples - use complex LM directly
+        if not examples:
             async for result in self.aforward_streaming(
                 streamed_field,
                 lm=complex_lm,
@@ -719,21 +721,18 @@ class ElysiaPrompt(Module):
                 **kwargs,
             ):
                 yield result
+            return
 
-        # Select the LM to use based on the number of examples
-        if len(examples) < self.tree_data.settings.NUM_FEEDBACK_EXAMPLES:
-            async for result in optimized_module.aforward_streaming(
-                streamed_field,
-                lm=complex_lm,
-                add_tree_data_inputs=add_tree_data_inputs,
-                **kwargs,
-            ):
-                yield result
-        else:
-            async for result in optimized_module.aforward_streaming(
-                streamed_field,
-                lm=base_lm,
-                add_tree_data_inputs=add_tree_data_inputs,
-                **kwargs,
-            ):
-                yield result
+        # Optimize with few-shot examples
+        optimized_module = dspy.LabeledFewShot(k=10).compile(self, trainset=examples)
+
+        # Choose LM based on example count
+        lm = (
+            base_lm
+            if len(examples) >= self.tree_data.settings.NUM_FEEDBACK_EXAMPLES
+            else complex_lm
+        )
+        async for result in optimized_module.aforward_streaming(
+            streamed_field, lm=lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
+        ):
+            yield result

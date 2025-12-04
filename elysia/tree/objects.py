@@ -202,27 +202,23 @@ class Environment:
                 If `True`, the duplicate object is added with a new `_REF_ID` entry, and the repeated properties are added to the object.
 
         """
+        # New tool - create new entry
         if tool_name not in self.environment:
             self.environment[tool_name] = [
-                EnvironmentItem(
-                    metadata=metadata,
-                    objects=objects,
-                )
+                EnvironmentItem(metadata=metadata, objects=objects)
             ]
-        else:
-            found_item = False
-            for item in self.environment[tool_name]:
-                if item.metadata == metadata:
-                    item.objects.extend(objects)
-                    found_item = True
-                    break
-            if not found_item:
-                self.environment[tool_name].append(
-                    EnvironmentItem(
-                        metadata=metadata,
-                        objects=objects,
-                    )
-                )
+            return
+
+        # Existing tool - try to find matching metadata item
+        for item in self.environment[tool_name]:
+            if item.metadata == metadata:
+                item.objects.extend(objects)
+                return
+
+        # No matching metadata - add new item
+        self.environment[tool_name].append(
+            EnvironmentItem(metadata=metadata, objects=objects)
+        )
 
     def append(
         self,
@@ -739,23 +735,28 @@ class TreeData:
     def soft_reset(self):
         self.previous_reasoning = {}
 
-    def _update_task(self, task_dict, key, value):
-        if value is not None:
-            if key in task_dict:
-                # If key already exists, append to it
-                if isinstance(value, str):
-                    task_dict[key] += "\n" + value
-                elif isinstance(value, int) or isinstance(value, float):
-                    task_dict[key] += value
-                elif isinstance(value, list):
-                    task_dict[key].extend(value)
-                elif isinstance(value, dict):
-                    task_dict[key].update(value)
-                elif isinstance(value, bool):
-                    task_dict[key] = value
-            elif key not in task_dict:
-                # If key does not exist, create it
-                task_dict[key] = value
+    def _update_task(self, task_dict: dict, key: str, value: Any) -> None:
+        """Update a task dictionary with a new value, merging if key exists."""
+        if value is None:
+            return
+
+        if key not in task_dict:
+            task_dict[key] = value
+            return
+
+        # Merge based on type
+        existing = task_dict[key]
+        if isinstance(value, str):
+            task_dict[key] = f"{existing}\n{value}"
+        elif isinstance(value, (int, float)):
+            task_dict[key] = existing + value
+        elif isinstance(value, list):
+            existing.extend(value)
+        elif isinstance(value, dict):
+            existing.update(value)
+        else:
+            # For bools and other types, just replace
+            task_dict[key] = value
 
     def _create_new_task_entry(
         self, task: str, num_trees_completed: int, **kwargs
@@ -803,15 +804,16 @@ class TreeData:
     def set_current_task(self, task: str):
         self.current_task = task
 
-    def get_errors(self):
+    def get_errors(self) -> dict | list:
+        """Get errors for the current task, or all errors for decision node."""
         if self.current_task == "elysia_decision_node":
             return self.errors
-        elif self.current_task is None or self.current_task not in self.errors:
+        if self.current_task is None or self.current_task not in self.errors:
             return []
-        else:
-            return self.errors[self.current_task]
+        return self.errors[self.current_task]
 
-    def clear_error(self, task: str):
+    def clear_error(self, task: str) -> None:
+        """Clear all errors for a specific task."""
         if task in self.errors:
             self.errors[task] = []
 

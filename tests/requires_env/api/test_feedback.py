@@ -116,7 +116,8 @@ async def test_full_feedback_cycle():
     async with user_manager.users[user_id][
         "client_manager"
     ].connect_to_async_client() as client:
-        feedback_collection = client.collections.get("ELYSIA_FEEDBACK__")
+        base_feedback_collection = client.collections.get("ELYSIA_FEEDBACK__")
+        feedback_collection = base_feedback_collection.with_tenant(user_id)
         session_uuid = generate_uuid5(
             {
                 "user_id": user_id,
@@ -124,7 +125,9 @@ async def test_full_feedback_cycle():
                 "query_id": query_id,
             }
         )
-        feedback_exists = await feedback_collection.data.exists(uuid=session_uuid)
+        feedback_exists = await base_feedback_collection.tenants.exists(
+            user_id
+        ) and await feedback_collection.data.exists(uuid=session_uuid)
 
     response = await run_add_feedback(
         AddFeedbackData(

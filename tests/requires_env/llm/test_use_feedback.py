@@ -43,7 +43,7 @@ async def create_green_pants_feedback(user_id):
 @pytest.mark.asyncio
 async def test_adding_retrieving_feedback():
 
-    user_id = "test_use_feedback_879053589310"
+    user_id = "user_test_use_feedback_879053589310"
 
     await create_green_pants_feedback(user_id)
 
@@ -70,7 +70,7 @@ async def test_adding_retrieving_feedback():
 @pytest.mark.asyncio
 async def test_adding_retrieving_feedback_with_view_environment():
 
-    user_id = "test_use_feedback_879053589310"  # use same user ID to avoid making feedback twice
+    user_id = "user_test_use_feedback_879053589310"  # use same user ID to avoid making feedback twice
 
     await create_green_pants_feedback(user_id)
 

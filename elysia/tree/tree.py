@@ -32,12 +32,10 @@ from elysia.tree.util import (
 from elysia.objects import (
     Completed,
     Result,
-    Return,
     StreamedReasoning,
     Update,
     Text,
     Tool,
-    Warning,
     Error,
 )
 from elysia.tools.retrieval.aggregate import Aggregate
@@ -209,16 +207,54 @@ class Tree:
                 self._complex_lm = load_complex_lm(self.settings)
             return self._complex_lm
 
+    # Branch initialization configuration
+    _BASE_INSTRUCTION_SIMPLE = """
+        Choose a base-level task based on the user's prompt and available information.
+        Decide based on the tools you have available as well as their descriptions.
+        Read them thoroughly and match the actions to the user prompt.
+    """
+
+    _BASE_INSTRUCTION_MULTI = """
+        Choose a base-level task based on the user's prompt and available information.
+        You can search, which includes aggregating or querying information - this should be used if the user needs (more) information.
+        You can end the conversation by choosing text response, or summarise some retrieved information.
+        Base your decision on what information is available and what the user is asking for - you can search multiple times if needed,
+        but you should not search if you have already found all the information you need.
+    """
+
+    _SEARCH_INSTRUCTION = """
+        Choose between querying the knowledge base via semantic/keyword search, or aggregating information by performing operations, on the knowledge base.
+        Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query. This is for retrieving specific information via a _query_, similar to a search engine.
+        Aggregating is when the user is looking for a specific operations on the dataset, such as summary statistics of the quantity of some items. Aggregation can also include grouping information by some property and returning statistics about the groups.
+    """
+
+    _SEARCH_DESCRIPTION = """
+        Search the knowledge base. This should be used when the user is lacking information for this particular prompt. This retrieves information only and provides no output to the user except the information.
+        Choose to query (semantic or keyword search on a knowledge base), or aggregate information (calculate properties/summary statistics/averages and operations on the knowledge bases).
+    """
+
+    def _add_base_tools(
+        self, base_id: str, include_search_tools: bool = True
+    ) -> str | None:
+        """Add common base tools to a branch and return query_id if search tools added."""
+        self.add_tool(from_node_id=base_id, tool=CitedSummarizer, end=True)
+        self.add_tool(from_node_id=base_id, tool=FakeTextResponse, end=True)
+
+        if not include_search_tools:
+            return None
+
+        self.add_tool(from_node_id=base_id, tool=Aggregate, end=False)
+        query_id = self.add_tool(
+            from_node_id=base_id, tool=Query, summariser_in_tree=True, end=False
+        )
+        self.add_tool(from_node_id=base_id, tool=Visualise, end=False)
+        return query_id
+
     def multi_branch_init(self) -> None:
+        """Initialize tree with multi-branch structure (search as separate branch)."""
         base_id = self.add_branch(
             name="base",
-            instruction="""
-            Choose a base-level task based on the user's prompt and available information.
-            You can search, which includes aggregating or querying information - this should be used if the user needs (more) information.
-            You can end the conversation by choosing text response, or summarise some retrieved information.
-            Base your decision on what information is available and what the user is asking for - you can search multiple times if needed,
-            but you should not search if you have already found all the information you need.
-            """,
+            instruction=self._BASE_INSTRUCTION_MULTI,
             status="Choosing a base-level task...",
         )
         self.add_tool(from_node_id=base_id, tool=CitedSummarizer, end=True)
@@ -227,15 +263,8 @@ class Tree:
         search_id = self.add_branch(
             name="search",
             from_node_id=base_id,
-            instruction="""
-            Choose between querying the knowledge base via semantic/keyword search, or aggregating information by performing operations, on the knowledge base.
-            Querying is when the user is looking for specific information related to the content of the dataset, requiring a specific search query. This is for retrieving specific information via a _query_, similar to a search engine.
-            Aggregating is when the user is looking for a specific operations on the dataset, such as summary statistics of the quantity of some items. Aggregation can also include grouping information by some property and returning statistics about the groups.
-            """,
-            description=f"""
-            Search the knowledge base. This should be used when the user is lacking information for this particular prompt. This retrieves information only and provides no output to the user except the information.
-            Choose to query (semantic or keyword search on a knowledge base), or aggregate information (calculate properties/summary statistics/averages and operations on the knowledge bases).
-            """,
+            instruction=self._SEARCH_INSTRUCTION,
+            description=self._SEARCH_DESCRIPTION,
             status="Searching the knowledge base...",
         )
         query_id = self.add_tool(
@@ -246,32 +275,21 @@ class Tree:
         self.add_tool(SummariseItems, from_node_id=query_id)
 
     def one_branch_init(self) -> None:
+        """Initialize tree with single branch structure (all tools at base)."""
         base_id = self.add_branch(
             name="base",
-            instruction="""
-            Choose a base-level task based on the user's prompt and available information.
-            Decide based on the tools you have available as well as their descriptions.
-            Read them thoroughly and match the actions to the user prompt.
-            """,
+            instruction=self._BASE_INSTRUCTION_SIMPLE,
             status="Choosing a base-level task...",
         )
-        self.add_tool(from_node_id=base_id, tool=CitedSummarizer, end=True)
-        self.add_tool(from_node_id=base_id, tool=FakeTextResponse, end=True)
-        self.add_tool(from_node_id=base_id, tool=Aggregate, end=False)
-        query_id = self.add_tool(
-            from_node_id=base_id, tool=Query, summariser_in_tree=True, end=False
-        )
-        self.add_tool(from_node_id=base_id, tool=Visualise, end=False)
-        self.add_tool(SummariseItems, from_node_id=query_id)
+        query_id = self._add_base_tools(base_id, include_search_tools=True)
+        if query_id:
+            self.add_tool(SummariseItems, from_node_id=query_id)
 
     def empty_init(self) -> None:
+        """Initialize tree with empty structure (base branch only, no tools)."""
         self.add_branch(
             name="base",
-            instruction="""
-            Choose a base-level task based on the user's prompt and available information.
-            Decide based on the tools you have available as well as their descriptions.
-            Read them thoroughly and match the actions to the user prompt.
-            """,
+            instruction=self._BASE_INSTRUCTION_SIMPLE,
             status="Choosing a base-level task...",
         )
 
@@ -983,6 +1001,7 @@ class Tree:
         self._update_actions_called(result, decision)
 
     def _add_error(self, function_name: str, error: Error) -> None:
+        """Record an error in tree data for self-healing feedback to the LLM."""
         if function_name not in self.tree_data.errors:
             self.tree_data.errors[function_name] = []
 
@@ -993,26 +1012,166 @@ class Tree:
             error=True,
         )
 
-        if error.feedback != "An unknown issue occurred.":
-            self.tree_data.errors[function_name].append(
-                "Avoidable error: "
-                f"{error.feedback} "
-                "(this error is likely to be solved by incorporating the feedback in a future tool call)"
-            )
-        else:
-            self.tree_data.errors[function_name].append(
-                "Unknown error: "
-                f"{error.error_message} "
-                "(this error is likely outside of your capacity to be solved - "
-                "judge the error message based on other information and if it seems fixable, call this tool again "
-                "if it is repeated, you may need to try something else or inform the user of the issue)"
-            )
+        is_avoidable = error.feedback != "An unknown issue occurred."
+        error_msg = (
+            f"Avoidable error: {error.feedback} "
+            "(this error is likely to be solved by incorporating the feedback in a future tool call)"
+            if is_avoidable
+            else f"Unknown error: {error.error_message} "
+            "(this error is likely outside of your capacity to be solved - "
+            "judge the error message based on other information and if it seems fixable, call this tool again "
+            "if it is repeated, you may need to try something else or inform the user of the issue)"
+        )
+        self.tree_data.errors[function_name].append(error_msg)
+
+    def _print_panel(self, content: str, title: str, style: str) -> None:
+        if self.settings.LOGGING_LEVEL_INT <= 20:
+            print(Panel.fit(content, title=title, border_style=style, padding=(1, 1)))
+
+    def _print_decision_panel(self, node_name: str, decision: Decision) -> None:
+        self._print_panel(
+            f"[bold]Node:[/bold] [magenta]{node_name}[/magenta]\n"
+            f"[bold]Decision:[/bold] [green]{decision.function_name}[/green]\n"
+            f"[bold]Reasoning:[/bold] {decision.reasoning}\n",
+            "Current Decision",
+            "magenta",
+        )
+
+    async def _execute_rule_tools(
+        self,
+        node: Node,
+        client_manager: ClientManager,
+    ) -> AsyncGenerator[dict | None, None]:
+        nodes_with_rules_met, rule_tool_inputs = await self._check_rules(
+            node, client_manager
+        )
+
+        for rule in nodes_with_rules_met:
+            rule_decision = Decision(rule, {}, "", False, False)
+            with ElysiaKeyManager(self.settings):
+                async for result in self.tools[rule](
+                    tree_data=self.tree_data,
+                    inputs=rule_tool_inputs[rule],
+                    base_lm=self.base_lm,
+                    complex_lm=self.complex_lm,
+                    client_manager=client_manager,
+                ):
+                    action_result, _ = await self._evaluate_result(
+                        result, rule_decision
+                    )
+                    if action_result is not None:
+                        yield action_result
+
+    async def _run_decision_node(
+        self,
+        current_node: Node,
+        available_options: list[str],
+        unavailable_options: list[tuple[str, str]],
+        user_prompt: str,
+        client_manager: ClientManager,
+    ) -> AsyncGenerator[dict | None, None]:
+        self.tracker.start_tracking("decision_node")
+        self.tree_data.set_current_task("elysia_decision_node")
+        options = self._build_tool_options(available_options, unavailable_options)
+
+        results = []
+        with ElysiaKeyManager(self.settings):
+            async for result in current_node.decide(
+                tree_data=self.tree_data,
+                base_lm=self.base_lm,
+                complex_lm=self.complex_lm,
+                options=options,
+                client_manager=client_manager,
+            ):
+                if isinstance(result, (StreamedReasoning, ViewEnvironment)):
+                    yield await self.returner(
+                        result, self.prompt_to_query_id[user_prompt]
+                    )
+                elif isinstance(result, Decision):
+                    self.current_decision = result
+                else:
+                    results.append(result)
+
+            for result in results:
+                action_result, _ = await self._evaluate_result(
+                    result, self.current_decision
+                )
+                if action_result is not None:
+                    yield action_result
+
+        self.tracker.end_tracking(
+            "decision_node",
+            "Decision Node",
+            self.base_lm if not self.low_memory else None,
+            self.complex_lm if not self.low_memory else None,
+        )
+
+    async def _execute_tool_action(
+        self,
+        tool_name: str,
+        decision: Decision,
+        client_manager: ClientManager,
+        **kwargs,
+    ) -> AsyncGenerator[tuple[dict | None, bool], None]:
+        """Execute a tool action and yield results with error status."""
+        self.tracker.start_tracking(decision.function_name)
+        self.tree_data.set_current_task(decision.function_name)
+        successful_action = True
+
+        with ElysiaKeyManager(self.settings):
+            async for result in self.tools[tool_name](
+                tree_data=self.tree_data,
+                inputs=decision.function_inputs,
+                base_lm=self.base_lm,
+                complex_lm=self.complex_lm,
+                client_manager=client_manager,
+                **kwargs,
+            ):
+                action_result, error = await self._evaluate_result(result, decision)
+                if action_result is not None:
+                    yield action_result, error
+                successful_action = not error and successful_action
+
+        self.tracker.end_tracking(
+            decision.function_name,
+            decision.function_name,
+            self.base_lm if not self.low_memory else None,
+            self.complex_lm if not self.low_memory else None,
+        )
+
+        # Yield final status
+        yield None, not successful_action
+
+    def _log_completion_stats(self) -> None:
+        self.settings.logger.debug(
+            "[bold green]Model identified overall goal as completed![/bold green]"
+        )
+        self.settings.logger.debug(
+            f"Total time taken for decision tree: {time.time() - self.start_time:.2f} seconds"
+        )
+        self.settings.logger.debug(
+            f"Decision Node Avg. Time: {self.tracker.get_average_time('decision_node'):.2f} seconds"
+        )
+        self.log_token_usage()
+
+        for i, iteration in enumerate(self.decision_history):
+            if iteration:
+                avg_times = [
+                    f"  - {task} ([magenta]Avg. {self.tracker.get_average_time(task):.2f} seconds[/magenta])\n"
+                    for task in iteration
+                    if task in self.tracker.trackers
+                ]
+                if avg_times:
+                    self.settings.logger.debug(
+                        f"Tasks completed (iteration {i+1}):\n" + "".join(avg_times)
+                    )
 
     async def _evaluate_result(
         self,
         result: Result | TreeUpdate | Error | TrainingUpdate | Text | Update,
         decision: Decision,
     ) -> tuple[dict | None, bool]:
+        """Evaluate a yielded result from a tool and update tree state accordingly."""
         error = False
 
         if isinstance(result, Result):
@@ -1025,38 +1184,20 @@ class Tree:
 
         if isinstance(result, Error):
             self._add_error(decision.function_name, result)
-            if self.settings.LOGGING_LEVEL_INT <= 20:
-                print(
-                    Panel.fit(
-                        (
-                            result.error_message
-                            if result.feedback == "An unknown issue occurred."
-                            else result.feedback
-                        ),
-                        title="Error",
-                        border_style="red",
-                        padding=(1, 1),
-                    )
-                )
+            error_text = (
+                result.feedback
+                if result.feedback != "An unknown issue occurred."
+                else result.error_message
+            )
+            self._print_panel(error_text, "Error", "red")
             error = True
 
         if isinstance(result, Text):
             self._update_conversation_history("assistant", result.text)
-            if self.settings.LOGGING_LEVEL_INT <= 20:
-                print(
-                    Panel.fit(
-                        result.text,
-                        title="Assistant response",
-                        border_style="cyan",
-                        padding=(1, 1),
-                    )
-                )
+            self._print_panel(result.text, "Assistant response", "cyan")
 
         return (
-            await self.returner(
-                result,
-                self.prompt_to_query_id[self.user_prompt],
-            ),
+            await self.returner(result, self.prompt_to_query_id[self.user_prompt]),
             error,
         )
 
@@ -1119,7 +1260,6 @@ class Tree:
         check_base_lm_settings(self.settings)
         check_complex_lm_settings(self.settings)
 
-        # Initialise some objects
         self.set_start_time()
         self.query_id_to_prompt[query_id] = user_prompt
         self.prompt_to_query_id[user_prompt] = query_id
@@ -1131,29 +1271,19 @@ class Tree:
         if client_manager.is_client:
             await client_manager.start_clients()
 
-            # Initialise the collections
             if self.tree_data.use_weaviate_collections:
                 if not collection_names:
                     async with client_manager.connect_to_async_client() as client:
                         collection_names = await retrieve_all_collection_names(client)
                 await self.set_collection_names(collection_names, client_manager)
 
-        if self.settings.LOGGING_LEVEL_INT <= 20:
-            print(
-                Panel.fit(
-                    user_prompt,
-                    title="User prompt",
-                    border_style="yellow",
-                    padding=(1, 1),
-                )
-            )
+        self._print_panel(user_prompt, "User Prompt", "yellow")
 
         return query_id
 
     def _build_tool_options(
         self, available_options: list[str], unavailable_options: list[tuple[str, str]]
     ) -> list[ToolOption]:
-        """Build ToolOption list from available and unavailable options."""
         options = []
         for option in available_options:
             node = self.nodes[option]
@@ -1200,47 +1330,32 @@ class Tree:
         )
         return options
 
-    def log_token_usage(self) -> None:
-        if not self.low_memory:
-            avg_input_base = self.tracker.get_average_input_tokens("base_lm")
-            avg_output_base = self.tracker.get_average_output_tokens("base_lm")
-            total_input_base = self.tracker.get_total_input_tokens("base_lm")
-            total_output_base = self.tracker.get_total_output_tokens("base_lm")
-            avg_input_complex = self.tracker.get_average_input_tokens("complex_lm")
-            avg_output_complex = self.tracker.get_average_output_tokens("complex_lm")
-            total_input_complex = self.tracker.get_total_input_tokens("complex_lm")
-            total_output_complex = self.tracker.get_total_output_tokens("complex_lm")
-            total_cost_base = self.tracker.get_total_cost("base_lm")
-            total_cost_complex = self.tracker.get_total_cost("complex_lm")
-            avg_cost_base = self.tracker.get_average_cost("base_lm")
-            avg_cost_complex = self.tracker.get_average_cost("complex_lm")
-            num_calls_base = self.tracker.get_num_calls("base_lm")
-            num_calls_complex = self.tracker.get_num_calls("complex_lm")
+    def _format_model_usage(self, model_type: str) -> str:
+        num_calls = self.tracker.get_num_calls(model_type)
+        if num_calls == 0:
+            return f"{model_type.replace('_', ' ').title()} Usage: [magenta]0[/magenta] calls"
 
-            if num_calls_base > 0:
-                self.settings.logger.debug(
-                    f"Base Model Usage: \n"
-                    f"  - Calls: [magenta]{num_calls_base}[/magenta]\n"
-                    f"  - Input Tokens: [magenta]{total_input_base}[/magenta] (Avg. [magenta]{int(avg_input_base)}[/magenta] per call)\n"
-                    f"  - Output Tokens: [cyan]{total_output_base}[/cyan] (Avg. [cyan]{int(avg_output_base)}[/cyan] per call)\n"
-                    f"  - Total Cost: [yellow]${total_cost_base:.4f}[/yellow] (Avg. [yellow]${avg_cost_base:.4f}[/yellow] per call)\n"
-                )
-            else:
-                self.settings.logger.debug(
-                    f"Base Model Usage: [magenta]0[/magenta] calls"
-                )
-            if num_calls_complex > 0:
-                self.settings.logger.debug(
-                    f"Complex Model Usage: \n"
-                    f"  - Calls: [magenta]{num_calls_complex}[/magenta]\n"
-                    f"  - Input Tokens: [magenta]{total_input_complex}[/magenta] (Avg. [magenta]{int(avg_input_complex)}[/magenta] per call)\n"
-                    f"  - Output Tokens: [cyan]{total_output_complex}[/cyan] (Avg. [cyan]{int(avg_output_complex)}[/cyan] per call)\n"
-                    f"  - Total Cost: [yellow]${total_cost_complex:.4f}[/yellow] (Avg. [yellow]${avg_cost_complex:.4f}[/yellow] per call)\n"
-                )
-            else:
-                self.settings.logger.debug(
-                    f"Complex Model Usage: [magenta]0[/magenta] calls"
-                )
+        avg_input = self.tracker.get_average_input_tokens(model_type)
+        avg_output = self.tracker.get_average_output_tokens(model_type)
+        total_input = self.tracker.get_total_input_tokens(model_type)
+        total_output = self.tracker.get_total_output_tokens(model_type)
+        total_cost = self.tracker.get_total_cost(model_type)
+        avg_cost = self.tracker.get_average_cost(model_type)
+
+        return (
+            f"{model_type.replace('_', ' ').title()} Usage: \n"
+            f"  - Calls: [magenta]{num_calls}[/magenta]\n"
+            f"  - Input Tokens: [magenta]{total_input}[/magenta] (Avg. [magenta]{int(avg_input)}[/magenta] per call)\n"
+            f"  - Output Tokens: [cyan]{total_output}[/cyan] (Avg. [cyan]{int(avg_output)}[/cyan] per call)\n"
+            f"  - Total Cost: [yellow]${total_cost:.4f}[/yellow] (Avg. [yellow]${avg_cost:.4f}[/yellow] per call)\n"
+        )
+
+    def log_token_usage(self) -> None:
+        if self.low_memory:
+            return
+
+        self.settings.logger.debug(self._format_model_usage("base_lm"))
+        self.settings.logger.debug(self._format_model_usage("complex_lm"))
 
     async def async_run(
         self,
@@ -1260,162 +1375,82 @@ class Tree:
         if client_manager is None:
             client_manager = self._create_client_manager()
 
-        # Initial setup for first run (not recursive call)
         if _first_run:
             query_id = await self._initialize_run(
                 user_prompt, query_id, collection_names, client_manager
             )
 
-        # Start the tree at the root node
-        if self.root is not None:
-            current_decision_node: Node = self.nodes[self.root]
-        else:
+        if self.root is None:
             raise ValueError("No root node found!")
+        current_decision_node: Node = self.nodes[self.root]
 
-        # Loop through the tree until the end is reached
         while True:
-
             available_options, unavailable_options = await self._get_available_options(
                 current_decision_node, client_manager
             )
 
-            if len(available_options) == 0:
+            if not available_options:
                 self.settings.logger.error("No options available to use!")
                 raise ValueError(
                     f"No tools or branches available to be decided from (on branch [magenta]{current_decision_node.name}[/magenta])! "
                     "Check the tool definitions and the `is_tool_available` methods."
                 )
 
-            # Evaluate any tools which have hardcoded rules that have been met
-            nodes_with_rules_met, rule_tool_inputs = await self._check_rules(
+            async for action_result in self._execute_rule_tools(
                 current_decision_node, client_manager
-            )
+            ):
+                yield action_result
 
-            if len(nodes_with_rules_met) > 0:
-                for rule in nodes_with_rules_met:
-                    rule_decision = Decision(rule, {}, "", False, False)
-                    with ElysiaKeyManager(self.settings):
-                        async for result in self.tools[rule](
-                            tree_data=self.tree_data,
-                            inputs=rule_tool_inputs[rule],
-                            base_lm=self.base_lm,
-                            complex_lm=self.complex_lm,
-                            client_manager=client_manager,
-                        ):
-                            action_result, _ = await self._evaluate_result(
-                                result, rule_decision
-                            )
-                            if action_result is not None:
-                                yield action_result
-
-            self.tracker.start_tracking("decision_node")
-            self.tree_data.set_current_task("elysia_decision_node")
-            options = self._build_tool_options(available_options, unavailable_options)
-
-            results = []
-            with ElysiaKeyManager(self.settings):
-                async for result in current_decision_node.decide(
-                    tree_data=self.tree_data,
-                    base_lm=self.base_lm,
-                    complex_lm=self.complex_lm,
-                    options=options,
-                    client_manager=client_manager,
-                ):
-                    if isinstance(result, (StreamedReasoning, ViewEnvironment)):
-                        yield await self.returner(
-                            result, self.prompt_to_query_id[user_prompt]
-                        )
-                    elif isinstance(result, Decision):
-                        self.current_decision = result
-                    else:
-                        results.append(result)
-
-                for result in results:
-                    action_result, _ = await self._evaluate_result(
-                        result, self.current_decision
-                    )
-                    if action_result is not None:
-                        yield action_result
-
-            self.tracker.end_tracking(
-                "decision_node",
-                "Decision Node",
-                self.base_lm if not self.low_memory else None,
-                self.complex_lm if not self.low_memory else None,
-            )
+            async for action_result in self._run_decision_node(
+                current_decision_node,
+                available_options,
+                unavailable_options,
+                user_prompt,
+                client_manager,
+            ):
+                yield action_result
 
             next_node_id = next(
-                option
-                for option in available_options
-                if self.nodes[option].name == self.current_decision.function_name
+                opt
+                for opt in available_options
+                if self.nodes[opt].name == self.current_decision.function_name
             )
+            next_node = self.nodes[next_node_id]
 
-            # Force text response (later) if model chooses end actions
-            # but no response will be generated from the node, set flag now
+            # If model picks to end but node isn't an end, then force a text answer for completeness
             force_text_response = (
-                not self.nodes[next_node_id].end and self.current_decision.end_actions
+                not next_node.end and self.current_decision.end_actions
             )
 
-            # end criteria, task picked is "text_response" or model chooses to end conversation
+            # Completed when either text response is picked or model chooses to end, or recursion limit reached
             completed = (
                 self.current_decision.function_name == "text_response"
                 or self.current_decision.end_actions
                 or self.tree_data.num_trees_completed > self.tree_data.recursion_limit
             )
 
-            # update the decision history
             self.decision_history[-1].append(self.current_decision.function_name)
+            self._print_decision_panel(
+                current_decision_node.name, self.current_decision
+            )
 
-            # print the current node information
-            if self.settings.LOGGING_LEVEL_INT <= 20:
-                print(
-                    Panel.fit(
-                        f"[bold]Node:[/bold] [magenta]{current_decision_node.name}[/magenta]\n"
-                        f"[bold]Decision:[/bold] [green]{self.current_decision.function_name}[/green]\n"
-                        f"[bold]Reasoning:[/bold] {self.current_decision.reasoning}\n",
-                        title="Current Decision",
-                        border_style="magenta",
-                        padding=(1, 1),
-                    )
-                )
-
-            # evaluate the action if this is not a branch
-            if not self.nodes[next_node_id].branch:
-                self.tracker.start_tracking(self.current_decision.function_name)
-                self.tree_data.set_current_task(self.current_decision.function_name)
+            # If action is a tool (not branch) then yield out results/record outputs
+            if not next_node.branch:
                 successful_action = True
-                with ElysiaKeyManager(self.settings):
-                    async for result in self.tools[self.nodes[next_node_id].name](
-                        tree_data=self.tree_data,
-                        inputs=self.current_decision.function_inputs,
-                        base_lm=self.base_lm,
-                        complex_lm=self.complex_lm,
-                        client_manager=client_manager,
-                        **kwargs,
-                    ):
-                        action_result, error = await self._evaluate_result(
-                            result, self.current_decision
-                        )
-
-                        if action_result is not None:
-                            yield action_result
-
-                        successful_action = not error and successful_action
-
-                self.tracker.end_tracking(
-                    self.current_decision.function_name,
-                    self.current_decision.function_name,
-                    self.base_lm if not self.low_memory else None,
-                    self.complex_lm if not self.low_memory else None,
-                )
+                async for action_result, had_error in self._execute_tool_action(
+                    next_node.name, self.current_decision, client_manager, **kwargs
+                ):
+                    if action_result is not None:
+                        yield action_result
+                    if had_error:
+                        successful_action = False
 
                 if not successful_action:
                     completed = (
                         self.tree_data.num_trees_completed
                         > self.tree_data.recursion_limit
                     )
-
-                if successful_action:
+                else:
                     self.tree_data.clear_error(self.current_decision.function_name)
 
             self.tree_data.update_tasks_completed(
@@ -1423,10 +1458,9 @@ class Tree:
                 task=self.current_decision.function_name,
                 num_trees_completed=self.tree_data.num_trees_completed,
                 reasoning=self.current_decision.reasoning,
-                action=not self.nodes[next_node_id].branch,
+                action=not next_node.branch,
                 inputs=self.current_decision.function_inputs,
             )
-
             yield (
                 await self._evaluate_result(
                     TreeUpdate(
@@ -1437,90 +1471,47 @@ class Tree:
                             if self.settings.BASE_USE_REASONING
                             else ""
                         ),
-                        reset_tree=(
-                            not completed and len(self.nodes[next_node_id].options) > 0
-                        ),
+                        reset_tree=not completed and len(next_node.options) > 0,
                     ),
                     self.current_decision,
                 )
             )[0]
 
-            # check if the current node is the end of the tree
-            if completed or len(self.nodes[next_node_id].options) == 0:
+            # Check termination conditions
+            if completed or not next_node.options:
                 break
-            # otherwise iterate through the tree
-            else:
-                current_decision_node = self.nodes[next_node_id]
+            current_decision_node = next_node
 
         self.tree_data.num_trees_completed += 1
 
-        # end of all trees
+        # Handle completion
         if completed:
-
-            # firstly, if we reached the end of a tree at a node that shouldn't be the end, call text response tool here to respond
-            if not self.nodes[next_node_id].end or force_text_response:
-                with ElysiaKeyManager(self.settings):
-                    async for result in self.tools["forced_text_response"](
-                        tree_data=self.tree_data,
-                        inputs={},
-                        base_lm=self.base_lm,
-                        complex_lm=self.complex_lm,
-                        client_manager=client_manager,
-                    ):
-                        action_result, _ = await self._evaluate_result(
-                            result, self.current_decision
-                        )
-                        if action_result is not None:
-                            yield action_result
+            # Generate forced text response if needed
+            if not next_node.end or force_text_response:
+                async for action_result in self._execute_forced_text_response(
+                    client_manager
+                ):
+                    yield action_result
 
             self.save_history(
                 query_id=self.prompt_to_query_id[user_prompt],
                 time_taken_seconds=time.time() - self.start_time,
             )
-
             yield await self.returner(
                 Completed(), query_id=self.prompt_to_query_id[user_prompt]
             )
-
-            self.settings.logger.debug(
-                f"[bold green]Model identified overall goal as completed![/bold green]"
-            )
-            self.settings.logger.debug(
-                f"Total time taken for decision tree: {time.time() - self.start_time:.2f} seconds"
-            )
-            self.settings.logger.debug(
-                f"Decision Node Avg. Time: {self.tracker.get_average_time('decision_node'):.2f} seconds"
-            )
-            self.log_token_usage()
-
-            avg_times = []
-            for i, iteration in enumerate(self.decision_history):
-                if iteration != []:
-                    avg_times = [
-                        (
-                            f"  - {task} ([magenta]Avg. {self.tracker.get_average_time(task):.2f} seconds[/magenta])\n"
-                            if task in self.tracker.trackers
-                            else ""
-                        )
-                        for task in iteration
-                    ]
-                    self.settings.logger.debug(
-                        f"Tasks completed (iteration {i+1}):\n" + "".join(avg_times)
-                    )
+            self._log_completion_stats()
 
             if close_clients_after_completion and client_manager.is_client:
                 await client_manager.close_clients()
-
-        # otherwise, end of the tree for this iteration, and recursively call process() to restart the tree
         else:
+            # Recursive restart for incomplete goal
             self.settings.logger.debug(
-                f"Model did [bold red]not[/bold red] yet complete overall goal! "
+                "Model did [bold red]not[/bold red] yet complete overall goal!"
             )
             self.settings.logger.debug(
                 f"Restarting tree (Recursion: {self.tree_data.num_trees_completed+1}/{self.tree_data.recursion_limit})..."
             )
-
-            # recursive call to restart the tree since the goal was not completed
             self.decision_history.append([])
             async for result in self.async_run(
                 user_prompt,
@@ -1531,6 +1522,23 @@ class Tree:
                 _first_run=False,
             ):
                 yield result
+
+    async def _execute_forced_text_response(
+        self, client_manager: ClientManager
+    ) -> AsyncGenerator[dict | None, None]:
+        with ElysiaKeyManager(self.settings):
+            async for result in self.tools["forced_text_response"](
+                tree_data=self.tree_data,
+                inputs={},
+                base_lm=self.base_lm,
+                complex_lm=self.complex_lm,
+                client_manager=client_manager,
+            ):
+                action_result, _ = await self._evaluate_result(
+                    result, self.current_decision
+                )
+                if action_result is not None:
+                    yield action_result
 
     def run(
         self,
