@@ -1,6 +1,6 @@
 from logging import Logger
 from elysia.objects import Tool, Error
-from elysia.util.elysia_modules import ElysiaPrompt
+from elysia.util.modules import ElysiaPrompt
 from elysia.tools.visualisation.objects import (
     ChartResult,
     BarChart,

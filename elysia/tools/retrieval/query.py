@@ -7,7 +7,7 @@ from rich.panel import Panel
 
 import dspy
 
-from elysia.util.elysia_modules import ElysiaPrompt
+from elysia.util.modules import ElysiaPrompt
 from elysia.objects import Response, Status, Tool, Error, Result, Return, Retrieval
 from elysia.tools.retrieval.chunk import AsyncCollectionChunker
 from elysia.tools.retrieval.objects import (

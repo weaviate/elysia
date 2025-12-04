@@ -34,7 +34,7 @@ from elysia.util.objects import (
     ViewEnvironment,
 )
 
-from elysia.util.elysia_modules import ElysiaPrompt, AssertedModule
+from elysia.util.modules import ElysiaPrompt, AssertedModule
 from elysia.util.parsing import format_datetime
 from elysia.util.client import ClientManager
 from elysia.tree.prompt_templates import (

@@ -3,7 +3,7 @@
 import dspy
 import dspy.predict
 
-from elysia.util.elysia_modules import ElysiaPrompt
+from elysia.util.modules import ElysiaPrompt
 
 # LLM
 from elysia.objects import Response, Tool, Text

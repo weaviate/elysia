@@ -273,7 +273,7 @@ class ElysiaPrompt(Module):
     - A message update (if `message_update` is `True`), a brief 'update' message to the user.
     - Whether the task is impossible (boolean)
 
-    You can use this module by calling the `.aforward()` method, passing all your *new* inputs as keyword arguments.
+    You can use this module by calling the `.forward()` or `.aforward()` method, passing all your *new* inputs as keyword arguments.
     You do not need to include keyword arguments for the other inputs, like the `environment`.
 
     Example:
@@ -577,10 +577,35 @@ class ElysiaPrompt(Module):
         return kwargs
 
     def forward(self, add_tree_data_inputs: bool = True, **kwargs):
+        """
+        Wrapper for the `.forward()` method of the signature provided on initialisation.
+        Calls the LM synchronously.
+
+        Args:
+            add_tree_data_inputs (bool): Optional. Whether to add the tree data inputs to the kwargs.
+                When enabled, this adds the inputs set up on initialisation (e.g. `
+                Defaults to True.
+            **kwargs: Additional keyword arguments to pass to the signature (normal inputs to the signature).
+
+        Returns:
+            (dspy.Prediction): The DSPy prediction output from the LM call.
+        """
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         return self.predict(**kwargs)
 
     async def aforward(self, add_tree_data_inputs: bool = True, **kwargs):
+        """
+        Wrapper for the `.aforward()` method of the signature provided on initialisation.
+        Calls the LLM asynchronously.
+
+        Args:
+            add_tree_data_inputs (bool, optional): Whether to add the tree data inputs to the kwargs.
+            Defaults to True.
+            **kwargs: Additional keyword arguments to pass to the signature.
+
+        Returns:
+            dspy.Prediction: The prediction from the signature.
+        """
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         return await self.predict.acall(**kwargs)
 
@@ -703,15 +728,17 @@ class ElysiaPrompt(Module):
             (list): the UUIDs used as few-shot examples retrieved from the database.
             (StreamResponse): The chunks from the streaming for the given streamed_field.
         """
-
         examples, uuids = await retrieve_feedback(
-            client_manager, self.tree_data.user_prompt, feedback_model, n=10
+            client_manager,
+            self.tree_data.user_prompt,
+            feedback_model,
+            user_id=self.tree_data.user_id,
+            n=10,
         )
         yield uuids
-        if len(examples) > 0:
-            optimizer = dspy.LabeledFewShot(k=10)
-            optimized_module = optimizer.compile(self, trainset=examples)
-        else:
+
+        # No examples - use complex LM directly
+        if not examples:
             async for result in self.aforward_streaming(
                 streamed_field,
                 lm=complex_lm,
@@ -719,21 +746,18 @@ class ElysiaPrompt(Module):
                 **kwargs,
             ):
                 yield result
+            return
 
-        # Select the LM to use based on the number of examples
-        if len(examples) < self.tree_data.settings.NUM_FEEDBACK_EXAMPLES:
-            async for result in optimized_module.aforward_streaming(
-                streamed_field,
-                lm=complex_lm,
-                add_tree_data_inputs=add_tree_data_inputs,
-                **kwargs,
-            ):
-                yield result
-        else:
-            async for result in optimized_module.aforward_streaming(
-                streamed_field,
-                lm=base_lm,
-                add_tree_data_inputs=add_tree_data_inputs,
-                **kwargs,
-            ):
-                yield result
+        # Optimize with few-shot examples
+        optimized_module = dspy.LabeledFewShot(k=10).compile(self, trainset=examples)
+
+        # Choose LM based on example count
+        lm = (
+            base_lm
+            if len(examples) >= self.tree_data.settings.NUM_FEEDBACK_EXAMPLES
+            else complex_lm
+        )
+        async for result in optimized_module.aforward_streaming(
+            streamed_field, lm=lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
+        ):
+            yield result
