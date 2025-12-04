@@ -420,7 +420,6 @@ class Tree:
         self.tree_data.num_trees_completed = 0
         self.decision_history = [[]]
         self.training_updates = []
-        self.tree_data.soft_reset()
         self.action_information = []
         self.tree_index += 1
         self.retrieved_objects = []
@@ -1015,6 +1014,12 @@ class Tree:
         )
         self.tree_data.errors[function_name].append(error_msg)
 
+    def _reset_view_environment_vars(self):
+        self.tree_data.view_env_vars = None
+
+    def _set_view_environment_vars(self, result):
+        self.tree_data.view_env_vars = result
+
     def _print_panel(self, content: str, title: str, style: str) -> None:
         if self.settings.LOGGING_LEVEL_INT <= 20:
             print(Panel.fit(content, title=title, border_style=style, padding=(1, 1)))
@@ -1074,10 +1079,15 @@ class Tree:
                 options=options,
                 client_manager=client_manager,
             ):
-                if isinstance(result, (StreamedReasoning, ViewEnvironment)):
+                if isinstance(result, StreamedReasoning):
                     yield await self.returner(
                         result, self.prompt_to_query_id[user_prompt]
                     )
+                elif isinstance(result, ViewEnvironment):
+                    yield await self.returner(
+                        result, self.prompt_to_query_id[user_prompt]
+                    )
+                    self._set_view_environment_vars(result)
                 elif isinstance(result, Decision):
                     self.current_decision = result
                 else:
@@ -1377,6 +1387,7 @@ class Tree:
             available_options, unavailable_options = await self._get_available_options(
                 current_decision_node, client_manager
             )
+            self._reset_view_environment_vars()
 
             if not available_options:
                 self.settings.logger.error("No options available to use!")

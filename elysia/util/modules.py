@@ -1,13 +1,14 @@
+import json
 from typing import Type, Callable
 from copy import copy, deepcopy
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Literal
 
 import dspy
 from dspy.primitives.module import Module
 from dspy.signatures.signature import Signature, ensure_signature
 from dspy.streaming import StreamListener, StreamResponse
 
-from elysia.tree.objects import TreeData, Atlas
+from elysia.tree.objects import TreeData, Atlas, Environment
 from elysia.util.feedback import retrieve_feedback
 from elysia.util.client import ClientManager
 
@@ -298,7 +299,7 @@ class ElysiaPrompt(Module):
         reasoning: bool = True,
         impossible: bool = True,
         message_update: bool = True,
-        environment: bool = False,
+        environment_level: Literal["full", "metadata", "dynamic", "none"] = "dynamic",
         collection_schemas: bool = False,
         tasks_completed: bool = False,
         collection_names: list[str] = [],
@@ -318,10 +319,12 @@ class ElysiaPrompt(Module):
                 If True, the LLM output will include a brief 'update' message to the user.
                 This describes the current action the LLM is performing.
                 Designed to increase interactivity and provide the user with information before the final output.
-            environment (bool): Whether to include an environment input.
-                If True, the module will include the currently stored data from previous tasks and actions into the prompt.
-                This is useful so that the LLM knows what has already been done, and can avoid repeating actions.
-                Or to use information from the environment to perform the new action.
+            environment_level (Literal["full", "metadata", "dynamic", "none"]): Whether to include an environment as an input.
+                - `"full"` means the environment in its entirety will always be included in the prompt. Not recommended as this can hit context limits and cause errors.
+                - `"metadata"` means the environment metadata only is displayed. This includes metadatas from the results themselves and how many objects of each type are in the environment.
+                - `"dynamic"` means the environment metadata is displayed when a token limit is reached, and the full environment is shown otherwise. Recommended.
+                  The token limit is controlled by the `env_token_limit` parameter of the `Settings` class, configurable via the `.configure(env_token_limit=...)` method of `Settings`.
+                - `"none"` means the environment is never included in the prompt
             collection_schemas (bool): Whether to include a collection schema input.
                 If True, the module will include the preprocessed collection schemas in the prompt input.
                 This is useful so that the LLM knows the structure of the collections, if querying or similar.
@@ -350,7 +353,7 @@ class ElysiaPrompt(Module):
 
         # Note which inputs are required
         self.message_update = message_update
-        self.environment = environment
+        self.environment_level = environment_level
         self.collection_schemas = collection_schemas
         self.tasks_completed = tasks_completed
         self.collection_names = collection_names
@@ -417,22 +420,6 @@ class ElysiaPrompt(Module):
         )
 
         # == Optional Inputs / Outputs ==
-
-        # -- Environment Input --
-        if environment:
-            environment_desc = (
-                "Information gathered from completed tasks. "
-                "Empty if no data has been retrieved yet. "
-                "Use to determine if more information is needed. "
-                "Additionally, use this as a reference to determine if you have already completed a task/what items are already available, to avoid repeating actions. "
-            )
-            environment_prefix = "${environment}"
-            environment_field: dict = dspy.InputField(
-                prefix=environment_prefix, desc=environment_desc
-            )
-            extended_signature = extended_signature.append(
-                name="environment", field=environment_field, type_=dict
-            )
 
         # -- Collection Schema Input --
         if collection_schemas:
@@ -547,7 +534,86 @@ class ElysiaPrompt(Module):
         self.predict = dspy.Predict(extended_signature, **config)
         self.predict.signature.instructions += elysia_meta_prompt  # type: ignore
 
+    def _add_environment_inputs(self, environment: Environment):
+
+        if self.environment_level == "none":
+            return
+
+        if self.environment_level == "dynamic":
+
+            if self.tree_data.view_env_vars is None:
+                environment_json = environment._unhidden_to_json()
+                # TODO: replace this with actual token counting
+                use_metadata = (
+                    len(json.dumps(environment_json)) > self.tree_data.env_token_limit
+                )
+            else:
+                use_metadata = False
+
+        else:
+            use_metadata = self.environment_level == "metadata"
+
+        # Check if environment metadata already exists in self.predict
+        if use_metadata:
+            if "environment_metadata" in self.predict.signature.fields:
+                return
+            else:
+
+                if "environment" in self.predict.signature.fields:
+                    self.predict.signature = self.predict.signature.delete(
+                        "environment"
+                    )
+
+                environment_metadata_desc = (
+                    "METADATA ONLY - Summary statistics about the environment, NOT the actual content. "
+                    "Shows: tool names, object counts, metadata properties. "
+                    "Does NOT show: actual message text, document content, specific data values. "
+                    ""
+                    "Format interpretation: "
+                    "- Top level: tool name that added objects "
+                    "- Each tool has X results "
+                    "- Each result has Y objects with associated metadata properties "
+                    ""
+                    "IMPORTANT: This is like a table of contents - it tells you WHAT exists but not WHAT'S INSIDE. "
+                )
+
+                environment_metadata_prefix = "${environment_metadata}"
+                environment_metadata_field: str = dspy.InputField(
+                    description=environment_metadata_desc,
+                    prefix=environment_metadata_prefix,
+                    format=str,
+                )
+                self.predict.signature = self.predict.signature.append(
+                    "environment_metadata", environment_metadata_field, str
+                )
+        else:
+            if "environment" in self.predict.signature.fields:
+                return
+            else:
+
+                if "environment_metadata" in self.predict.signature.fields:
+                    self.predict.signature = self.predict.signature.delete(
+                        "environment_metadata"
+                    )
+
+                environment_desc = (
+                    "Information gathered from completed tasks. "
+                    "Empty if no data has been retrieved yet. "
+                    "Use to determine if more information is needed. "
+                    "Additionally, use this as a reference to determine if you have already completed a task/what items are already available, to avoid repeating actions. "
+                )
+                environment_prefix = "${environment}"
+                environment_field: dict = dspy.InputField(
+                    prefix=environment_prefix, desc=environment_desc, format=dict
+                )
+
+                self.predict.signature = self.predict.signature.append(
+                    name="environment", field=environment_field, type_=dict
+                )
+
     def _add_tree_data_inputs(self, kwargs: dict) -> dict:
+
+        self._add_environment_inputs(self.tree_data.environment)
 
         # Add the tree data inputs to the kwargs
         kwargs["user_prompt"] = self.tree_data.user_prompt
@@ -556,8 +622,19 @@ class ElysiaPrompt(Module):
         kwargs["previous_errors"] = self.tree_data.get_errors()
 
         # Add the optional inputs to the kwargs
-        if self.environment:
-            kwargs["environment"] = self.tree_data.environment.environment
+        if self.environment_level is not "none":
+            if self.tree_data.view_env_vars is None:
+                kwargs["environment"] = self.tree_data.environment.environment
+            else:
+                kwargs["environment"] = self.tree_data.environment._view(
+                    self.tree_data.view_env_vars.tool_names,
+                    self.tree_data.view_env_vars.metadata_keys,
+                    self.tree_data.view_env_vars.metadata_values,
+                )
+
+            kwargs["environment_metadata"] = (
+                self.tree_data.environment.output_llm_metadata()
+            )
 
         if self.collection_schemas:
             if self.collection_names != []:

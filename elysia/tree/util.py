@@ -73,7 +73,7 @@ class ForcedTextResponse(Tool):
         text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
-            environment=True,
+            environment_level="dynamic",
             tasks_completed=True,
             message_update=False,
         )
@@ -169,40 +169,42 @@ class Node:
                 "This tool does NOT complete the user's request immediately, it only helps you gather information to inform your next action choice or inputs. "
                 "After viewing the environment, you can select another tool after selecting this tool from available_actions. "
                 "Retrieved objects from previous tool calls are stored here. "
-                "Optionally input tool_name to filter by a specific tool's results. "
-                "Optionally input metadata_key and metadata_value alongside tool_name to filter by specific metadata criteria. "
+                "Optionally input tool_names to filter by specific tools' results. "
+                "Optionally input metadata_keys and metadata_values alongside tool_names to filter by specific metadata criteria. "
             ),
             "inputs": [
                 {
-                    "name": "tool_name",
+                    "name": "tool_names",
                     "description": (
-                        "The name of the tool to view the environment for. Top level key for the environment. "
+                        "The name(s) of the tool to view the environment for. Top level key for the environment. "
                         "If not provided or None, view the entire environment."
                     ),
                     "default": None,
-                    "type": str,
+                    "type": list[str],
                     "required": False,
                 },
                 {
-                    "name": "metadata_key",
+                    "name": "metadata_keys",
                     "description": (
                         "A key of the metadata to view the environment for. Subkey for the environment. "
                         "If not provided or None, view all objects for the given tool_name. "
                         "If provided metadata_key, must provide metadata_value. "
+                        "If giving more than one, the position of the key must match the position of the corresponding tool_name/metadata_value it is associated with"
                     ),
                     "default": None,
-                    "type": str,
+                    "type": list[str],
                     "required": False,
                 },
                 {
-                    "name": "metadata_value",
+                    "name": "metadata_values",
                     "description": (
                         "A value of the metadata to view the environment for. Subkey for the environment. "
                         "If not provided or None, view all objects for the given tool_name."
                         "If provided metadata_value, must provide metadata_key. "
+                        "If giving more than one, the position of the value must match the position of the corresponding tool_name/metadata_key it is associated with"
                     ),
                     "default": None,
-                    "type": str,
+                    "type": list[str],
                     "required": False,
                 },
             ],
@@ -246,38 +248,6 @@ class Node:
             f"Your output MUST be one of the following: {available_option_names}",
         )
 
-    def _get_filtered_environment(
-        self,
-        tree_data: TreeData,
-        tool_name: str | None,
-        metadata_key: str | None,
-        metadata_value: Any | None,
-    ) -> dict:
-        env = tree_data.environment
-
-        if (
-            metadata_key
-            and metadata_value
-            and tool_name
-            and tool_name in env.environment
-        ):
-            objects = env.get_objects(
-                tool_name=tool_name,
-                metadata_key=metadata_key,
-                metadata_value=metadata_value,
-            )
-            return {tool_name: objects} if objects else env.to_json()["environment"]
-
-        if tool_name and tool_name in env.environment:
-            return {
-                tool_name: [
-                    {"metadata": item.metadata, "objects": item.objects}
-                    for item in env.get(tool_name) or []
-                ]
-            }
-
-        return env.to_json()["environment"]
-
     async def _execute_view_environment(
         self,
         kwargs: dict,
@@ -314,27 +284,27 @@ class Node:
                     for i in view_env_inputs
                 ],
             )
-            tool_name = function_inputs["tool_name"]
-            metadata_key = function_inputs["metadata_key"]
-            metadata_value = function_inputs["metadata_value"]
+            tool_names = function_inputs["tool_names"]
+            metadata_keys = function_inputs["metadata_keys"]
+            metadata_values = function_inputs["metadata_values"]
 
-            environment = self._get_filtered_environment(
-                tree_data, tool_name, metadata_key, metadata_value
+            environment = tree_data.environment._view(
+                tool_names, metadata_keys, metadata_values
             )
 
             # Build preview of first 5 objects for ViewEnvironment object
-            first_key = tool_name or (
-                list(environment.keys())[0] if environment else None
-            )
+            first_key = (
+                tool_names[0] if tool_names and len(tool_names) > 0 else None
+            ) or (list(environment.keys())[0] if environment else None)
             preview_items = environment.get(first_key, []) if first_key else []
             preview = [
                 item["objects"] for item in preview_items[:5] if isinstance(item, dict)
             ]
 
             yield ViewEnvironment(
-                tool_name=tool_name,
-                metadata_key=metadata_key,
-                metadata_value=metadata_value,
+                tool_names=tool_names,
+                metadata_keys=metadata_keys,
+                metadata_values=metadata_values,
                 environment_preview=preview,
             )
 
@@ -345,6 +315,7 @@ class Node:
                 tasks_completed=True,
                 message_update=True,
                 reasoning=tree_data.settings.BASE_USE_REASONING,
+                environment_level="none",
             )
 
             if tree_data.streaming:
@@ -550,7 +521,7 @@ class Node:
                 message_update=False,
                 impossible=False,
                 reasoning=tree_data.settings.BASE_USE_REASONING,
-                environment=not env_token_limit_reached,
+                environment="none" if env_token_limit_reached else "full",
             ),
             self._tool_assertion,
         )

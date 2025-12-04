@@ -81,9 +81,7 @@ class Tracker:
         history = lm.history[-num_calls:]
 
         # Sum tokens and cost in a single pass
-        input_tokens = sum(
-            h.get("usage", {}).get("prompt_tokens", 0) for h in history
-        )
+        input_tokens = sum(h.get("usage", {}).get("prompt_tokens", 0) for h in history)
         output_tokens = sum(
             h.get("usage", {}).get("completion_tokens", 0) for h in history
         )
@@ -205,18 +203,21 @@ class ViewEnvironment(Update):
 
     def __init__(
         self,
-        tool_name: str,
-        metadata_key: str,
-        metadata_value: Any,
+        tool_names: list[str],
+        metadata_keys: list[str],
+        metadata_values: list[Any],
         environment_preview: list[dict],
     ):
+        self.tool_names = tool_names
+        self.metadata_keys = metadata_keys
+        self.metadata_values = metadata_values
         Update.__init__(
             self,
             "view_environment",
             {
-                "tool_name": tool_name,
-                "metadata_key": metadata_key,
-                "metadata_value": metadata_value,
+                "tool_names": self.tool_names,
+                "metadata_keys": self.metadata_keys,
+                "metadata_values": self.metadata_values,
                 "environment_preview": environment_preview,
             },
         )

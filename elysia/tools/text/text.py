@@ -59,7 +59,7 @@ class CitedSummarizer(Tool):
             tree_data=tree_data,
             reasoning=False,
             impossible=False,
-            environment=True,
+            environment_level="dynamic",
             tasks_completed=True,
             message_update=False,
         )
@@ -116,7 +116,7 @@ class Summarizer(Tool):
         summarizer = ElysiaPrompt(
             SummarizingPrompt,
             tree_data=tree_data,
-            environment=True,
+            environment_level="dynamic",
             tasks_completed=True,
             message_update=False,
         )
@@ -154,7 +154,7 @@ class TextResponse(Tool):
         text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
-            environment=True,
+            environment_level="dynamic",
             tasks_completed=True,
             message_update=False,
         )

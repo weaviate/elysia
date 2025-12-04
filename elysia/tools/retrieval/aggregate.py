@@ -164,7 +164,7 @@ class Aggregate(Tool):
         aggregate_generator = ElysiaPrompt(
             aggregation_prompt,
             tree_data=tree_data,
-            environment=True,
+            environment_level="dynamic",
             collection_schemas=True,
             tasks_completed=True,
             message_update=True,

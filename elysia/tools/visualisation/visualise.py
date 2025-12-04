@@ -64,7 +64,7 @@ class Visualise(Tool):
             create_chart = ElysiaPrompt(
                 type_mapping[chart_type],
                 tree_data=tree_data,
-                environment=True,
+                environment_level="dynamic",
                 impossible=True,
                 tasks_completed=True,
                 reasoning=tree_data.settings.BASE_USE_REASONING,

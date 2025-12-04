@@ -1,6 +1,5 @@
 from typing import AsyncGenerator, Union
 from logging import Logger
-from pydantic import BaseModel, Field
 
 from rich import print
 from rich.panel import Panel
@@ -266,7 +265,7 @@ class Query(Tool):
         query_generator = ElysiaPrompt(
             query_creator_prompt,
             tree_data=tree_data,
-            environment=True,
+            environment_level="dynamic",
             collection_schemas=True,
             tasks_completed=True,
             message_update=True,
@@ -368,7 +367,7 @@ class Query(Tool):
                     ),
                     "query_output": (
                         query.query_outputs.model_dump()
-                        if query.query_outputs is not None
+                        if query.query_outputs
                         else None
                     ),
                 }

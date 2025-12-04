@@ -7,8 +7,9 @@ import json
 from elysia.config import Settings
 from elysia.config import settings as environment_settings
 from elysia.objects import Result
+from elysia.util.objects import ViewEnvironment
 from elysia.util.client import ClientManager
-from elysia.util.parsing import format_dict_to_serialisable, remove_whitespace
+from elysia.util.parsing import format_dict_to_serialisable
 from copy import deepcopy
 from weaviate.classes.query import Filter
 
@@ -100,6 +101,46 @@ class Environment:
             raise ValueError(
                 "Must provide either metadata or metadata_key/metadata_value"
             )
+
+    def _view(
+        self,
+        tool_names: list[str] | None,
+        metadata_keys: list[str] | list[None] | None,
+        metadata_values: list[Any] | None,
+    ):
+        if tool_names is None:
+            return self.to_json()["environment"]
+
+        # Handle None values for metadata_keys and metadata_values
+        if metadata_keys is None:
+            metadata_keys = [None] * len(tool_names)
+        if metadata_values is None:
+            metadata_values = [None] * len(tool_names)
+
+        result = {}
+        for tool_name, metadata_key, metadata_value in zip(
+            tool_names, metadata_keys, metadata_values
+        ):
+            if (
+                metadata_key
+                and metadata_value
+                and tool_name
+                and tool_name in self.environment
+            ):
+                objects = self.get_objects(
+                    tool_name=tool_name,
+                    metadata_key=metadata_key,
+                    metadata_value=metadata_value,
+                )
+                if objects:
+                    result[tool_name] = objects
+            elif tool_name and tool_name in self.environment:
+                result[tool_name] = [
+                    {"metadata": item.metadata, "objects": item.objects}
+                    for item in self.get(tool_name) or []
+                ]
+
+        return result if result else self.to_json()["environment"]
 
     def _find_item_by_metadata(
         self,
@@ -662,9 +703,9 @@ class TreeData:
         atlas: Atlas,
         user_id: str,
         user_prompt: str = "",
-        conversation_history: list[dict] = [],
+        conversation_history: list[dict] | None = None,
         environment: Environment | None = None,
-        tasks_completed: list[dict] = [],
+        tasks_completed: list[dict] | None = None,
         num_trees_completed: int = 0,
         recursion_limit: int = 3,
         settings: Settings | None = None,
@@ -674,9 +715,11 @@ class TreeData:
 
         # -- Base Data --
         self.user_prompt = user_prompt
-        self.conversation_history = conversation_history
+        self.conversation_history = (
+            [] if conversation_history is None else conversation_history
+        )
         self.environment = Environment() if environment is None else environment
-        self.tasks_completed = tasks_completed
+        self.tasks_completed = [] if tasks_completed is None else tasks_completed
         self.num_trees_completed = num_trees_completed
         self.recursion_limit = recursion_limit
         self.settings = environment_settings if settings is None else settings
@@ -693,6 +736,7 @@ class TreeData:
         # -- Errors --
         self.errors: dict[str, list[str]] = {}
         self.current_task = None
+        self.view_env_vars: ViewEnvironment | None = None
 
         # -- Other --
         self.env_token_limit = self.settings.ENV_TOKEN_LIMIT
@@ -718,9 +762,6 @@ class TreeData:
     def delete_from_dict(self, property: str, key: str):
         if property in self.__dict__ and key in self.__dict__[property]:
             del self.__dict__[property][key]
-
-    def soft_reset(self):
-        self.previous_reasoning = {}
 
     def _update_task(self, task_dict: dict, key: str, value: Any) -> None:
         if value is None:
@@ -811,7 +852,6 @@ class TreeData:
     def tasks_completed_string(self) -> str:
         """
         Output a nicely formatted string of the tasks completed so far, designed to be used in the LLM prompt.
-        This is where the outputs of the `llm_message` fields are displayed.
         You can use this if you are interfacing with LLMs in tools, to help it understand the context of the tasks completed so far.
 
         Returns:
@@ -828,12 +868,11 @@ class TreeData:
             lines.append(header)
 
             for task in prompt_data["task"]:
-                # Format inputs
                 inputs = ", ".join(
                     self._format_input_value(k, v)
                     for k, v in task.get("inputs", {}).items()
                 )
-                error_flag = " [ERRORED] " if task.get("error") else ""
+                error_flag = " [ERRORED] " if task.get("error", False) else ""
                 lines.append(f"\t- {task['task']}({inputs}){error_flag}:")
 
                 # Add item count if present
