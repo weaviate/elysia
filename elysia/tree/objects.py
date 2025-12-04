@@ -108,7 +108,6 @@ class Environment:
         metadata_key: str | None = None,
         metadata_value: Any | None = None,
     ) -> EnvironmentItem | None:
-        """Find an item in the environment by metadata matching."""
         if tool_name not in self.environment:
             return None
 
@@ -124,9 +123,6 @@ class Environment:
         return None
 
     def clear(self, include_hidden: bool = False):
-        """
-        Clears the environment.
-        """
         self.environment = {}
         if include_hidden:
             self.hidden_environment = {}
@@ -202,20 +198,17 @@ class Environment:
                 If `True`, the duplicate object is added with a new `_REF_ID` entry, and the repeated properties are added to the object.
 
         """
-        # New tool - create new entry
         if tool_name not in self.environment:
             self.environment[tool_name] = [
                 EnvironmentItem(metadata=metadata, objects=objects)
             ]
             return
 
-        # Existing tool - try to find matching metadata item
         for item in self.environment[tool_name]:
             if item.metadata == metadata:
                 item.objects.extend(objects)
                 return
 
-        # No matching metadata - add new item
         self.environment[tool_name].append(
             EnvironmentItem(metadata=metadata, objects=objects)
         )
@@ -668,34 +661,28 @@ class TreeData:
         collection_data: CollectionData,
         atlas: Atlas,
         user_id: str,
-        user_prompt: str | None = None,
-        conversation_history: list[dict] | None = None,
+        user_prompt: str = "",
+        conversation_history: list[dict] = [],
         environment: Environment | None = None,
-        tasks_completed: list[dict] | None = None,
-        num_trees_completed: int | None = None,
-        recursion_limit: int | None = None,
+        tasks_completed: list[dict] = [],
+        num_trees_completed: int = 0,
+        recursion_limit: int = 3,
         settings: Settings | None = None,
         use_weaviate_collections: bool = True,
         streaming: bool = False,
     ):
-        self.settings = environment_settings if settings is None else settings
-        self.user_id = user_id
 
         # -- Base Data --
-        self.user_prompt = "" if user_prompt is None else user_prompt
-        self.conversation_history = (
-            [] if conversation_history is None else conversation_history
-        )
+        self.user_prompt = user_prompt
+        self.conversation_history = conversation_history
         self.environment = Environment() if environment is None else environment
-        self.tasks_completed = [] if tasks_completed is None else tasks_completed
-        self.num_trees_completed = (
-            0 if num_trees_completed is None else num_trees_completed
-        )
-        self.recursion_limit = 3 if recursion_limit is None else recursion_limit
+        self.tasks_completed = tasks_completed
+        self.num_trees_completed = num_trees_completed
+        self.recursion_limit = recursion_limit
+        self.settings = environment_settings if settings is None else settings
 
         self.streaming = streaming
-
-        # -- Atlas --
+        self.user_id = user_id
         self.atlas = atlas
 
         # -- Collection Data --
@@ -736,7 +723,6 @@ class TreeData:
         self.previous_reasoning = {}
 
     def _update_task(self, task_dict: dict, key: str, value: Any) -> None:
-        """Update a task dictionary with a new value, merging if key exists."""
         if value is None:
             return
 
@@ -744,7 +730,7 @@ class TreeData:
             task_dict[key] = value
             return
 
-        # Merge based on type
+        # Merge/replace based on type
         existing = task_dict[key]
         if isinstance(value, str):
             task_dict[key] = f"{existing}\n{value}"
@@ -755,13 +741,11 @@ class TreeData:
         elif isinstance(value, dict):
             existing.update(value)
         else:
-            # For bools and other types, just replace
             task_dict[key] = value
 
     def _create_new_task_entry(
         self, task: str, num_trees_completed: int, **kwargs
     ) -> dict:
-        """Create a new task entry with the given parameters."""
         new_task = {"task": task, "iteration": num_trees_completed}
         for key, value in kwargs.items():
             self._update_task(new_task, key, value)
@@ -805,7 +789,6 @@ class TreeData:
         self.current_task = task
 
     def get_errors(self) -> dict | list:
-        """Get errors for the current task, or all errors for decision node."""
         if self.current_task == "elysia_decision_node":
             return self.errors
         if self.current_task is None or self.current_task not in self.errors:
@@ -813,13 +796,11 @@ class TreeData:
         return self.errors[self.current_task]
 
     def clear_error(self, task: str) -> None:
-        """Clear all errors for a specific task."""
         if task in self.errors:
             self.errors[task] = []
 
     @staticmethod
     def _format_input_value(key: str, value: Any) -> str:
-        """Format a single input key-value pair for display."""
         if isinstance(value, str):
             return f"{key}='{value}'"
         elif isinstance(value, dict):

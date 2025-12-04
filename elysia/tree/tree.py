@@ -207,7 +207,6 @@ class Tree:
                 self._complex_lm = load_complex_lm(self.settings)
             return self._complex_lm
 
-    # Branch initialization configuration
     _BASE_INSTRUCTION_SIMPLE = """
         Choose a base-level task based on the user's prompt and available information.
         Decide based on the tools you have available as well as their descriptions.
@@ -236,7 +235,6 @@ class Tree:
     def _add_base_tools(
         self, base_id: str, include_search_tools: bool = True
     ) -> str | None:
-        """Add common base tools to a branch and return query_id if search tools added."""
         self.add_tool(from_node_id=base_id, tool=CitedSummarizer, end=True)
         self.add_tool(from_node_id=base_id, tool=FakeTextResponse, end=True)
 
@@ -251,7 +249,6 @@ class Tree:
         return query_id
 
     def multi_branch_init(self) -> None:
-        """Initialize tree with multi-branch structure (search as separate branch)."""
         base_id = self.add_branch(
             name="base",
             instruction=self._BASE_INSTRUCTION_MULTI,
@@ -275,7 +272,6 @@ class Tree:
         self.add_tool(SummariseItems, from_node_id=query_id)
 
     def one_branch_init(self) -> None:
-        """Initialize tree with single branch structure (all tools at base)."""
         base_id = self.add_branch(
             name="base",
             instruction=self._BASE_INSTRUCTION_SIMPLE,
@@ -286,7 +282,6 @@ class Tree:
             self.add_tool(SummariseItems, from_node_id=query_id)
 
     def empty_init(self) -> None:
-        """Initialize tree with empty structure (base branch only, no tools)."""
         self.add_branch(
             name="base",
             instruction=self._BASE_INSTRUCTION_SIMPLE,
@@ -734,13 +729,13 @@ class Tree:
         Format the tree into a nice hierarchical text representation.
 
         Args:
-            node_id: The ID of the node to start from. If None, starts from root.
-            indent: Current indentation level
-            prefix: Prefix for the current line (for tree structure visualization)
-            max_width: Maximum width for text wrapping
+            node_id (str | None): The ID of the node to start from. If None, starts from root.
+            indent (int): Current indentation level
+            prefix (str): Prefix for the current line (for tree structure visualization)
+            max_width (int): Maximum width for text wrapping
 
         Returns:
-            str: Formatted tree string
+            (str): Formatted tree string
         """
         if node_id is None:
             if self.root is None:
@@ -921,18 +916,15 @@ class Tree:
 
     def _update_conversation_history(self, role: str, message: str) -> None:
         if message != "":
-            # If the first message, create a new message
             if len(self.tree_data.conversation_history) == 0:
                 self.tree_data.update_list(
                     "conversation_history", {"role": role, "content": message}
                 )
-            # If the last message is from the same role, append to the content
             elif self.tree_data.conversation_history[-1]["role"] == role:
                 if self.tree_data.conversation_history[-1]["content"].endswith(" "):
                     self.tree_data.conversation_history[-1]["content"] += message
                 else:
                     self.tree_data.conversation_history[-1]["content"] += " " + message
-            # Otherwise, create a new message
             else:
                 self.tree_data.update_list(
                     "conversation_history", {"role": role, "content": message}
@@ -1001,7 +993,6 @@ class Tree:
         self._update_actions_called(result, decision)
 
     def _add_error(self, function_name: str, error: Error) -> None:
-        """Record an error in tree data for self-healing feedback to the LLM."""
         if function_name not in self.tree_data.errors:
             self.tree_data.errors[function_name] = []
 
@@ -1113,7 +1104,6 @@ class Tree:
         client_manager: ClientManager,
         **kwargs,
     ) -> AsyncGenerator[tuple[dict | None, bool], None]:
-        """Execute a tool action and yield results with error status."""
         self.tracker.start_tracking(decision.function_name)
         self.tree_data.set_current_task(decision.function_name)
         successful_action = True
@@ -1171,7 +1161,6 @@ class Tree:
         result: Result | TreeUpdate | Error | TrainingUpdate | Text | Update,
         decision: Decision,
     ) -> tuple[dict | None, bool]:
-        """Evaluate a yielded result from a tool and update tree state accordingly."""
         error = False
 
         if isinstance(result, Result):
