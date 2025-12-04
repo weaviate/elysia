@@ -65,6 +65,7 @@ class Visualise(Tool):
                 type_mapping[chart_type],
                 tree_data=tree_data,
                 environment_level="dynamic",
+                collection_schemas="none",
                 impossible=True,
                 tasks_completed=True,
                 reasoning=tree_data.settings.BASE_USE_REASONING,

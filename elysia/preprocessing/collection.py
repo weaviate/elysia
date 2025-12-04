@@ -1,5 +1,6 @@
 import random
 import dspy
+from fsspec.utils import Any
 from rich.progress import Progress
 from typing import AsyncGenerator
 
@@ -64,7 +65,7 @@ async def _summarise_collection(
 ) -> tuple[str, dict]:
 
     with ElysiaKeyManager(settings):
-        prediction = await collection_summariser_prompt.aforward(
+        prediction = await collection_summariser_prompt.acall(
             data_sample=subset_objects,
             data_fields=list(properties.keys()),
             sample_size=f"""
@@ -74,16 +75,20 @@ async def _summarise_collection(
             lm=lm,
         )
 
+    summary = prediction.collection_summary.overall_summary
+    relationships = prediction.collection_summary.relationships
+    structure = prediction.collection_summary.structure
+    irregularities = prediction.collection_summary.irregularities
+
     # Concatenate summary sentences, adding punctuation if needed
     sentences = [
-        prediction.overall_summary,
-        prediction.relationships,
-        prediction.structure,
-        prediction.irregularities,
+        summary,
+        relationships,
+        structure,
+        irregularities,
     ]
     summary_parts = [
-        f"{s} " if s.endswith((".", "?", "!", "\n")) else f"{s}."
-        for s in sentences
+        f"{s} " if s.endswith((".", "?", "!", "\n")) else f"{s}. " for s in sentences
     ]
     return "".join(summary_parts), prediction.field_descriptions
 
@@ -119,7 +124,7 @@ async def _evaluate_field_statistics(
                     "count": group.total_count,
                 }
                 for group in groups_response.groups
-                if group.total_count > 1
+                if group.total_count is not None and group.total_count > 1
             ]
         else:
             groups = [
@@ -244,7 +249,7 @@ async def _suggest_prompts(
     lm: dspy.LM,
 ) -> list[str]:
     with ElysiaKeyManager(settings):
-        prediction = await prompt_suggestor_prompt.aforward(
+        prediction = await prompt_suggestor_prompt.acall(
             collection_information=collection_information,
             example_objects=example_objects,
             lm=lm,
@@ -262,7 +267,7 @@ async def _evaluate_return_types(
 ) -> list[str]:
 
     with ElysiaKeyManager(settings):
-        prediction = await return_type_prompt.aforward(
+        prediction = await return_type_prompt.acall(
             collection_summary=collection_summary,
             data_fields=data_fields,
             example_objects=example_objects,
@@ -294,7 +299,7 @@ async def _define_mappings(
 ) -> dict:
 
     with ElysiaKeyManager(settings):
-        prediction = await data_mapping_prompt.aforward(
+        prediction = await data_mapping_prompt.acall(
             mapping_type=mapping_type,
             input_data_fields=input_fields,
             output_data_fields=output_fields,
@@ -318,7 +323,9 @@ async def _evaluate_index_properties(collection: CollectionAsync) -> dict:
     return index_properties
 
 
-async def _find_vectorisers(collection: CollectionAsync) -> dict[str, dict]:
+async def _find_vectorisers(
+    collection: CollectionAsync,
+) -> tuple[list[dict] | None, dict | None]:
     schema_info = await collection.config.get()
     if not schema_info.vector_config:
         named_vectors = None
@@ -492,7 +499,7 @@ async def preprocess_async(
             full_response = subset_objects
         else:
             weaviate_resp = await collection.query.fetch_objects(limit=len_collection)
-            full_response = [obj.properties for obj in weaviate_resp.objects]
+            full_response: list[dict] = [obj.properties for obj in weaviate_resp.objects]  # type: ignore
 
         # Initialise the output
         named_vectors, vectoriser = await _find_vectorisers(collection)
@@ -511,7 +518,11 @@ async def preprocess_async(
         for property in properties:
             out["fields"].append(
                 await _evaluate_field_statistics(
-                    collection, properties, property, len_collection, full_response
+                    collection=collection,
+                    properties=properties,
+                    property=property,
+                    len_collection=len_collection,
+                    sample_objects=full_response,
                 )
             )
             if property in field_descriptions:

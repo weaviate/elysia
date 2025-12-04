@@ -148,7 +148,7 @@ my_module = ElysiaPrompt(
     tree_data=tree_data, # tree_data input from the tool
     message_update = True,
     environment_level = "full",
-    collection_schemas False,
+    collection_schemas = "full",
     tasks_completed = False,
     collection_names = [],
 )
@@ -287,7 +287,8 @@ class TextResponse(Tool):
         text_response = ElysiaPrompt(
             TextResponsePrompt,
             tree_data=tree_data,
-            environment_level = "dynamic",
+            environment_level="dynamic",
+            collection_schemas="none",
             tasks_completed=True,
             message_update=False,
         )

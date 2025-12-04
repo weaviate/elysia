@@ -165,7 +165,7 @@ class Aggregate(Tool):
             aggregation_prompt,
             tree_data=tree_data,
             environment_level="dynamic",
-            collection_schemas=True,
+            collection_schemas="full",
             tasks_completed=True,
             message_update=True,
             collection_names=inputs["collection_names"],

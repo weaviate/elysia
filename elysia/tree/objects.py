@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, overload, Literal
 from logging import Logger
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -12,6 +12,7 @@ from elysia.util.client import ClientManager
 from elysia.util.parsing import format_dict_to_serialisable
 from copy import deepcopy
 from weaviate.classes.query import Filter
+from toon import encode
 
 
 class EnvironmentItem(BaseModel):
@@ -76,6 +77,8 @@ class Environment:
     ):
         self.environment = environment if environment is not None else {}
         self.hidden_environment = hidden_environment
+        self._toon = None
+        self._updated = False
 
     @staticmethod
     def _validate_metadata_params(
@@ -102,12 +105,37 @@ class Environment:
                 "Must provide either metadata or metadata_key/metadata_value"
             )
 
+    @property
+    def toon(self):
+        if self._toon is None or self._updated:
+            self._toon = encode(self._unhidden_to_json())
+        return self._toon
+
+    @overload
     def _view(
         self,
         tool_names: list[str] | None,
         metadata_keys: list[str] | list[None] | None,
         metadata_values: list[Any] | None,
-    ):
+        toon_encode: Literal[False],
+    ) -> dict: ...
+
+    @overload
+    def _view(
+        self,
+        tool_names: list[str] | None,
+        metadata_keys: list[str] | list[None] | None,
+        metadata_values: list[Any] | None,
+        toon_encode: Literal[True],
+    ) -> str: ...
+
+    def _view(
+        self,
+        tool_names: list[str] | None,
+        metadata_keys: list[str] | list[None] | None,
+        metadata_values: list[Any] | None,
+        toon_encode=True,
+    ) -> str | dict:
         if tool_names is None:
             return self.to_json()["environment"]
 
@@ -140,7 +168,11 @@ class Environment:
                     for item in self.get(tool_name) or []
                 ]
 
-        return result if result else self.to_json()["environment"]
+        return (
+            (encode(result) if toon_encode else result)
+            if result
+            else (self.toon if toon_encode else self._unhidden_to_json())
+        )
 
     def _find_item_by_metadata(
         self,
@@ -167,6 +199,7 @@ class Environment:
         self.environment = {}
         if include_hidden:
             self.hidden_environment = {}
+        self._updated = True
 
     def is_empty(self, tool_name: str | None = None) -> bool:
         """
@@ -239,6 +272,7 @@ class Environment:
                 If `True`, the duplicate object is added with a new `_REF_ID` entry, and the repeated properties are added to the object.
 
         """
+        self._updated = True
         if tool_name not in self.environment:
             self.environment[tool_name] = [
                 EnvironmentItem(metadata=metadata, objects=objects)
@@ -287,6 +321,7 @@ class Environment:
             raise ValueError(
                 f"No item found in the environment for the given metadata: {descriptor}"
             )
+        self._updated = True
         item.objects.extend(objects)
 
     def remove(
@@ -306,6 +341,7 @@ class Environment:
             metadata_key (str | None): The key of the metadata to remove.
             metadata_value (Any | None): The value of the metadata to remove.
         """
+        self._updated = True
         self._validate_metadata_params(
             metadata, metadata_key, metadata_value, require_one=False
         )
@@ -361,6 +397,7 @@ class Environment:
                 f"No item found in the environment for the given metadata: {descriptor}"
             )
         item.objects = objects
+        self._updated = True
 
     def get_objects(
         self,
@@ -620,17 +657,33 @@ class CollectionData:
                 for collection_name in collection_names
             }
 
-    def output_collection_summaries(self, collection_names: list[str] | None = None):
+    def output_collection_summaries(
+        self, collection_names: list[str] | None = None, shorten: bool = False
+    ):
         if collection_names is None:
-            return {
+            summaries = {
                 collection_name: self.metadata[collection_name]["summary"]
                 for collection_name in self.collection_names
             }
         else:
-            return {
+            summaries = {
                 collection_name: self.metadata[collection_name]["summary"]
                 for collection_name in collection_names
             }
+        if shorten:
+            sentence_boundaries = [".", "?", "!"]
+            return {
+                collection_name: " ".join(
+                    [
+                        s
+                        for boundary in sentence_boundaries
+                        for s in summary.split(boundary)
+                    ][:3]
+                )
+                for collection_name, summary in summaries.items()
+            }
+        else:
+            return summaries
 
     def output_mapping_lists(self):
         return {
@@ -1009,6 +1062,13 @@ class TreeData:
             for collection_name in self.collection_names
         }
         return out
+
+    def output_collection_summaries(
+        self, collection_names: list[str] | None = None, shorten: bool = False
+    ):
+        return self.collection_data.output_collection_summaries(
+            collection_names, shorten
+        )
 
     def to_json(self, remove_unserialisable: bool = False):
         out = {

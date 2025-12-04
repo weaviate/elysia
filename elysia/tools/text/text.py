@@ -60,6 +60,7 @@ class CitedSummarizer(Tool):
             reasoning=False,
             impossible=False,
             environment_level="dynamic",
+            collection_schemas="none",
             tasks_completed=True,
             message_update=False,
         )
@@ -117,6 +118,7 @@ class Summarizer(Tool):
             SummarizingPrompt,
             tree_data=tree_data,
             environment_level="dynamic",
+            collection_schemas="none",
             tasks_completed=True,
             message_update=False,
         )
@@ -155,6 +157,7 @@ class TextResponse(Tool):
             TextResponsePrompt,
             tree_data=tree_data,
             environment_level="dynamic",
+            collection_schemas="none",
             tasks_completed=True,
             message_update=False,
         )

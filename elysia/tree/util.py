@@ -74,6 +74,7 @@ class ForcedTextResponse(Tool):
             TextResponsePrompt,
             tree_data=tree_data,
             environment_level="dynamic",
+            collection_schemas="none",
             tasks_completed=True,
             message_update=False,
         )
@@ -242,6 +243,52 @@ class Node:
         available_option_names = [
             action["name"] for action in kwargs["available_actions"]
         ]
+
+        # Custom logic if view environment is called incorrectly
+        if pred.function_name == "view_environment":
+            inputs = pred.function_inputs
+            has_keys = "metadata_keys" in inputs
+            has_values = "metadata_values" in inputs
+
+            # Check if only one is provided
+            if has_keys and not has_values:
+                return (
+                    False,
+                    "If providing metadata_keys to view_environment, must also provide metadata_values.",
+                )
+            if has_values and not has_keys:
+                return (
+                    False,
+                    "If providing metadata_values to view_environment, must also provide metadata_keys.",
+                )
+
+            # Check if both are provided but one is None
+            if has_keys and has_values:
+                keys = inputs["metadata_keys"]
+                values = inputs["metadata_values"]
+
+                if keys is not None and values is None:
+                    return (
+                        False,
+                        "If providing metadata_keys to view_environment, must also provide metadata_values.",
+                    )
+                if keys is None and values is not None:
+                    return (
+                        False,
+                        "If providing metadata_values to view_environment, must also provide metadata_keys.",
+                    )
+
+                # Check if lengths match when both are not None
+                if keys is not None and values is not None and len(keys) != len(values):
+                    return (
+                        False,
+                        (
+                            "If providing metadata_keys and metadata_values to view_environment, "
+                            "the number of keys must match the number of values. "
+                            f"Number of keys: {len(keys)}, "
+                            f"Number of values: {len(values)}"
+                        ),
+                    )
         return (
             pred.function_name in available_option_names,
             f"You picked the action `{pred.function_name}` - that is not in `available_actions`! "
@@ -289,7 +336,7 @@ class Node:
             metadata_values = function_inputs["metadata_values"]
 
             environment = tree_data.environment._view(
-                tool_names, metadata_keys, metadata_values
+                tool_names, metadata_keys, metadata_values, False
             )
 
             # Build preview of first 5 objects for ViewEnvironment object
@@ -311,7 +358,9 @@ class Node:
             environment_decision_executor = ElysiaPrompt(
                 DPWithEnvMetadataResponse,
                 tree_data=tree_data,
-                collection_schemas=tree_data.use_weaviate_collections,
+                collection_schemas=(
+                    "summaries" if tree_data.use_weaviate_collections else "none"
+                ),
                 tasks_completed=True,
                 message_update=True,
                 reasoning=tree_data.settings.BASE_USE_REASONING,
@@ -515,7 +564,9 @@ class Node:
             ElysiaPrompt(
                 signature,
                 tree_data=tree_data,
-                collection_schemas=tree_data.use_weaviate_collections,
+                collection_schemas=(
+                    "summaries" if tree_data.use_weaviate_collections else "none"
+                ),
                 tasks_completed=True,
                 message_update=False,
                 impossible=False,
@@ -704,7 +755,7 @@ async def get_follow_up_suggestions(
         user_prompt=tree_data.user_prompt,
         reference=tree_data.atlas.datetime_reference,
         conversation_history=tree_data.conversation_history,
-        environment=tree_data.environment.environment,
+        environment=tree_data.environment.toon,
         data_information=tree_data.output_collection_metadata(with_mappings=False),
         old_suggestions=current_suggestions,
         context=context,

@@ -301,7 +301,7 @@ class ElysiaPrompt(Module):
         impossible: bool = True,
         message_update: bool = True,
         environment_level: Literal["full", "metadata", "dynamic", "none"] = "dynamic",
-        collection_schemas: bool = False,
+        collection_schemas: Literal["full", "summaries", "none"] = "full",
         tasks_completed: bool = False,
         collection_names: list[str] = [],
         **config,
@@ -327,11 +327,10 @@ class ElysiaPrompt(Module):
                   Additionally, if the decision agent has used a 'view_environment' tool to inspect the most relevant parts of the environment, these viewed objects will be passed down to this LM call instead.
                   The token limit is controlled by the `env_token_limit` parameter of the `Settings` class, configurable via the `.configure(env_token_limit=...)` method of `Settings`.
                 - `"none"` means the environment is never included in the prompt
-            collection_schemas (bool): Whether to include a collection schema input.
-                If True, the module will include the preprocessed collection schemas in the prompt input.
-                This is useful so that the LLM knows the structure of the collections, if querying or similar.
-                Use this sparingly, as it will use a large amount of tokens.
-                You can specify `collection_names` to only include certain collections in this schema.
+            collection_schemas (Literal["full", "summaries", "none"] = "full"): Whether to include descriptions or characterisitcs of the collections in the prompt input.
+                - `"full"` means the module will include all pre-processed information about Weaviate collecttions, including summaries, field descriptions, vectorisers and more.
+                - `"summaries"` means the module will only include an overall summary/description of each collection.
+                - `"none"` means the module will not include any collection information in the prompt input.
             tasks_completed (bool): Whether to include a tasks completed input.
                 If True, the module will include the list of tasks completed input.
                 This is a nicely formatted list of the tasks that have been completed, with the reasoning for each task.
@@ -423,8 +422,8 @@ class ElysiaPrompt(Module):
 
         # == Optional Inputs / Outputs ==
 
-        # -- Collection Schema Input --
-        if collection_schemas:
+        # -- Collection Schema Input(s) --
+        if self.collection_schemas == "full":
             collection_schemas_desc = (
                 "Metadata about available collections and their schemas: "
                 "This is a dictionary with the following fields: "
@@ -449,10 +448,24 @@ class ElysiaPrompt(Module):
             )
             collection_schemas_prefix = "${collection_schemas}"
             collection_schemas_field: dict = dspy.InputField(
-                prefix=collection_schemas_prefix, desc=collection_schemas_desc
+                prefix=collection_schemas_prefix,
+                desc=collection_schemas_desc,
+                format=dict,
             )
             extended_signature = extended_signature.append(
                 name="collection_schemas", field=collection_schemas_field, type_=dict
+            )
+
+        if self.collection_schemas == "summaries":
+            collections_desc = "Descriptions of available collections. Keys are collection names, values are summaries. "
+            collections_prefix = "${collections}"
+            collections_field: dict = dspy.InputField(
+                prefix=collections_prefix,
+                desc=collections_desc,
+                format=list[dict],
+            )
+            extended_signature = extended_signature.append(
+                name="collections", field=collections_field, type_=list[dict]
             )
 
         # -- Tasks Completed Input --
@@ -604,6 +617,7 @@ class ElysiaPrompt(Module):
                     "Empty if no data has been retrieved yet. "
                     "Use to determine if more information is needed. "
                     "Additionally, use this as a reference to determine if you have already completed a task/what items are already available, to avoid repeating actions. "
+                    "Data is in TOON format (2-space indent, arrays show length and fields)."
                 )
                 environment_prefix = "${environment}"
                 environment_field: dict = dspy.InputField(
@@ -627,19 +641,20 @@ class ElysiaPrompt(Module):
         # Add the optional inputs to the kwargs
         if self.environment_level is not "none":
             if self.tree_data.view_env_vars is None:
-                kwargs["environment"] = self.tree_data.environment.environment
+                kwargs["environment"] = self.tree_data.environment.toon
             else:
                 kwargs["environment"] = self.tree_data.environment._view(
                     self.tree_data.view_env_vars.tool_names,
                     self.tree_data.view_env_vars.metadata_keys,
                     self.tree_data.view_env_vars.metadata_values,
+                    toon_encode=True,
                 )
 
             kwargs["environment_metadata"] = (
                 self.tree_data.environment.output_llm_metadata()
             )
 
-        if self.collection_schemas:
+        if self.collection_schemas == "full":
             if self.collection_names != []:
                 kwargs["collection_schemas"] = (
                     self.tree_data.output_collection_metadata(
@@ -649,6 +664,16 @@ class ElysiaPrompt(Module):
             else:
                 kwargs["collection_schemas"] = (
                     self.tree_data.output_collection_metadata(with_mappings=False)
+                )
+
+        elif self.collection_schemas == "summaries":
+            if self.collection_names != []:
+                kwargs["collections"] = self.tree_data.output_collection_summaries(
+                    collection_names=self.collection_names, shorten=True
+                )
+            else:
+                kwargs["collections"] = self.tree_data.output_collection_summaries(
+                    shorten=True
                 )
 
         if self.tasks_completed:

@@ -266,7 +266,7 @@ class Query(Tool):
             query_creator_prompt,
             tree_data=tree_data,
             environment_level="dynamic",
-            collection_schemas=True,
+            collection_schemas="full",
             tasks_completed=True,
             message_update=True,
             collection_names=collection_names,

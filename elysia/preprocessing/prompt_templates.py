@@ -1,5 +1,32 @@
 import dspy
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+class CollectionSummary(BaseModel):
+    overall_summary: str = Field(
+        description=(
+            "An overall summary of the dataset. "
+            "Use markdown formatting (such as headers, bold, italics, lists, etc.) to make the summary more readable. "
+            "This should be _exactly_ 3 sentences. If you do not return exactly 3 sentences, you will be penalised."
+        ).strip()
+    )
+    relationships: str = Field(
+        description="A brief overview of the relationships between the fields. Mention any overlap or relevant points about how the fields are related. Around 2-4 sentences."
+    )
+    structure: str = Field(
+        description="An overview of the structure of the dataset. How is it formatted. Around 1-3 sentences."
+    )
+    irregularities: str = Field(
+        description="Any irregularities in the dataset that you think are important to know. Anything that could cause problems for the user when querying the data. Around 1-2 sentences. If there are no irregularities, you don't need to return anything. Say 'No irregularities found.' or something similar."
+    )
+
+    @classmethod
+    @field_validator("overall_summary")
+    def check_overall_summary(cls, v: str) -> str:
+        sentence_boundaries = [".", "?", "!"]
+        if len([i for i in v if i in sentence_boundaries]) != 3:
+            raise ValueError("Overall summary must be exactly 3 sentences.")
+        return v
 
 
 class CollectionSummariserPrompt(dspy.Signature):
@@ -11,44 +38,26 @@ class CollectionSummariserPrompt(dspy.Signature):
     Use markdown formatting (such as headers, bold, italics, lists, etc.) to make the summary more readable.
     """
 
-    sample_size = dspy.InputField(
+    sample_size: str = dspy.InputField(
         description="""
     The number of objects in the data_sample, out of a total number of objects in the collection.
     """
     )
-    data_sample = dspy.InputField(
+    data_sample: list[dict] = dspy.InputField(
         description="""
     A subset of the data to summarise. This will be a list of JSON objects. Each item is an individual item in the dataset and has the same fields.
     Because this is a subset, do not make definitive statements about _all_ of what the data contains.
     Instead, you can make statements like "this data includes..."
     """
     )
-    data_fields = dspy.InputField(
+    data_fields: list[str] = dspy.InputField(
         description="""
     The fields that exist in the data. This will be a list of field names.
     """
     )
-    overall_summary: str = dspy.OutputField(
-        description="""
-        An overall summary of the dataset. Use markdown formatting (such as headers, bold, italics, lists, etc.) to make the summary more readable.
-        A brief paragraph.
-        """
-    )
-    relationships: str = dspy.OutputField(
-        description="""
-    A brief overview of the relationships between the fields. Mention any overlap or relevant points about how the fields are related. Around 2-4 sentences.
-    """
-    )
-    structure: str = dspy.OutputField(
-        description="""
-    An overview of the structure of the dataset. How is it formatted. Around 1-3 sentences.
-    """
-    )
-    irregularities: str = dspy.OutputField(
-        description="""
-    Any irregularities in the dataset that you think are important to know. Anything that could cause problems for the user when querying the data. Around 1-2 sentences.
-    If there are no irregularities, you don't need to return anything. Say 'No irregularities found.' or something similar.
-    """
+
+    collection_summary: CollectionSummary = dspy.OutputField(
+        description="A summary of the collection."
     )
     field_descriptions: dict[str, str] = dspy.OutputField(
         description="""

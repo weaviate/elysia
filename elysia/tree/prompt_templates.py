@@ -328,10 +328,9 @@ DPWithEnvMetadataResponse = DPWithEnvMetadataResponse.prepend(
             "ACTUAL CONTENT from the environment retrieved via view_environment tool. "
             "This contains the real data objects (messages, documents, etc.) with their full content. "
             "Use this to understand WHAT is inside the retrieved data. "
-            "If this is empty, you have NOT yet viewed the environment content. "
-            "If this is populated, you have access to actual object content and can now make informed decisions. "
-            "Use this data to: determine if you can answer the user's question, provide accurate responses, "
-            "or decide if more data retrieval is needed."
+            "Use this data to determine if you can answer the user's question, provide accurate responses, "
+            "or decide if more data is needed to answer the prompt. "
+            "Data is in TOON format (2-space indent, arrays show length and fields). "
         )
     ),
     type_=dict,
@@ -386,7 +385,11 @@ class FollowUpSuggestionsPrompt(dspy.Signature):
         format=str,
     )
     environment: str = dspy.InputField(
-        description="Information gathered from completed tasks. These are already shown to the user. Use for context, and to cross reference with data_information.",
+        description=(
+            "Information gathered from completed tasks. These are already shown to the user. "
+            "Use for context, and to cross reference with data_information. "
+            "Data is in TOON format (2-space indent, arrays show length and fields). "
+        ),
         format=str,
     )
     data_information: dict[str, str | dict] = dspy.InputField(
