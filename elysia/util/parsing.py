@@ -4,6 +4,8 @@ import uuid
 from typing import Any
 from types import GenericAlias
 
+import re
+
 from weaviate.collections.classes.aggregate import (
     AggregateDate,
     AggregateGroupByReturn,
@@ -131,7 +133,10 @@ def format_aggregation_property(prop):
             ("mode", "mode"),
             ("sum_", "sum"),
         ]
-        return {"type": "number", "values": _extract_aggregate_values(prop, aggregations)}
+        return {
+            "type": "number",
+            "values": _extract_aggregate_values(prop, aggregations),
+        }
 
     if isinstance(prop, AggregateDate):
         aggregations = [
@@ -185,3 +190,9 @@ def format_aggregation_response(response):
                 out[field][key] = prop
 
     return out
+
+
+def estimate_tokens(text: str) -> int:
+    short = len(re.findall(r"\b\w{1,4}\b|[^\w\s]", text))
+    long_chars = sum(len(m) for m in re.findall(r"\b\w{5,}\b", text))
+    return short + (long_chars + 3) // 4

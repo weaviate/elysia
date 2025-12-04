@@ -33,7 +33,7 @@ from elysia.util.objects import (
 )
 
 from elysia.util.modules import ElysiaPrompt, AssertedModule
-from elysia.util.parsing import format_datetime
+from elysia.util.parsing import format_datetime, estimate_tokens
 from elysia.util.client import ClientManager
 from elysia.tree.prompt_templates import (
     FollowUpSuggestionsPrompt,
@@ -501,9 +501,8 @@ class Node:
                 return
 
         # Determine signature based on environment size
-        # TODO: replace this with actual token counting
         env_token_limit_reached = (
-            len(json.dumps(tree_data.environment._unhidden_to_json()))
+            estimate_tokens(json.dumps(tree_data.environment._unhidden_to_json()))
             > tree_data.env_token_limit
         )
         if env_token_limit_reached:

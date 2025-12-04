@@ -11,6 +11,7 @@ from dspy.streaming import StreamListener, StreamResponse
 from elysia.tree.objects import TreeData, Atlas, Environment
 from elysia.util.feedback import retrieve_feedback
 from elysia.util.client import ClientManager
+from elysia.util.parsing import estimate_tokens
 
 elysia_meta_prompt = """
 You are part of an ensemble of agents that are working together to solve a task.
@@ -544,10 +545,11 @@ class ElysiaPrompt(Module):
 
             if self.tree_data.view_env_vars is None:
                 environment_json = environment._unhidden_to_json()
-                # TODO: replace this with actual token counting
                 use_metadata = (
-                    len(json.dumps(environment_json)) > self.tree_data.env_token_limit
+                    estimate_tokens(json.dumps(environment_json))
+                    > self.tree_data.env_token_limit
                 )
+
             else:
                 use_metadata = False
 
