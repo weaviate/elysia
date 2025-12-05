@@ -155,7 +155,7 @@ class UserManager:
             frontend_config.config["save_configs_to_weaviate"]
             and frontend_config.save_location_client_manager.is_client
         ):
-            await local_user["tree_graph_manager"].retrieve(
+            await local_user["tree_graph_manager"].sync(
                 user_id, frontend_config.save_location_client_manager
             )
 
@@ -190,7 +190,7 @@ class UserManager:
                 fe_config.config["save_configs_to_weaviate"]
                 and fe_config.save_location_client_manager.is_client
             ):
-                await self.users[user_id]["tree_graph_manager"].retrieve(
+                await self.users[user_id]["tree_graph_manager"].sync(
                     user_id, fe_config.save_location_client_manager
                 )
 

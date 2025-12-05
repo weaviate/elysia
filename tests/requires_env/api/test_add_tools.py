@@ -40,8 +40,8 @@ Tests when we ARE saving configs to Weaviate.
 
 test_presets = [
     TreeGraph(
-        id="default",
-        name="Default",
+        id="test_preset_1",
+        name="Test Preset 1",
         default=True,
         nodes={
             "x12343": TreeNode(
@@ -89,8 +89,8 @@ test_presets = [
         ],
     ),
     TreeGraph(
-        id="edward_preset_1",
-        name="Edward Preset 1",
+        id="test_preset_2",
+        name="Test Preset 2",
         default=False,
         nodes={
             "base": TreeNode(
@@ -150,8 +150,8 @@ test_presets = [
         ],
     ),
     TreeGraph(
-        id="edward_preset_2",
-        name="Edward Preset 2",
+        id="test_preset_3",
+        name="Test Preset 3",
         default=False,
         nodes={
             "this_is_the_root_branch": TreeNode(
@@ -328,3 +328,62 @@ async def test_cycle(test_preset: TreeGraph):
     assert "presets" in response
     assert response["presets"] is not None
     assert len(response["presets"]) == 0
+
+
+@pytest.mark.asyncio
+async def test_set_default():
+    user_id = f"test_add_tool_preset_{uuid4()}"
+    user_manager = get_user_manager()
+    await initialise_user(user_id, user_manager)
+    user_local = await user_manager.get_user_local(user_id)
+    tree_graph_manager = user_local["tree_graph_manager"]
+
+    response = await save_config_user(
+        user_id=user_id,
+        config_id=f"test_add_tool_preset_{uuid4()}",
+        data=SaveConfigUserData(
+            name="test_add_tool_preset",
+            default=True,
+            config={},
+            frontend_config={"save_configs_to_weaviate": True},
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    # Check there is only one default
+    num_defaults = sum(1 for preset in tree_graph_manager.presets if preset.default)
+    assert num_defaults == 1
+
+    # Add a new tool preset
+    response = await add_tool_preset(
+        user_id=user_id,
+        data=TreeGraph(
+            id=f"test_preset_default_{uuid4()}",
+            name=f"Test Preset Default",
+            default=True,
+            nodes={
+                "x1234355": TreeNode(
+                    id="x1234355",
+                    name="base2",
+                    is_branch=True,
+                    description="",
+                ),
+                "y1234355": TreeNode(
+                    id="y1234355",
+                    name="query2",
+                    is_branch=False,
+                    description="",
+                ),
+            },
+            edges=[("x1234355", "y1234355")],
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    # Check there is still only one default
+    num_defaults = sum(1 for preset in tree_graph_manager.presets if preset.default)
+    assert num_defaults == 1

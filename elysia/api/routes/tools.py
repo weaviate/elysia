@@ -48,6 +48,7 @@ async def add_tool_preset(
         fe_config.config["save_configs_to_weaviate"]
         and fe_config.save_location_client_manager.is_client
     ):
+        logger.debug(f"Adding tool preset {data.id} to Weaviate")
         client_manager: ClientManager = fe_config.save_location_client_manager
         await add_preset_weaviate(
             user_id,
@@ -58,8 +59,9 @@ async def add_tool_preset(
             data.default,
             client_manager,
         )
-        await user["tree_graph_manager"].retrieve(user_id, client_manager)
+        await user["tree_graph_manager"].sync(user_id, client_manager)
     else:
+        logger.debug(f"Adding tool preset {data.id} to local tree graph manager")
         user["tree_graph_manager"].add(
             id=data.id,
             name=data.name,
@@ -67,7 +69,10 @@ async def add_tool_preset(
             edges=data.edges,
             default=data.default,
         )
-    return JSONResponse(content={"error": ""}, status_code=200)
+    return JSONResponse(
+        content={"presets": user["tree_graph_manager"].to_json(), "error": ""},
+        status_code=200,
+    )
 
 
 @router.get("/{user_id}")
@@ -95,7 +100,15 @@ async def delete_tool_preset(
         fe_config.config["save_configs_to_weaviate"]
         and fe_config.save_location_client_manager.is_client
     ):
+        logger.debug(f"Deleting tool preset {preset_id} from Weaviate")
         client_manager: ClientManager = fe_config.save_location_client_manager
         await delete_preset_weaviate(user_id, preset_id, client_manager)
-    user["tree_graph_manager"].remove(preset_id)
-    return JSONResponse(content={"error": ""}, status_code=200)
+        await user["tree_graph_manager"].sync(user_id, client_manager)
+    else:
+        logger.debug(f"Deleting tool preset {preset_id} from local tree graph manager")
+        user["tree_graph_manager"].remove(preset_id)
+
+    return JSONResponse(
+        content={"presets": user["tree_graph_manager"].to_json(), "error": ""},
+        status_code=200,
+    )

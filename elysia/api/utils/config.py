@@ -243,6 +243,7 @@ default_presets = [
 class TreeGraphManager:
     def __init__(self):
         self.presets: list[TreeGraph] = default_presets
+        self.removed_preset_ids: set[str] = set()  # keep track for syncing
 
     def add(
         self,
@@ -269,6 +270,13 @@ class TreeGraphManager:
         )
 
     def remove(self, id: str) -> None:
+        removed_preset = next(
+            (preset for preset in self.presets if preset.id == id),
+            None,
+        )
+        if removed_preset and removed_preset.default:
+            self.presets[0].default = True
+        self.removed_preset_ids.add(id)
         self.presets = [preset for preset in self.presets if preset.id != id]
 
     def get(self, id: str) -> TreeGraph | None:
@@ -283,13 +291,16 @@ class TreeGraphManager:
             None,
         )
 
-    async def retrieve(self, user_id: str, client_manager: ClientManager) -> None:
-        retrieved_presets = await get_presets_weaviate(user_id, client_manager)
-
-        retrieved_ids = {preset.id for preset in retrieved_presets}
+    async def sync(self, user_id: str, client_manager: ClientManager) -> None:
         self.presets = [
-            preset for preset in self.presets if preset.id not in retrieved_ids
+            preset
+            for preset in default_presets
+            if preset.id not in self.removed_preset_ids
         ]
+        retrieved_presets = await get_presets_weaviate(user_id, client_manager)
+        if any(preset.default for preset in retrieved_presets):
+            for preset in self.presets:
+                preset.default = False
         self.presets.extend(retrieved_presets)
 
     def to_json(self) -> list[dict]:

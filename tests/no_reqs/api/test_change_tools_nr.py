@@ -449,3 +449,63 @@ async def test_in_tree(test_preset: TreeGraph):
             assert preset_description == tree_description
         elif not test_preset.nodes[node_id].is_branch:
             assert tree_description == available_tools[node_id]["description"]
+
+
+@pytest.mark.asyncio
+async def test_set_default():
+    user_id = f"test_add_tool_preset_{uuid4()}"
+    user_manager = get_user_manager()
+    await initialise_user(user_id, user_manager)
+    user_local = await user_manager.get_user_local(user_id)
+    tree_graph_manager = user_local["tree_graph_manager"]
+
+    # save config so that save_configs_to_weaviate is False
+    response = await save_config_user(
+        user_id=user_id,
+        config_id=f"test_add_tool_preset_{uuid4()}",
+        data=SaveConfigUserData(
+            name="test_add_tool_preset",
+            default=True,
+            config={},
+            frontend_config={"save_configs_to_weaviate": False},
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    # Check there is only one default
+    num_defaults = sum(1 for preset in tree_graph_manager.presets if preset.default)
+    assert num_defaults == 1
+
+    # Add a new tool preset
+    response = await add_tool_preset(
+        user_id=user_id,
+        data=TreeGraph(
+            id=f"test_preset_default_{uuid4()}",
+            name=f"Test Preset Default",
+            default=True,
+            nodes={
+                "x1234355": TreeNode(
+                    id="x1234355",
+                    name="base2",
+                    is_branch=True,
+                    description="",
+                ),
+                "y1234355": TreeNode(
+                    id="y1234355",
+                    name="query2",
+                    is_branch=False,
+                    description="",
+                ),
+            },
+            edges=[("x1234355", "y1234355")],
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    # Check there is still only one default
+    num_defaults = sum(1 for preset in tree_graph_manager.presets if preset.default)
+    assert num_defaults == 1
