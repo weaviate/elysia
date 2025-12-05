@@ -1,13 +1,14 @@
-from elysia.util.client import ClientManager
-from elysia.api.api_types import TreeNode, TreeGraph
-import elysia.api.custom_tools as custom_tools
-from elysia import Tool
+from typing import Dict, Type
 
 from weaviate.classes.config import Configure, Property, DataType
 from weaviate.util import generate_uuid5
 from weaviate.classes.query import Filter
 
-from typing import Dict, Type
+import elysia.api.custom_tools as custom_tools
+from elysia.util.client import ClientManager
+from elysia.api.api_types import TreeGraph
+from elysia.util.objects import TreeNode
+from elysia import Tool
 
 
 def find_tool_classes() -> Dict[str, Type[Tool]]:

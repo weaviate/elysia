@@ -26,7 +26,7 @@ from elysia.tools.retrieval.util import (
 )
 from elysia.tree.objects import TreeData
 from elysia.util.client import ClientManager
-from elysia.util.objects import TrainingUpdate, TreeUpdate, FewShotExamples
+from elysia.util.objects import TrainingUpdate, EdgeUpdate, FewShotExamples
 from elysia.util.return_types import all_return_types
 
 
@@ -197,7 +197,7 @@ class Query(Tool):
         complex_lm: dspy.LM,
         client_manager: ClientManager,
         **kwargs,
-    ) -> AsyncGenerator[Return | TreeUpdate | Error | TrainingUpdate, None]:
+    ) -> AsyncGenerator[Return | EdgeUpdate | Error | TrainingUpdate, None]:
         """
         Can perform three main functions:
         1. Query the knowledge base with Weaviate using hybrid, semantic, or keyword search, applying filters and more.

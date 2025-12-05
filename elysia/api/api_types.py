@@ -1,6 +1,8 @@
 from typing import Any, List, Optional
 from pydantic import BaseModel
 
+from elysia.util.objects import TreeNode
+
 
 class QueryData(BaseModel):
     user_id: str
@@ -127,15 +129,6 @@ class UpdateFrontendConfigData(BaseModel):
 
 class AvailableModelsData(BaseModel):
     user_id: str
-
-
-class TreeNode(BaseModel):
-    id: str
-    name: str
-    is_branch: bool
-    description: str
-    instruction: Optional[str] = ""  # branch only
-    is_root: Optional[bool] = False  # branch only
 
 
 class TreeGraph(BaseModel):

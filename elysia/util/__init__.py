@@ -1,6 +1,6 @@
 from .client import ClientManager
 from .objects import (
-    TreeUpdate,
+    EdgeUpdate,
     TrainingUpdate,
     FewShotExamples,
 )

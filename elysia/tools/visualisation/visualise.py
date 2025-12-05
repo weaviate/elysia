@@ -1,12 +1,7 @@
 from logging import Logger
 from elysia.objects import Tool, Error
 from elysia.util.modules import ElysiaPrompt
-from elysia.tools.visualisation.objects import (
-    ChartResult,
-    BarChart,
-    HistogramChart,
-    ScatterOrLineChart,
-)
+from elysia.tools.visualisation.objects import ChartResult
 from elysia.tools.visualisation.util import convert_chart_types_to_matplotlib
 from elysia.tools.visualisation.prompt_templates import (
     CreateBarChart,
@@ -14,7 +9,7 @@ from elysia.tools.visualisation.prompt_templates import (
     CreateScatterOrLineChart,
 )
 from elysia.objects import Response
-from elysia.util.objects import TrainingUpdate, TreeUpdate
+from elysia.util.objects import TrainingUpdate
 
 
 class Visualise(Tool):

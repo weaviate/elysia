@@ -56,7 +56,13 @@ from elysia.config import (
     load_base_lm,
     load_complex_lm,
 )
-from elysia.util.objects import Tracker, TrainingUpdate, TreeUpdate, ViewEnvironment
+from elysia.util.objects import (
+    Tracker,
+    TrainingUpdate,
+    EdgeUpdate,
+    ViewEnvironment,
+    GraphUpdate,
+)
 from elysia.util.collection import retrieve_all_collection_names
 from elysia.util.feedback import create_feedback_collection
 from elysia.util.parsing import format_datetime
@@ -1168,7 +1174,7 @@ class Tree:
 
     async def _evaluate_result(
         self,
-        result: Result | TreeUpdate | Error | TrainingUpdate | Text | Update,
+        result: Result | EdgeUpdate | Error | TrainingUpdate | Text | Update,
         decision: Decision,
     ) -> tuple[dict | None, bool]:
         error = False
@@ -1378,6 +1384,13 @@ class Tree:
             query_id = await self._initialize_run(
                 user_prompt, query_id, collection_names, client_manager
             )
+            yield await self.returner(
+                GraphUpdate(
+                    nodes=[node.to_tree_node() for node in self.nodes.values()],
+                    edges=self.edges,
+                ),
+                query_id,
+            )
 
         if self.root is None:
             raise ValueError("No root node found!")
@@ -1434,6 +1447,21 @@ class Tree:
                 current_decision_node.name, self.current_decision
             )
 
+            yield await self.returner(
+                EdgeUpdate(
+                    from_node=current_decision_node.id,
+                    to_node=next_node.id,
+                    reasoning=(
+                        self.current_decision.reasoning
+                        if self.settings.BASE_USE_REASONING
+                        else ""
+                    ),
+                    reset_tree=not completed and len(next_node.options) == 0,
+                    tree_index=self.tree_data.num_trees_completed,
+                ),
+                self.prompt_to_query_id[user_prompt],
+            )
+
             # If action is a tool (not branch) then yield out results/record outputs
             if not next_node.branch:
                 successful_action = True
@@ -1461,25 +1489,10 @@ class Tree:
                 action=not next_node.branch,
                 inputs=self.current_decision.function_inputs,
             )
-            yield (
-                await self._evaluate_result(
-                    TreeUpdate(
-                        from_node=current_decision_node.id,
-                        to_node=self.current_decision.function_name,
-                        reasoning=(
-                            self.current_decision.reasoning
-                            if self.settings.BASE_USE_REASONING
-                            else ""
-                        ),
-                        reset_tree=not completed and len(next_node.options) > 0,
-                    ),
-                    self.current_decision,
-                )
-            )[0]
-
             # Check termination conditions
             if completed or not next_node.options:
                 break
+
             current_decision_node = next_node
 
         self.tree_data.num_trees_completed += 1

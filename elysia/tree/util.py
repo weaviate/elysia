@@ -27,9 +27,10 @@ from elysia.objects import (
 from elysia.tree.objects import TreeData
 from elysia.util.objects import (
     TrainingUpdate,
-    TreeUpdate,
+    EdgeUpdate,
     FewShotExamples,
     ViewEnvironment,
+    TreeNode,
 )
 
 from elysia.util.modules import ElysiaPrompt, AssertedModule
@@ -160,6 +161,15 @@ class Node:
             "instruction": self.instruction,
             "description": self.description,
         }
+
+    def to_tree_node(self) -> TreeNode:
+        return TreeNode(
+            id=self.id,
+            name=self.name,
+            is_branch=self.branch,
+            description=self.description,
+            instruction=self.instruction,
+        )
 
     def _get_view_environment(self) -> dict:
         return {
@@ -513,7 +523,7 @@ class Node:
         | Text
         | Error
         | TrainingUpdate
-        | TreeUpdate
+        | EdgeUpdate
         | StreamedReasoning
         | ViewEnvironment,
         None,
@@ -691,7 +701,7 @@ class TreeReturner:
 
     async def __call__(
         self,
-        result: Result | TreeUpdate | Update | Text | Error | StreamedReasoning,
+        result: Result | EdgeUpdate | Update | Text | Error | StreamedReasoning,
         query_id: str,
     ) -> dict[str, str | dict] | None:
 
@@ -706,16 +716,6 @@ class TreeReturner:
             payload = await result.to_frontend(
                 self.user_id, self.conversation_id, query_id
             )
-            return payload
-
-        elif isinstance(result, TreeUpdate):
-            payload = await result.to_frontend(
-                self.user_id,
-                self.conversation_id,
-                query_id,
-                self.tree_index,
-            )
-            self.store.append(payload)
             return payload
 
 

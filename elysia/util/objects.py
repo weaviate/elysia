@@ -1,12 +1,22 @@
 import time
-import uuid
 from copy import deepcopy
+from logging import Logger
+from typing import Any, Optional
+
 import dspy
 from pydantic import BaseModel
-from typing import Any
-from elysia.util.parsing import format_dict_to_serialisable
-from logging import Logger
+
 from elysia.objects import Update
+from elysia.util.parsing import format_dict_to_serialisable
+
+
+class TreeNode(BaseModel):
+    id: str
+    name: str
+    is_branch: bool
+    description: str
+    instruction: Optional[str] = ""  # branch only
+    is_root: Optional[bool] = False  # branch only
 
 
 class Tracker:
@@ -223,7 +233,27 @@ class ViewEnvironment(Update):
         )
 
 
-class TreeUpdate:
+class GraphUpdate(Update):
+    """
+    Frontend update to represent what nodes have been updated.
+    """
+
+    def __init__(
+        self,
+        nodes: list[TreeNode],
+        edges: list[tuple[str, str]],
+    ):
+        Update.__init__(
+            self,
+            "graph",
+            {
+                "nodes": {node.id: node.model_dump() for node in nodes},
+                "edges": edges,
+            },
+        )
+
+
+class EdgeUpdate(Update):
     """
     Frontend update to represent what nodes have been updated.
     """
@@ -234,41 +264,27 @@ class TreeUpdate:
         to_node: str,
         reasoning: str,
         reset_tree: bool = False,
+        tree_index: int = 0,
     ):
         """
         Args:
             from_node (str): The node that is being updated from.
             to_node (str): The node that is being updated to.
             reasoning (str): The reasoning for the update.
-            last_in_branch (bool): Whether this is the last update in the branch (whether the tree is complete after this - hardcoded)
+            reset_tree (bool): Whether this is the last update in the branch (whether the tree is complete after this - hardcoded)
                 e.g. in query tool, sometimes the query is the end of the tree and sometimes summarise objects is
         """
-        self.from_node = from_node
-        self.to_node = to_node
-        self.reasoning = reasoning
-        self.reset_tree = reset_tree
-
-    async def to_frontend(
-        self,
-        user_id: str,
-        conversation_id: str,
-        query_id: str,
-        tree_index: int,
-    ):
-        return {
-            "type": "tree_update",
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "conversation_id": conversation_id,
-            "query_id": query_id,
-            "payload": {
-                "node": self.from_node,
+        Update.__init__(
+            self,
+            "edge",
+            {
+                "from": from_node,
+                "to": to_node,
+                "reasoning": reasoning,
+                "reset_tree": reset_tree,
                 "tree_index": tree_index,
-                "decision": self.to_node,
-                "reasoning": self.reasoning,
-                "reset": self.reset_tree,
             },
-        }
+        )
 
 
 class TrainingUpdate:
