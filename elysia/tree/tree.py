@@ -162,6 +162,10 @@ class Tree:
             logger=self.settings.logger,
         )
 
+        # console and status for rich output (set during run_with_live)
+        self._console: Console | None = None
+        self._status = None
+
         # Set the initialisations
         self.tools: dict[str, Tool] = {}
         self.set_branch_initialisation(branch_initialisation)
@@ -1027,8 +1031,18 @@ class Tree:
         self.tree_data.view_env_vars = result
 
     def _print_panel(self, content: str, title: str, style: str) -> None:
+        """Print a panel, pausing the status spinner if active to avoid overlap."""
         if self.settings.LOGGING_LEVEL_INT <= 20:
-            print(Panel.fit(content, title=title, border_style=style, padding=(1, 1)))
+            panel = Panel.fit(content, title=title, border_style=style, padding=(1, 1))
+            if self._status is not None:
+                self._status.stop()
+                if self._console is not None:
+                    self._console.print(panel)
+                else:
+                    print(panel)
+                self._status.start()
+            else:
+                print(panel)
 
     def _print_decision_panel(self, node_name: str, decision: Decision) -> None:
         self._print_panel(
@@ -1601,26 +1615,31 @@ class Tree:
             return self.retrieved_objects
 
         async def run_with_live():
-            console = Console()
+            self._console = Console()
 
-            with console.status("[bold indigo]Thinking...") as status:
-                async for result in self.async_run(
-                    user_prompt,
-                    collection_names,
-                    client_manager,
-                    training_route,
-                    query_id,
-                    close_clients_after_completion,
-                ):
-                    if (
-                        result is not None
-                        and "type" in result
-                        and result["type"] == "status"
-                        and isinstance(result["payload"], dict)
-                        and "text" in result["payload"]
+            with self._console.status("[bold indigo]Thinking...") as status:
+                self._status = status
+                try:
+                    async for result in self.async_run(
+                        user_prompt,
+                        collection_names,
+                        client_manager,
+                        training_route,
+                        query_id,
+                        close_clients_after_completion,
                     ):
-                        payload: dict = result["payload"]  # type: ignore
-                        status.update(f"[bold indigo]{payload['text']}")
+                        if (
+                            result is not None
+                            and "type" in result
+                            and result["type"] == "status"
+                            and isinstance(result["payload"], dict)
+                            and "text" in result["payload"]
+                        ):
+                            payload: dict = result["payload"]  # type: ignore
+                            status.update(f"[bold indigo]{payload['text']}")
+                finally:
+                    self._status = None
+                    self._console = None
 
             return self.retrieved_objects
 
