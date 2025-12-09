@@ -459,7 +459,9 @@ class Settings:
                 setattr(self, attr_name, kwargs.pop(kwarg_name))
 
         # Handle logging level (supports both naming conventions)
-        log_level = kwargs.pop("logging_level", None) or kwargs.pop("logger_level", None)
+        log_level = kwargs.pop("logging_level", None) or kwargs.pop(
+            "logger_level", None
+        )
         if log_level:
             self.LOGGING_LEVEL = log_level
             self.LOGGING_LEVEL_INT = logging.getLevelNamesMapping()[log_level]
@@ -468,10 +470,14 @@ class Settings:
             kwargs.pop("logging_level_int", None)
             kwargs.pop("logger_level_int", None)
 
-        log_level_int = kwargs.pop("logging_level_int", None) or kwargs.pop("logger_level_int", None)
+        log_level_int = kwargs.pop("logging_level_int", None) or kwargs.pop(
+            "logger_level_int", None
+        )
         if log_level_int:
             self.LOGGING_LEVEL_INT = log_level_int
-            self.LOGGING_LEVEL = {v: k for k, v in logging.getLevelNamesMapping().items()}[log_level_int]
+            self.LOGGING_LEVEL = {
+                v: k for k, v in logging.getLevelNamesMapping().items()
+            }[log_level_int]
             self.logger.setLevel(self.LOGGING_LEVEL)
 
         # More simple attribute mappings
@@ -807,13 +813,29 @@ def load_lm(
 
     full_lm_name = f"{provider}/{lm_name}"
 
-    if lm_name.startswith("o1") or lm_name.startswith("o3"):
-        return LM(
-            model=full_lm_name,
-            api_base=model_api_base,
-            max_tokens=8000,
-            temperature=1.0,
-        )
+    if (
+        lm_name.startswith("o1")
+        or lm_name.startswith("o3")
+        or lm_name.startswith("gpt-5")
+    ):
+        try:
+            return LM(
+                model=full_lm_name,
+                api_base=model_api_base,
+                max_tokens=20000,
+                temperature=1.0,
+            )
+        except ValueError as e:
+            if "max_tokens >= " in str(e):
+                min_max_tokens = int(str(e).split("max_tokens >= ")[1].split(" ")[0])
+                return LM(
+                    model=full_lm_name,
+                    api_base=model_api_base,
+                    max_tokens=min_max_tokens,
+                    temperature=1.0,
+                )
+            else:
+                raise e
 
     return LM(model=full_lm_name, api_base=model_api_base, max_tokens=8000)
 
