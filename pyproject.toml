@@ -19,7 +19,7 @@ keywords=["ai", "agentic", "weaviate", "retrieval", "search", "llm"]
 dependencies = [
     "apscheduler==3.11.0",
     "bcrypt>=4.3.0",
-    "dspy-ai>=3.0.0",
+    "dspy-ai>=3.0.4",
     "fastapi[standard]>=0.115.11",
     "httpx==0.28.1",
     "pympler==1.1",
