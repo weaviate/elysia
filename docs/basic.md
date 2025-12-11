@@ -13,7 +13,7 @@ These Weaviate collections are those which we want to search over using Elysia.
 ## Setup
 
 You need to specify what models you want to use, as well as any API keys. To set up the models, you can use `configure`. For example, if you want to use the GPT-4o family of models:
-
+ 
 ```python
 from elysia import configure
 configure(
