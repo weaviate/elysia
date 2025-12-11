@@ -595,7 +595,21 @@ class ElysiaKeyManager:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    def _check_model_availability(self, model: str, provider: str) -> bool:
+    def _check_model_availability(
+        self, model: str | None, provider: str | None
+    ) -> bool:
+
+        if model is None:
+            raise IncorrectModelError(
+                f"No model specified. "
+                f"Available models based on your API keys: {', '.join(get_available_models(list(self.settings.API_KEYS.keys())))}"
+            )
+        if provider is None:
+            raise IncorrectModelError(
+                f"No provider specified. "
+                f"Available providers based on your API keys: {', '.join(get_available_providers(list(self.settings.API_KEYS.keys())))}"
+            )
+
         if provider not in models_by_provider and not provider.startswith("openrouter"):
             raise IncorrectModelError(
                 f"The provider {provider} is not available. "
@@ -707,12 +721,14 @@ class ElysiaKeyManager:
         if exc_type is AuthenticationError:
             missing_base_api_keys = [
                 api_key
-                for api_key in provider_to_api_keys[self.settings.BASE_PROVIDER]
+                for api_key in provider_to_api_keys.get(self.settings.BASE_PROVIDER, [])
                 if api_key not in self.settings.API_KEYS
             ]
             missing_complex_api_keys = [
                 api_key
-                for api_key in provider_to_api_keys[self.settings.COMPLEX_PROVIDER]
+                for api_key in provider_to_api_keys.get(
+                    self.settings.COMPLEX_PROVIDER, []
+                )
                 if api_key not in self.settings.API_KEYS
             ]
             if len(missing_base_api_keys) > 0:
@@ -732,7 +748,7 @@ class ElysiaKeyManager:
                 f"One of your API keys may be incorrect. "
                 f"Please check update your API keys in the settings. "
                 f"The relevant API keys are: "
-                f"{set(provider_to_api_keys[self.settings.BASE_PROVIDER] + provider_to_api_keys[self.settings.COMPLEX_PROVIDER])}"
+                f"{set(provider_to_api_keys.get(self.settings.BASE_PROVIDER, []) + provider_to_api_keys.get(self.settings.COMPLEX_PROVIDER, []))}"
             )
 
         if exc_type is NotFoundError:
