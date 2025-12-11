@@ -111,14 +111,14 @@ class AssertedModule(dspy.Module):
         return prediction
 
     async def aforward_streaming(
-        self, streamed_field: str, **kwargs
+        self, streamed_fields: list[str], **kwargs
     ) -> AsyncGenerator[dspy.Prediction | StreamResponse, None]:
 
         if not hasattr(self.module, "aforward_streaming"):
             raise ValueError("Module has no attribute aforward_streaming!")
 
         found_pred = False
-        async for chunk in self.module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
+        async for chunk in self.module.aforward_streaming(streamed_fields=streamed_fields, **kwargs):  # type: ignore
             if isinstance(chunk, StreamResponse):
                 yield chunk
             elif isinstance(chunk, dspy.Prediction):
@@ -135,7 +135,7 @@ class AssertedModule(dspy.Module):
             history.messages.append({**kwargs, **prediction})
             for attempt in range(self.num_tries):
                 found_pred = False
-                async for chunk in self.asserted_module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
+                async for chunk in self.asserted_module.aforward_streaming(streamed_fields=streamed_fields, **kwargs):  # type: ignore
                     if isinstance(chunk, StreamResponse):
                         yield chunk
                     elif isinstance(chunk, dspy.Prediction):
@@ -195,7 +195,7 @@ class AssertedModule(dspy.Module):
         return prediction, uuids
 
     async def aforward_streaming_with_feedback_examples(
-        self, streamed_field: str, **kwargs
+        self, streamed_fields: list[str], **kwargs
     ) -> AsyncGenerator[dspy.Prediction | StreamResponse | list[str], None]:
 
         if not hasattr(self.module, "aforward_streaming_with_feedback_examples"):
@@ -207,7 +207,7 @@ class AssertedModule(dspy.Module):
 
         found_pred = False
         async for chunk in self.module.aforward_streaming_with_feedback_examples(
-            streamed_field=streamed_field, **kwargs
+            streamed_fields=streamed_fields, **kwargs
         ):  # type: ignore
             if isinstance(chunk, StreamResponse):
                 yield chunk
@@ -227,7 +227,7 @@ class AssertedModule(dspy.Module):
             history.messages.append({**kwargs, **prediction})
             for attempt in range(self.num_tries):
                 found_pred = False
-                async for chunk in self.asserted_module.aforward_streaming(streamed_field=streamed_field, **kwargs):  # type: ignore
+                async for chunk in self.asserted_module.aforward_streaming(streamed_fields=streamed_fields, **kwargs):  # type: ignore
                     if isinstance(chunk, StreamResponse):
                         yield chunk
                     elif isinstance(chunk, dspy.Prediction):
@@ -285,8 +285,8 @@ class ElysiaPrompt(Module):
         signature=...,
         tree_data=...,
         message_update=True,
-        environment=True,
-        collection_schemas=True,
+        environment_level="full",
+        collection_schemas="full",
         tasks_completed=True,
     )
     my_module.aforward(input1=..., input2=..., lm=...)
@@ -304,7 +304,7 @@ class ElysiaPrompt(Module):
         collection_schemas: Literal["full", "summaries", "none"] = "full",
         tasks_completed: bool = False,
         collection_names: list[str] = [],
-        **config,
+        config: dict = {},
     ):
         """
         Args:
@@ -342,7 +342,7 @@ class ElysiaPrompt(Module):
                 If provided, this will modify the collection schema input to only include the collections in this list.
                 This is useful if you only want to include certain collections in the prompt.
                 And to reduce token usage.
-            **config (Any): The DSPy configuration for the module.
+            config (dict): The DSPy configuration for the module.
         """
 
         super().__init__()
@@ -639,7 +639,7 @@ class ElysiaPrompt(Module):
         kwargs["previous_errors"] = self.tree_data.get_errors()
 
         # Add the optional inputs to the kwargs
-        if self.environment_level is not "none":
+        if self.environment_level != "none":
             if self.tree_data.view_env_vars is None:
                 kwargs["environment"] = self.tree_data.environment.toon
             else:
@@ -718,13 +718,13 @@ class ElysiaPrompt(Module):
         return await self.predict.acall(**kwargs)
 
     async def aforward_streaming(
-        self, streamed_field: str, add_tree_data_inputs: bool = True, **kwargs
+        self, streamed_fields: list[str], add_tree_data_inputs: bool = True, **kwargs
     ) -> AsyncGenerator[StreamResponse | dspy.Prediction, None]:
         """
         Performs an asynchronous forward pass to the signature with streaming enabled.
 
         Args:
-            streamed_field (str): The name of the field to stream.
+            streamed_fields (list[str]): The fields in the dspy Module that will be streamed.
                 If given as e.g. `"reasoning"`, then this method will yield `StreamResponse`s whose `chunk` attributes are text pieces of the reasoning field.
                 The field given must be a string output type, otherwise this will error.
             add_tree_data_inputs (bool): Optional. Whether to add the tree data inputs to the kwargs.
@@ -740,13 +740,19 @@ class ElysiaPrompt(Module):
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         stream_predict = dspy.streamify(
             self.predict,
-            stream_listeners=[StreamListener(signature_field_name=streamed_field)],
+            stream_listeners=[
+                StreamListener(signature_field_name=streamed_field)
+                for streamed_field in streamed_fields
+            ],
             is_async_program=True,
             async_streaming=True,
         )
-        output_stream = stream_predict(**kwargs)
+        output_stream = stream_predict(**kwargs)  # type: ignore
         async for chunk in output_stream:
-            yield chunk
+            if isinstance(chunk, StreamResponse):
+                yield chunk
+            elif isinstance(chunk, dspy.Prediction):
+                yield chunk
 
     async def aforward_with_feedback_examples(
         self,
@@ -826,7 +832,7 @@ class ElysiaPrompt(Module):
 
     async def aforward_streaming_with_feedback_examples(
         self,
-        streamed_field: str,
+        streamed_fields: list[str],
         feedback_model: str,
         client_manager: ClientManager,
         base_lm: dspy.LM,
@@ -839,7 +845,7 @@ class ElysiaPrompt(Module):
         Same as `aforward_with_feedback_examples` but is an async generator function.
 
         Args:
-            streamed_field (str): The field in the dspy Module that will be streamed (must be a string output field).
+            streamed_fields (list[str]): The fields in the dspy Module that will be streamed.
             feedback_model (str): The label of the feedback data to use as examples.
                 E.g., "decision" is the default name given to examples for the LM in the decision tree.
                 This is used to retrieve the examples from the feedback collection.
@@ -867,7 +873,7 @@ class ElysiaPrompt(Module):
         # No examples - use complex LM directly
         if not examples:
             async for result in self.aforward_streaming(
-                streamed_field,
+                streamed_fields,
                 lm=complex_lm,
                 add_tree_data_inputs=add_tree_data_inputs,
                 **kwargs,
@@ -885,6 +891,6 @@ class ElysiaPrompt(Module):
             else complex_lm
         )
         async for result in optimized_module.aforward_streaming(
-            streamed_field, lm=lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
+            streamed_fields, lm=lm, add_tree_data_inputs=add_tree_data_inputs, **kwargs
         ):
             yield result

@@ -238,6 +238,9 @@ def test_view_environment_incorrect_items():
     )
 
     query_found = False
+    assert (
+        prompt in tree.actions_called
+    ), f"Prompt was not found in the actions called. Actions called: {tree.actions_called.keys()}"
     for action in tree.actions_called[prompt]:
         if action["name"] == "query":
             query_found = True

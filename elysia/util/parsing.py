@@ -1,10 +1,10 @@
 import datetime
 import json
 import uuid
+import re
+
 from typing import Any
 from types import GenericAlias
-
-import re
 
 from weaviate.collections.classes.aggregate import (
     AggregateDate,

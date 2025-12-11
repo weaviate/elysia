@@ -311,7 +311,9 @@ async def test_run_if_true_false_tool():
 @pytest.mark.asyncio
 async def test_run_if_true_true_tool():
 
-    tree = await run_tree("Hello", [], [RunIfTrueTrueTool])
+    tree = await run_tree(
+        user_prompt="Hello", collection_names=[], tools=[RunIfTrueTrueTool]
+    )
 
     assert "rule_tool" in tree.tree_data.environment.environment
 

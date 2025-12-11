@@ -6,6 +6,7 @@ from copy import deepcopy
 from typing import AsyncGenerator, Literal, Any
 
 import dspy
+from pydantic.v1.typing import NoneType
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
@@ -32,7 +33,7 @@ from elysia.tree.util import (
 from elysia.objects import (
     Completed,
     Result,
-    StreamedReasoning,
+    StreamedReturn,
     Update,
     Text,
     Tool,
@@ -50,6 +51,7 @@ from elysia.tree.util import ForcedTextResponse
 from elysia.util.async_util import asyncio_run
 from elysia.tree.objects import CollectionData, TreeData, Atlas, Environment
 from elysia.util.client import ClientManager
+from elysia.util.streaming import StreamedParserFactory
 from elysia.config import (
     check_base_lm_settings,
     check_complex_lm_settings,
@@ -137,6 +139,7 @@ class Tree:
         self._complex_lm = None
         self._config_modified = False
         self.root = None
+        self.streamer = StreamedParserFactory()
 
         # Define the inputs to prompts
         self.tree_data = TreeData(
@@ -1053,115 +1056,6 @@ class Tree:
             "magenta",
         )
 
-    async def _execute_rule_tools(
-        self,
-        node: Node,
-        client_manager: ClientManager,
-    ) -> AsyncGenerator[dict | None, None]:
-        nodes_with_rules_met, rule_tool_inputs = await self._check_rules(
-            node, client_manager
-        )
-
-        for rule in nodes_with_rules_met:
-            rule_decision = Decision(rule, {}, "", False, False)
-            with ElysiaKeyManager(self.settings):
-                async for result in self.tools[rule](
-                    tree_data=self.tree_data,
-                    inputs=rule_tool_inputs[rule],
-                    base_lm=self.base_lm,
-                    complex_lm=self.complex_lm,
-                    client_manager=client_manager,
-                ):
-                    action_result, _ = await self._evaluate_result(
-                        result, rule_decision
-                    )
-                    if action_result is not None:
-                        yield action_result
-
-    async def _run_decision_node(
-        self,
-        current_node: Node,
-        available_options: list[str],
-        unavailable_options: list[tuple[str, str]],
-        user_prompt: str,
-        client_manager: ClientManager,
-    ) -> AsyncGenerator[dict | None, None]:
-        self.tracker.start_tracking("decision_node")
-        self.tree_data.set_current_task("elysia_decision_node")
-        options = self._build_tool_options(available_options, unavailable_options)
-
-        results = []
-        with ElysiaKeyManager(self.settings):
-            async for result in current_node.decide(
-                tree_data=self.tree_data,
-                base_lm=self.base_lm,
-                complex_lm=self.complex_lm,
-                options=options,
-                client_manager=client_manager,
-            ):
-                if isinstance(result, StreamedReasoning):
-                    yield await self.returner(
-                        result, self.prompt_to_query_id[user_prompt]
-                    )
-                elif isinstance(result, ViewEnvironment):
-                    yield await self.returner(
-                        result, self.prompt_to_query_id[user_prompt]
-                    )
-                    self._set_view_environment_vars(result)
-                elif isinstance(result, Decision):
-                    self.current_decision = result
-                else:
-                    results.append(result)
-
-            for result in results:
-                action_result, _ = await self._evaluate_result(
-                    result, self.current_decision
-                )
-                if action_result is not None:
-                    yield action_result
-
-        self.tracker.end_tracking(
-            "decision_node",
-            "Decision Node",
-            self.base_lm if not self.low_memory else None,
-            self.complex_lm if not self.low_memory else None,
-        )
-
-    async def _execute_tool_action(
-        self,
-        tool_name: str,
-        decision: Decision,
-        client_manager: ClientManager,
-        **kwargs,
-    ) -> AsyncGenerator[tuple[dict | None, bool], None]:
-        self.tracker.start_tracking(decision.function_name)
-        self.tree_data.set_current_task(decision.function_name)
-        successful_action = True
-
-        with ElysiaKeyManager(self.settings):
-            async for result in self.tools[tool_name](
-                tree_data=self.tree_data,
-                inputs=decision.function_inputs,
-                base_lm=self.base_lm,
-                complex_lm=self.complex_lm,
-                client_manager=client_manager,
-                **kwargs,
-            ):
-                action_result, error = await self._evaluate_result(result, decision)
-                if action_result is not None:
-                    yield action_result, error
-                successful_action = not error and successful_action
-
-        self.tracker.end_tracking(
-            decision.function_name,
-            decision.function_name,
-            self.base_lm if not self.low_memory else None,
-            self.complex_lm if not self.low_memory else None,
-        )
-
-        # Yield final status
-        yield None, not successful_action
-
     def _log_completion_stats(self) -> None:
         self.settings.logger.debug(
             "[bold green]Model identified overall goal as completed![/bold green]"
@@ -1185,6 +1079,150 @@ class Tree:
                     self.settings.logger.debug(
                         f"Tasks completed (iteration {i+1}):\n" + "".join(avg_times)
                     )
+
+    async def _execute_rule_tools(
+        self,
+        node: Node,
+        client_manager: ClientManager,
+    ) -> AsyncGenerator[dict | None, None]:
+        nodes_with_rules_met, rule_tool_inputs = await self._check_rules(
+            node, client_manager
+        )
+
+        for rule in nodes_with_rules_met:
+            rule_decision = Decision(rule, {}, "", False, False)
+            with ElysiaKeyManager(self.settings):
+                async for result in self.tools[rule](
+                    tree_data=self.tree_data,
+                    inputs=rule_tool_inputs[rule],
+                    base_lm=self.base_lm,
+                    complex_lm=self.complex_lm,
+                    client_manager=client_manager,
+                ):
+                    if isinstance(result, StreamedReturn):
+                        parser, stream_id = self.streamer.get_parser(
+                            result.output_type, result.field_name
+                        )
+                        streamed_payloads = parser.feed(result.chunk)
+                        for i, streamed_payload in enumerate(streamed_payloads):
+                            yield await self.returner.send_streamed(
+                                streamed_payload,
+                                self.prompt_to_query_id[self.user_prompt],
+                                stream_id,
+                            )
+                    else:
+                        action_result, _ = await self._evaluate_result(
+                            result, rule_decision
+                        )
+                        if action_result is not None:
+                            yield action_result
+
+    async def _run_decision_node(
+        self,
+        current_node: Node,
+        available_options: list[str],
+        unavailable_options: list[tuple[str, str]],
+        user_prompt: str,
+        client_manager: ClientManager,
+    ) -> AsyncGenerator[dict | None, None]:
+
+        self.tracker.start_tracking("decision_node")
+        self.tree_data.set_current_task("elysia_decision_node")
+        options = self._build_tool_options(available_options, unavailable_options)
+
+        results = []
+        with ElysiaKeyManager(self.settings):
+            async for result in current_node.decide(
+                tree_data=self.tree_data,
+                base_lm=self.base_lm,
+                complex_lm=self.complex_lm,
+                options=options,
+                client_manager=client_manager,
+            ):
+                if isinstance(result, StreamedReturn):
+                    parser, stream_id = self.streamer.get_parser(
+                        result.output_type, result.field_name
+                    )
+                    streamed_payloads = parser.feed(result.chunk)
+                    for i, streamed_payload in enumerate(streamed_payloads):
+                        yield await self.returner.send_streamed(
+                            streamed_payload,
+                            self.prompt_to_query_id[user_prompt],
+                            stream_id,
+                        )
+                elif isinstance(result, ViewEnvironment):
+                    yield await self.returner.send(
+                        result, self.prompt_to_query_id[user_prompt]
+                    )
+                    self._set_view_environment_vars(result)
+                elif isinstance(result, Decision):
+                    self.current_decision = result
+                else:
+                    results.append(result)
+
+            for result in results:
+                action_result, _ = await self._evaluate_result(
+                    result, self.current_decision
+                )
+                if action_result is not None:
+                    yield action_result
+
+        self.tracker.end_tracking(
+            "decision_node",
+            "Decision Node",
+            self.base_lm if not self.low_memory else None,
+            self.complex_lm if not self.low_memory else None,
+        )
+        self.streamer.reset()
+
+    async def _execute_tool_action(
+        self,
+        tool_name: str,
+        decision: Decision,
+        client_manager: ClientManager,
+        **kwargs,
+    ) -> AsyncGenerator[tuple[dict | None, bool], None]:
+        self.tracker.start_tracking(decision.function_name)
+        self.tree_data.set_current_task(decision.function_name)
+        successful_action = True
+
+        with ElysiaKeyManager(self.settings):
+            async for result in self.tools[tool_name](
+                tree_data=self.tree_data,
+                inputs=decision.function_inputs,
+                base_lm=self.base_lm,
+                complex_lm=self.complex_lm,
+                client_manager=client_manager,
+                **kwargs,
+            ):
+                if isinstance(result, StreamedReturn):
+                    parser, stream_id = self.streamer.get_parser(
+                        result.output_type, result.field_name
+                    )
+                    streamed_payloads = parser.feed(result.chunk)
+                    for i, streamed_payload in enumerate(streamed_payloads):
+                        yield (
+                            await self.returner.send_streamed(
+                                streamed_payload,
+                                self.prompt_to_query_id[self.user_prompt],
+                                stream_id,
+                            ),
+                            False,
+                        )
+                else:
+                    action_result, error = await self._evaluate_result(result, decision)
+                    if action_result is not None:
+                        yield action_result, error
+                    successful_action = not error and successful_action
+
+        self.tracker.end_tracking(
+            decision.function_name,
+            decision.function_name,
+            self.base_lm if not self.low_memory else None,
+            self.complex_lm if not self.low_memory else None,
+        )
+
+        yield None, not successful_action
 
     async def _evaluate_result(
         self,
@@ -1216,7 +1254,7 @@ class Tree:
             self._print_panel(result.text, "Assistant response", "cyan")
 
         return (
-            await self.returner(result, self.prompt_to_query_id[self.user_prompt]),
+            await self.returner.send(result, self.prompt_to_query_id[self.user_prompt]),
             error,
         )
 
@@ -1398,7 +1436,7 @@ class Tree:
             query_id = await self._initialize_run(
                 user_prompt, query_id, collection_names, client_manager
             )
-            yield await self.returner(
+            yield await self.returner.send(
                 GraphUpdate(
                     nodes=[node.to_tree_node() for node in self.nodes.values()],
                     edges=self.edges,
@@ -1461,7 +1499,7 @@ class Tree:
                 current_decision_node.name, self.current_decision
             )
 
-            yield await self.returner(
+            yield await self.returner.send(
                 EdgeUpdate(
                     from_node=current_decision_node.id,
                     to_node=next_node.id,
@@ -1524,7 +1562,7 @@ class Tree:
                 query_id=self.prompt_to_query_id[user_prompt],
                 time_taken_seconds=time.time() - self.start_time,
             )
-            yield await self.returner(
+            yield await self.returner.send(
                 Completed(), query_id=self.prompt_to_query_id[user_prompt]
             )
             self._log_completion_stats()
@@ -1617,7 +1655,9 @@ class Tree:
         async def run_with_live():
             self._console = Console()
 
-            with self._console.status("[bold indigo]Thinking...") as status:
+            with self._console.status(
+                "[bold indigo]Thinking...[/bold indigo]"
+            ) as status:
                 self._status = status
                 try:
                     async for result in self.async_run(
@@ -1635,8 +1675,10 @@ class Tree:
                             and isinstance(result["payload"], dict)
                             and "text" in result["payload"]
                         ):
-                            payload: dict = result["payload"]  # type: ignore
-                            status.update(f"[bold indigo]{payload['text']}")
+                            payload: dict = result["payload"]
+                            status.update(
+                                f"[bold indigo]{payload['text']}[/bold indigo]"
+                            )
                 finally:
                     self._status = None
                     self._console = None

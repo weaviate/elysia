@@ -4,6 +4,8 @@ import ast
 from typing import Any, AsyncGenerator, Callable, TYPE_CHECKING, overload, Optional
 from pydantic import BaseModel, Field
 
+# from elysia.util.streaming import StreamedTextWithCitations, StreamedString
+
 if TYPE_CHECKING:
     from elysia.tree.tree import Tree
 
@@ -571,6 +573,7 @@ class Text(Return):
 
         return {
             "type": self.frontend_type,
+            "streamed": False,
             "id": self.frontend_type[:3] + "-" + str(uuid.uuid4()),
             "user_id": user_id,
             "conversation_id": conversation_id,
@@ -584,24 +587,16 @@ class Response(Text):
         Text.__init__(self, "response", [{"text": text}], **kwargs)
 
 
-class StreamedReasoning(Return):
-    def __init__(self, chunk: str, last: bool = False):
-        Return.__init__(self, "streamed_reasoning", "reasoning")
+class StreamedReturn:
+    def __init__(
+        self,
+        chunk: Any,
+        field_name: str,
+        output_type: type,
+    ):
         self.chunk = chunk
-        self.last = last
-
-    def to_json(self):
-        return {"type": self.payload_type, "chunk": self.chunk, "last": self.last}
-
-    async def to_frontend(self, user_id: str, conversation_id: str, query_id: str):
-        return {
-            "type": self.frontend_type,
-            "id": self.frontend_type[:3] + "-" + str(uuid.uuid4()),
-            "user_id": user_id,
-            "conversation_id": conversation_id,
-            "query_id": query_id,
-            "payload": self.to_json(),
-        }
+        self.output_type = output_type
+        self.field_name = field_name
 
 
 class Update(Return):
@@ -621,6 +616,7 @@ class Update(Return):
     async def to_frontend(self, user_id: str, conversation_id: str, query_id: str):
         return {
             "type": self.frontend_type,
+            "streamed": False,
             "user_id": user_id,
             "conversation_id": conversation_id,
             "query_id": query_id,
@@ -832,6 +828,7 @@ class Result(Return):
 
         return {
             "type": self.frontend_type,
+            "streamed": False,
             "user_id": user_id,
             "conversation_id": conversation_id,
             "query_id": query_id,
@@ -945,6 +942,7 @@ class Retrieval(Result):
 
         return {
             "type": self.frontend_type,
+            "streamed": False,
             "user_id": user_id,
             "conversation_id": conversation_id,
             "query_id": query_id,

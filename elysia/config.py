@@ -704,7 +704,7 @@ class ElysiaKeyManager:
                 self.settings.COMPLEX_MODEL, self.settings.COMPLEX_PROVIDER
             )
 
-        if exc_type is AuthenticationError or exc_type is BadRequestError:
+        if exc_type is AuthenticationError:
             missing_base_api_keys = [
                 api_key
                 for api_key in provider_to_api_keys[self.settings.BASE_PROVIDER]
@@ -729,17 +729,13 @@ class ElysiaKeyManager:
                 )
 
             raise APIKeyError(
-                f"One of your API keys is incorrect. "
-                f"Please update your API keys in the settings. "
+                f"One of your API keys may be incorrect. "
+                f"Please check update your API keys in the settings. "
                 f"The relevant API keys are: "
                 f"{set(provider_to_api_keys[self.settings.BASE_PROVIDER] + provider_to_api_keys[self.settings.COMPLEX_PROVIDER])}"
             )
 
-        if (
-            exc_type is AuthenticationError
-            or exc_type is BadRequestError
-            or exc_type is NotFoundError
-        ):
+        if exc_type is NotFoundError:
             raise IncorrectModelError(
                 f"Either one of the models or providers: '{self.settings.BASE_MODEL}' or '{self.settings.COMPLEX_MODEL}' "
                 f"({self.settings.BASE_PROVIDER} or {self.settings.COMPLEX_PROVIDER}) "
@@ -867,40 +863,39 @@ def configure(**kwargs) -> None:
     Configure the settings for Elysia for the global settings object.
 
     Args:
-        **kwargs (str): One or more of the following:
+        base_model (str): The base model to use. e.g. "gpt-4o-mini"
+        complex_model (str): The complex model to use. e.g. "gpt-4o"
+        base_provider (str): The provider to use for base_model. E.g. "openai" or "openrouter/openai"
+        complex_provider (str): The provider to use for complex_model. E.g. "openai" or "openrouter/openai"
+        model_api_base (str): The API base to use.
+        wcd_url (str): The Weaviate cloud URL to use.
+        wcd_api_key (str): The Weaviate cloud API key to use.
+        weaviate_is_local (bool): Whether the Weaviate cluster is local.
+        local_weaviate_port (int): The port to use for the local Weaviate cluster.
+        local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
+        weaviate_is_custom (bool): Whether to use custom connection parameters.
+        custom_http_host (str): HTTP host for custom Weaviate connection.
+        custom_http_port (int): HTTP port for custom connection. Defaults to 8080.
+        custom_http_secure (bool): Use HTTPS for custom connection. Defaults to False.
+        custom_grpc_host (str): gRPC host for custom Weaviate connection.
+        custom_grpc_port (int): gRPC port for custom connection. Defaults to 50051.
+        custom_grpc_secure (bool): Use secure gRPC for custom connection. Defaults to False.
+        logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+        use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
+            If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.
+            These are implemented via few-shot examples for the decision node.
+            They are collected in the 'feedback' collection (ELYSIA_FEEDBACK__).
+            Relevant examples are retrieved from the collection based on searching the collection via the user's prompt.
+        num_feedback_examples (int): EXPERIMENTAL: How many feedback examples are required before using the smaller base LM.
+            (if `use_feedback` is `True`)
+        base_use_reasoning` (bool): Whether to use reasoning output for the base model.
+            If True, the model will generate reasoning before coming to its solution.
+        complex_use_reasoning (bool): Whether to use reasoning output for the complex model.
+            If True, the model will generate reasoning before coming to its solution.
+        env_token_limit (int): The token limit for the environment. Defaults to 10_000.
 
-            - base_model (str): The base model to use. e.g. "gpt-4o-mini"
-            - complex_model (str): The complex model to use. e.g. "gpt-4o"
-            - base_provider (str): The provider to use for base_model. E.g. "openai" or "openrouter/openai"
-            - complex_provider (str): The provider to use for complex_model. E.g. "openai" or "openrouter/openai"
-            - model_api_base (str): The API base to use.
-            - wcd_url (str): The Weaviate cloud URL to use.
-            - wcd_api_key (str): The Weaviate cloud API key to use.
-            - weaviate_is_local (bool): Whether the Weaviate cluster is local.
-            - local_weaviate_port (int): The port to use for the local Weaviate cluster.
-            - local_weaviate_grpc_port (int): The gRPC port to use for the local Weaviate cluster.
-            - weaviate_is_custom (bool): Whether to use custom connection parameters.
-            - custom_http_host (str): HTTP host for custom Weaviate connection.
-            - custom_http_port (int): HTTP port for custom connection. Defaults to 8080.
-            - custom_http_secure (bool): Use HTTPS for custom connection. Defaults to False.
-            - custom_grpc_host (str): gRPC host for custom Weaviate connection.
-            - custom_grpc_port (int): gRPC port for custom connection. Defaults to 50051.
-            - custom_grpc_secure (bool): Use secure gRPC for custom connection. Defaults to False.
-            - logging_level (str): The logging level to use. e.g. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
-            - use_feedback (bool): EXPERIMENTAL. Whether to use feedback from previous runs of the tree.
-              If True, the tree will use TrainingUpdate objects that have been saved in previous runs of the decision tree.
-              These are implemented via few-shot examples for the decision node.
-              They are collected in the 'feedback' collection (ELYSIA_FEEDBACK__).
-              Relevant examples are retrieved from the collection based on searching the collection via the user's prompt.
-            - `num_feedback_examples` (int): EXPERIMENTAL: How many feedback examples are required before using the smaller base LM.
-              (if `use_feedback` is `True`)
-            - `base_use_reasoning` (bool): Whether to use reasoning output for the base model.
-               If True, the model will generate reasoning before coming to its solution.
-            - `complex_use_reasoning` (bool): Whether to use reasoning output for the complex model.
-              If True, the model will generate reasoning before coming to its solution.
-            - `env_token_limit` (int): The token limit for the environment. Defaults to 10_000.
-            - Additional API keys: Any argument ending with `apikey` or `api_key` will be added to the `API_KEYS` dictionary.
-              E.g. `openai_apikey="..."`
+        keyword arguments (Any): Additional API keys: Any argument ending with `apikey` or `api_key` will be added to the `API_KEYS` dictionary.
+            E.g. `openai_apikey="..."`
 
     """
     settings.configure(**kwargs)

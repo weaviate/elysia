@@ -348,6 +348,7 @@ class DocumentRetrieval(Retrieval):
 
         return {
             "type": self.frontend_type,
+            "streamed": False,
             "user_id": user_id,
             "conversation_id": conversation_id,
             "query_id": query_id,

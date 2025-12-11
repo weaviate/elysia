@@ -1,17 +1,5 @@
 import dspy
-from typing import List
-from pydantic import BaseModel, Field
-
-
-class TextWithCitation(BaseModel):
-    text: str = Field(description="The text within the summary")
-    ref_ids: List[str] = Field(
-        description=(
-            "The ref_ids of the citations relevant to the text. "
-            "Can be an empty list if the text is not related to any of the citations."
-        ),
-        default_factory=list,
-    )
+from elysia.tools.text.objects import ListTextWithCitation
 
 
 class CitedSummarizingPrompt(dspy.Signature):
@@ -25,7 +13,7 @@ class CitedSummarizingPrompt(dspy.Signature):
     """
 
     subtitle = dspy.OutputField(description="A subtitle for the summary")
-    cited_text: List[TextWithCitation] = dspy.OutputField(
+    cited_text: ListTextWithCitation = dspy.OutputField(
         description="""
         A list of TextWithCitation objects whose 'text' fields will be concatenated to form the complete summary.
         

@@ -1,6 +1,6 @@
-from elysia.objects import Text
 from typing import List
 from pydantic import BaseModel, Field
+from dspy import Type
 
 
 class TextWithCitation(BaseModel):
@@ -14,29 +14,11 @@ class TextWithCitation(BaseModel):
     )
 
 
-class TextWithTitle(Text):
-    def __init__(self, text: str, title: str, **kwargs):
-        Text.__init__(
-            self,
-            "text_with_title",
-            [{"text": text}],
-            metadata={"title": title},
-            **kwargs,
-        )
+class ListTextWithCitation(Type):
+    cited_text: List[TextWithCitation] = Field(
+        description="A list of TextWithCitation objects"
+    )
 
-
-class TextWithCitations(Text):
-    def __init__(self, cited_texts: List[TextWithCitation], title: str, **kwargs):
-        Text.__init__(
-            self,
-            "text_with_citations",
-            [
-                {
-                    "text": cited_text_item.text,
-                    "ref_ids": cited_text_item.ref_ids,
-                }
-                for cited_text_item in cited_texts
-            ],
-            metadata={"title": title},
-            **kwargs,
-        )
+    @classmethod
+    def is_streamable(cls):
+        return True

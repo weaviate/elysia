@@ -1,12 +1,14 @@
 # Prompt Executors
 #
 import dspy
-import dspy.predict
+from dspy.streaming import StreamResponse
 
 from elysia.util.modules import ElysiaPrompt
+from elysia.util.streaming import StreamEndMarker
 
 # LLM
-from elysia.objects import Response, Tool, Text
+from elysia.objects import Response, Tool, Text, StreamedReturn
+from elysia.tools.text.objects import ListTextWithCitation
 from elysia.tools.text.prompt_templates import (
     SummarizingPrompt,
     TextResponsePrompt,
@@ -65,14 +67,47 @@ class CitedSummarizer(Tool):
             message_update=False,
         )
 
-        summary = await summarizer.aforward(
-            lm=base_lm,
-        )
+        if tree_data.streaming:
+            title_sent = False
+            title = ""
+            async for result in summarizer.aforward_streaming(
+                streamed_fields=["cited_text", "subtitle"],
+                lm=base_lm,
+            ):
+                if isinstance(result, StreamResponse):
+                    if result.signature_field_name == "subtitle":
+                        title += result.chunk
+                    if result.signature_field_name == "cited_text":
+                        if not title_sent:
+                            yield StreamedReturn(
+                                chunk={"title": title},
+                                field_name="cited_text",
+                                output_type=dict,
+                            )
+                            title_sent = True
+                        yield StreamedReturn(
+                            chunk=result.chunk,
+                            field_name="cited_text",
+                            output_type=ListTextWithCitation,
+                        )
+                elif isinstance(result, dspy.Prediction):
+                    summary = result
+
+            yield StreamedReturn(
+                chunk=None,
+                field_name="cited_text",
+                output_type=StreamEndMarker,
+            )
+        else:
+            summary = await summarizer.aforward(
+                lm=base_lm,
+            )
 
         yield Text(
             "text_with_citations",
-            objects=[t.model_dump() for t in summary.cited_text],
+            objects=[t.model_dump() for t in summary.cited_text.cited_text],
             metadata={"title": summary.subtitle},
+            display=not tree_data.streaming,
         )
 
 

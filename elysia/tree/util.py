@@ -21,7 +21,7 @@ from elysia.objects import (
     Text,
     Tool,
     Update,
-    StreamedReasoning,
+    StreamedReturn,
 )
 
 from elysia.tree.objects import TreeData
@@ -34,6 +34,7 @@ from elysia.util.objects import (
 )
 
 from elysia.util.modules import ElysiaPrompt, AssertedModule
+from elysia.util.streaming import StreamedPayload, StreamEndMarker
 from elysia.util.parsing import format_datetime, estimate_tokens
 from elysia.util.client import ClientManager
 from elysia.tree.prompt_templates import (
@@ -314,7 +315,7 @@ class Node:
         complex_lm: dspy.LM,
         client_manager: ClientManager,
     ) -> AsyncGenerator[
-        StreamedReasoning | dspy.Prediction | ViewEnvironment | list, None
+        StreamedReturn | dspy.Prediction | ViewEnvironment | FewShotExamples, None
     ]:
 
         history = dspy.History(messages=[])
@@ -387,8 +388,14 @@ class Node:
                 else:
                     aforward_fn = environment_decision_executor.aforward_streaming
 
+                yield StreamedReturn(
+                    chunk={"reasoning": True},
+                    output_type=dict,
+                    field_name="reasoning",
+                )
+
                 async for chunk in aforward_fn(
-                    streamed_field="reasoning",
+                    streamed_fields=["reasoning"],
                     environment=environment,
                     available_actions=kwargs["available_actions"],
                     history=history,
@@ -399,24 +406,29 @@ class Node:
                     client_manager=client_manager,
                     feedback_model="decision",
                 ):
-                    if (
-                        isinstance(chunk, StreamResponse)
-                        and chunk.signature_field_name == "reasoning"
-                    ):
-                        yield StreamedReasoning(
-                            chunk=chunk.chunk, last=chunk.is_last_chunk
+                    if isinstance(chunk, StreamResponse):
+                        yield StreamedReturn(
+                            chunk=chunk.chunk,
+                            output_type=str,
+                            field_name="reasoning",
                         )
                     elif isinstance(chunk, dspy.Prediction):
                         pred = chunk
                     elif isinstance(chunk, list):
-                        yield chunk
+                        yield FewShotExamples(chunk)
+
+                yield StreamedReturn(
+                    chunk=None,
+                    output_type=StreamEndMarker,
+                    field_name="reasoning",
+                )
             else:
                 if tree_data.settings.USE_FEEDBACK:
                     pred, uuids = (
                         await environment_decision_executor.aforward_with_feedback_examples(
                             feedback_model="decision",
                             client_manager=client_manager,
-                            streamed_field="reasoning",
+                            streamed_fields=["reasoning"],
                             environment=environment,
                             available_actions=kwargs["available_actions"],
                             history=history,
@@ -425,10 +437,10 @@ class Node:
                             add_tree_data_inputs=False,
                         )
                     )
-                    yield uuids
+                    yield FewShotExamples(uuids)
                 else:
                     pred = await environment_decision_executor.aforward(
-                        streamed_field="reasoning",
+                        streamed_fields=["reasoning"],
                         environment=environment,
                         available_actions=kwargs["available_actions"],
                         history=history,
@@ -498,11 +510,15 @@ class Node:
         }
 
     def _process_stream_chunk(self, chunk) -> tuple[Any | None, dspy.Prediction | None]:
-        if (
-            isinstance(chunk, StreamResponse)
-            and chunk.signature_field_name == "reasoning"
-        ):
-            return StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk), None
+        if isinstance(chunk, StreamResponse):
+            return (
+                StreamedReturn(
+                    chunk=chunk.chunk,
+                    output_type=str,
+                    field_name=chunk.signature_field_name,
+                ),
+                None,
+            )
         elif isinstance(chunk, dspy.Prediction):
             return None, chunk
         elif isinstance(chunk, list):
@@ -524,7 +540,7 @@ class Node:
         | Error
         | TrainingUpdate
         | EdgeUpdate
-        | StreamedReasoning
+        | StreamedReturn
         | ViewEnvironment,
         None,
     ]:
@@ -581,7 +597,7 @@ class Node:
                 message_update=False,
                 impossible=False,
                 reasoning=tree_data.settings.BASE_USE_REASONING,
-                environment="none" if env_token_limit_reached else "full",
+                environment_level="none" if env_token_limit_reached else "full",
             ),
             self._tool_assertion,
         )
@@ -603,12 +619,24 @@ class Node:
                 if tree_data.settings.USE_FEEDBACK
                 else decision_executor.aforward_streaming
             )
-            async for chunk in aforward_fn(streamed_field="reasoning", **kwargs):
+            yield StreamedReturn(
+                chunk={"reasoning": True},
+                output_type=dict,
+                field_name="reasoning",
+            )
+
+            async for chunk in aforward_fn(streamed_fields=["reasoning"], **kwargs):
                 yield_val, pred_val = self._process_stream_chunk(chunk)
                 if yield_val is not None:
                     yield yield_val
                 if pred_val is not None:
                     pred = pred_val
+
+            yield StreamedReturn(
+                chunk=None,
+                output_type=StreamEndMarker,
+                field_name="reasoning",
+            )
         else:
             if tree_data.settings.USE_FEEDBACK:
                 pred, uuids = await decision_executor.aforward_with_feedback_examples(
@@ -640,17 +668,12 @@ class Node:
                 complex_lm=complex_lm,
                 client_manager=client_manager,
             ):
-                if (
-                    isinstance(chunk, StreamResponse)
-                    and chunk.signature_field_name == "reasoning"
+                if isinstance(
+                    chunk, (StreamedReturn, ViewEnvironment, FewShotExamples)
                 ):
-                    yield StreamedReasoning(chunk=chunk.chunk, last=chunk.is_last_chunk)
-                elif isinstance(chunk, ViewEnvironment):
                     yield chunk
                 elif isinstance(chunk, dspy.Prediction):
                     pred = chunk
-                elif isinstance(chunk, list):
-                    yield FewShotExamples(chunk)
 
         target_option = next(opt for opt in options if pred.function_name == opt.name)
         yield Decision(
@@ -689,6 +712,7 @@ class TreeReturner:
         self.store.append(
             {
                 "type": "user_prompt",
+                "streamed": False,
                 "id": str(uuid.uuid4()),
                 "user_id": self.user_id,
                 "conversation_id": self.conversation_id,
@@ -699,24 +723,42 @@ class TreeReturner:
             }
         )
 
-    async def __call__(
+    async def send_streamed(
         self,
-        result: Result | EdgeUpdate | Update | Text | Error | StreamedReasoning,
+        result: StreamedPayload,
         query_id: str,
+        stream_id: str,
     ) -> dict[str, str | dict] | None:
 
-        if isinstance(result, (Update, Text, Result, Error)):
-            payload = await result.to_frontend(
-                self.user_id, self.conversation_id, query_id
-            )
-            self.store.append(payload)
-            return payload
+        if not isinstance(result, StreamedPayload):
+            return
 
-        elif isinstance(result, StreamedReasoning):
-            payload = await result.to_frontend(
-                self.user_id, self.conversation_id, query_id
-            )
-            return payload
+        payload = {
+            "type": "text",
+            "user_id": self.user_id,
+            "streamed": True,
+            "conversation_id": self.conversation_id,
+            "query_id": query_id,
+            "id": str(uuid.uuid4()),
+            "payload": {
+                "type": result.type,
+                "chunk": result.chunk,
+                "index": result.index,
+                "stream_id": stream_id,
+            },
+        }
+        return payload
+
+    async def send(
+        self, result: Result | EdgeUpdate | Update | Text | Error, query_id: str
+    ) -> dict[str, str | dict] | None:
+
+        if not isinstance(result, (Result, EdgeUpdate, Update, Text, Error)):
+            return
+
+        payload = await result.to_frontend(self.user_id, self.conversation_id, query_id)
+        self.store.append(payload)
+        return payload
 
 
 async def create_conversation_title(conversation: list[dict], lm: dspy.LM):

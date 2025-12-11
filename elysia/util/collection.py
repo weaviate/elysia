@@ -1,9 +1,10 @@
 import ast
 import datetime
-from typing import Any, List
+from typing import Any
 
 from weaviate.classes.config import DataType
 from weaviate.classes.query import Filter, Sort
+from weaviate.client import WeaviateAsyncClient, WeaviateClient
 from weaviate.types import UUID
 
 from elysia.util.parsing import format_datetime
@@ -24,7 +25,7 @@ data_mapping = {
 }
 
 
-async def retrieve_all_collection_names(client):
+async def retrieve_all_collection_names(client: WeaviateAsyncClient):
     all_collections = await client.collections.list_all()
     return [
         collection
@@ -33,24 +34,28 @@ async def retrieve_all_collection_names(client):
     ]
 
 
-def get_collection_data_types(client, collection_name: str):
+def get_collection_data_types(client: WeaviateClient, collection_name: str):
     properties = client.collections.get(collection_name).config.get().properties
     return {property.name: property.data_type[:] for property in properties}
 
 
-async def async_get_collection_data_types(client, collection_name: str):
+async def async_get_collection_data_types(
+    client: WeaviateAsyncClient, collection_name: str
+):
     config = client.collections.get(collection_name).config
     config = await config.get()
     properties = config.properties
     return {property.name: property.data_type[:] for property in properties}
 
 
-def get_collection_weaviate_data_types(client, collection_name: str):
+def get_collection_weaviate_data_types(client: WeaviateClient, collection_name: str):
     data_types = get_collection_data_types(client, collection_name)
     return {k: data_mapping[v] for k, v in data_types.items()}
 
 
-async def async_get_collection_weaviate_data_types(client, collection_name: str):
+async def async_get_collection_weaviate_data_types(
+    client: WeaviateAsyncClient, collection_name: str
+):
     data_types = await async_get_collection_data_types(client, collection_name)
     return {k: data_mapping[v] for k, v in data_types.items()}
 
