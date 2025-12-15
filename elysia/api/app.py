@@ -24,7 +24,6 @@ from elysia.api.routes import (
     db,
 )
 from elysia.api.services.user import UserManager
-from elysia.api.utils.resources import print_resources
 
 
 from pathlib import Path
@@ -33,11 +32,6 @@ from pathlib import Path
 async def check_timeouts():
     user_manager = get_user_manager()
     await user_manager.check_all_trees_timeout()
-
-
-async def output_resources():
-    user_manager = get_user_manager()
-    await print_resources(user_manager, save_to_file=True)
 
 
 async def check_restart_clients():
@@ -55,7 +49,6 @@ async def lifespan(app: FastAPI):
     # use prime numbers for intervals so they don't overlap
     scheduler.add_job(check_timeouts, "interval", seconds=29)
     scheduler.add_job(check_restart_clients, "interval", seconds=31)
-    scheduler.add_job(output_resources, "interval", seconds=1103)
 
     scheduler.start()
     yield
