@@ -289,7 +289,7 @@ class StreamedDict(StreamedParser):
         StreamedParser.__init__(self)
 
     def feed(self, chunk: dict) -> list[StreamedPayload]:
-        return [StreamedPayload(type="metadata", chunk=chunk, index=0)]
+        return [StreamedPayload(type="metadata", chunk=chunk, index=None)]
 
 
 class StreamedEnd(StreamedParser):
