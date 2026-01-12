@@ -70,6 +70,7 @@ class CitedSummarizer(Tool):
         if tree_data.streaming:
             title_sent = False
             title = ""
+            text_buffer = []
             async for result in summarizer.aforward_streaming(
                 streamed_fields=["cited_text", "subtitle"],
                 lm=base_lm,
@@ -78,18 +79,38 @@ class CitedSummarizer(Tool):
                     if result.signature_field_name == "subtitle":
                         title += result.chunk
                     if result.signature_field_name == "cited_text":
-                        if not title_sent:
+                        if title and not title_sent:
                             yield StreamedReturn(
                                 chunk={"title": title},
                                 field_name="cited_text",
                                 output_type=dict,
                             )
                             title_sent = True
-                        yield StreamedReturn(
-                            chunk=result.chunk,
-                            field_name="cited_text",
-                            output_type=ListTextWithCitation,
-                        )
+
+                        if title_sent or len(text_buffer) > 2:
+                            if not title_sent:
+                                yield StreamedReturn(
+                                    chunk={"title": ""},
+                                    field_name="cited_text",
+                                    output_type=dict,
+                                )
+                                title_sent = True
+
+                            for text in text_buffer:
+                                yield StreamedReturn(
+                                    chunk=text,
+                                    field_name="cited_text",
+                                    output_type=ListTextWithCitation,
+                                )
+                                text_buffer = []
+
+                            yield StreamedReturn(
+                                chunk=result.chunk,
+                                field_name="cited_text",
+                                output_type=ListTextWithCitation,
+                            )
+                        else:
+                            text_buffer.append(result.chunk)
                 elif isinstance(result, dspy.Prediction):
                     summary = result
 

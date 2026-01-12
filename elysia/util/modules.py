@@ -734,7 +734,7 @@ class ElysiaPrompt(Module):
             **kwargs: Additional keyword arguments to pass to the signature.
 
         Returns:
-            AsyncGenerator[StreamResponse | dspy.Prediction, None]: The prediction from the signature.
+            AsyncGenerator[StreamResponse | dspy.Prediction, None]: The chunks from the streamed fields or the final prediction (at the end of streaming).
         """
 
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs

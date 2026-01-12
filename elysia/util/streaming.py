@@ -65,16 +65,26 @@ class StreamedTextWithCitations(StreamedParser):
 
         while self.buffer:
             if self.state == TextParserState.IDLE:
-                # Look for "cited_text" field to enter the array
+                # Look for "cited_text" field to enter the array (wrapped format)
                 cited_text_field = self.buffer.find('"cited_text"')
-                if cited_text_field != -1:
-                    # Find the colon and opening bracket
+                # Also look for direct array start (unwrapped format)
+                direct_array = self.buffer.find("[")
+
+                if cited_text_field != -1 and (
+                    direct_array == -1 or cited_text_field < direct_array
+                ):
+                    # Found "cited_text" field first - use wrapped format
                     colon_pos = self.buffer.find(":", cited_text_field)
                     if colon_pos != -1:
                         self.state = TextParserState.LOOKING_FOR_ARRAY
                         self.buffer = self.buffer[colon_pos + 1 :]
                         continue
                     break
+                elif direct_array != -1:
+                    # Found array directly - skip to IN_ARRAY state
+                    self.state = TextParserState.IN_ARRAY
+                    self.buffer = self.buffer[direct_array + 1 :]
+                    continue
 
                 # No recognizable pattern, clear buffer keeping last chars
                 if len(self.buffer) > 20:

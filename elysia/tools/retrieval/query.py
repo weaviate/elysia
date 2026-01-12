@@ -5,9 +5,20 @@ from rich import print
 from rich.panel import Panel
 
 import dspy
+from dspy.streaming import StreamResponse
 
+from elysia.util.streaming import StreamEndMarker
 from elysia.util.modules import ElysiaPrompt
-from elysia.objects import Response, Status, Tool, Error, Result, Return, Retrieval
+from elysia.objects import (
+    Response,
+    Status,
+    Tool,
+    Error,
+    Result,
+    Return,
+    Retrieval,
+    StreamedReturn,
+)
 from elysia.tools.retrieval.chunk import AsyncCollectionChunker
 from elysia.tools.retrieval.objects import (
     ConversationRetrieval,
@@ -197,7 +208,9 @@ class Query(Tool):
         complex_lm: dspy.LM,
         client_manager: ClientManager,
         **kwargs,
-    ) -> AsyncGenerator[Return | EdgeUpdate | Error | TrainingUpdate, None]:
+    ) -> AsyncGenerator[
+        Return | EdgeUpdate | Error | TrainingUpdate | StreamedReturn, None
+    ]:
         """
         Can perform three main functions:
         1. Query the knowledge base with Weaviate using hybrid, semantic, or keyword search, applying filters and more.
@@ -268,7 +281,7 @@ class Query(Tool):
             environment_level="dynamic",
             collection_schemas="full",
             tasks_completed=True,
-            message_update=True,
+            message_update=False,
             collection_names=collection_names,
         )
 
@@ -309,30 +322,97 @@ class Query(Tool):
         # Generate query with LLM
         try:
             if tree_data.settings.USE_FEEDBACK:
-                query, example_uuids = (
-                    await query_generator.aforward_with_feedback_examples(
+
+                if tree_data.streaming:
+                    yield StreamedReturn(
+                        chunk={"reasoning": True, "tool_name": "query"},
+                        output_type=dict,
+                        field_name="reasoning",
+                    )
+                    async for (
+                        chunk
+                    ) in query_generator.aforward_streaming_with_feedback_examples(
+                        streamed_fields=["reasoning"],
                         feedback_model="query",
                         client_manager=client_manager,
                         base_lm=base_lm,
                         complex_lm=complex_lm,
+                    ):
+                        if isinstance(chunk, list):
+                            yield FewShotExamples(uuids=chunk)
+                        elif isinstance(chunk, StreamResponse):
+                            yield StreamedReturn(
+                                chunk=chunk.chunk,
+                                output_type=str,
+                                field_name="reasoning",
+                            )
+                        elif isinstance(chunk, dspy.Prediction):
+                            query = chunk
+
+                    yield StreamedReturn(
+                        chunk=None,
+                        output_type=StreamEndMarker,
+                        field_name="reasoning",
+                    )
+                else:
+                    query, example_uuids = (
+                        await query_generator.aforward_with_feedback_examples(
+                            feedback_model="query",
+                            client_manager=client_manager,
+                            base_lm=base_lm,
+                            complex_lm=complex_lm,
+                            available_collections=collection_names,
+                            previous_queries=previous_queries,
+                            collection_display_types=display_types,
+                            display_type_descriptions=display_type_descriptions,
+                            searchable_fields=searchable_fields,
+                            num_base_lm_examples=6,
+                            return_example_uuids=True,
+                        )
+                    )
+                    yield FewShotExamples(uuids=example_uuids)
+
+            else:
+                if tree_data.streaming:
+
+                    yield StreamedReturn(
+                        chunk={"reasoning": True, "tool_name": "query"},
+                        output_type=dict,
+                        field_name="reasoning",
+                    )
+
+                    async for chunk in query_generator.aforward_streaming(
+                        streamed_fields=["reasoning"],
+                        lm=complex_lm,
                         available_collections=collection_names,
                         previous_queries=previous_queries,
                         collection_display_types=display_types,
                         display_type_descriptions=display_type_descriptions,
                         searchable_fields=searchable_fields,
-                        num_base_lm_examples=6,
-                        return_example_uuids=True,
+                    ):
+                        if isinstance(chunk, StreamResponse):
+                            yield StreamedReturn(
+                                chunk=chunk.chunk,
+                                output_type=str,
+                                field_name="reasoning",
+                            )
+                        elif isinstance(chunk, dspy.Prediction):
+                            query = chunk
+
+                    yield StreamedReturn(
+                        chunk=None,
+                        output_type=StreamEndMarker,
+                        field_name="reasoning",
                     )
-                )
-            else:
-                query = await query_generator.aforward(
-                    lm=complex_lm,
-                    available_collections=collection_names,
-                    previous_queries=previous_queries,
-                    collection_display_types=display_types,
-                    display_type_descriptions=display_type_descriptions,
-                    searchable_fields=searchable_fields,
-                )
+                else:
+                    query = await query_generator.aforward(
+                        lm=complex_lm,
+                        available_collections=collection_names,
+                        previous_queries=previous_queries,
+                        collection_display_types=display_types,
+                        display_type_descriptions=display_type_descriptions,
+                        searchable_fields=searchable_fields,
+                    )
 
         except Exception as e:
             yield Error(error_message=str(e))
@@ -342,11 +422,6 @@ class Query(Tool):
             self.logger.debug(f"Query: {query.query_outputs}")
             self.logger.debug(f"Fields to search: {query.fields_to_search}")
             self.logger.debug(f"Data display: {query.data_display}")
-
-        # Yield results to front end
-        yield Response(text=query.message_update)
-        if tree_data.settings.USE_FEEDBACK:
-            yield FewShotExamples(uuids=example_uuids)
 
         # Return if model deems query impossible
         if (
