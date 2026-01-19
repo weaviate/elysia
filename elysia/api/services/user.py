@@ -584,7 +584,6 @@ class UserManager:
             wcd_api_key (str | None): The API key for the Weaviate Cloud Database instance used to save the tree.
                 Defaults to the value of the `wcd_api_key` setting in the frontend config.
         """
-
         if self.check_user_timeout(user_id):
             user_timeout_error = UserTimeoutError()
             error_payload = await user_timeout_error.to_frontend(
@@ -598,6 +597,12 @@ class UserManager:
                 await self.load_tree(user_id, conversation_id)
             else:
                 tree_timeout_error = TreeTimeoutError()
+                logger.error(
+                    (
+                        f"Tree timeout error: conversation ID '{conversation_id}' for user '{user_id}' not found. "
+                        f"Available conversations: {list(self.users[user_id]['tree_manager'].trees.keys())}"
+                    )
+                )
                 error_payload = await tree_timeout_error.to_frontend(
                     user_id, conversation_id, query_id
                 )
