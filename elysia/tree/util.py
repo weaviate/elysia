@@ -170,6 +170,7 @@ class Node:
             is_branch=self.branch,
             description=self.description,
             instruction=self.instruction,
+            is_root=self.root,
         )
 
     def _get_view_environment(self) -> dict:
