@@ -331,7 +331,55 @@ async def test_cycle(test_preset: TreeGraph):
 
 
 @pytest.mark.asyncio
-async def test_set_default():
+async def test_remove_default():
+    user_id = f"test_remove_default_{uuid4()}"
+    user_manager = get_user_manager()
+    await initialise_user(user_id, user_manager)
+
+    user_local = await user_manager.get_user_local(user_id)
+    tree_graph_manager = user_local["tree_graph_manager"]  #
+    num_presets = len(tree_graph_manager.presets)
+
+    response = await save_config_user(
+        user_id=user_id,
+        config_id=f"test_remove_default_{uuid4()}",
+        data=SaveConfigUserData(
+            name="test_remove_default",
+            default=True,
+            config={},
+            frontend_config={"save_configs_to_weaviate": True},
+        ),
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    # Check there is only one default
+    num_defaults = sum(1 for preset in tree_graph_manager.presets if preset.default)
+    assert num_defaults == 1
+    default_preset = next(
+        preset for preset in tree_graph_manager.presets if preset.default
+    )
+
+    non_default_preset = default_preset.copy()
+    non_default_preset.default = False
+
+    # Remove the default
+    response = await add_tool_preset(
+        user_id=user_id,
+        data=non_default_preset,
+        user_manager=user_manager,
+    )
+    response = read_response(response)
+    assert response["error"] == ""
+
+    # Check there is still only one default
+    new_num_presets = len(tree_graph_manager.presets)
+    assert new_num_presets == num_presets
+
+
+@pytest.mark.asyncio
+async def test_add_new_default():
     user_id = f"test_add_tool_preset_{uuid4()}"
     user_manager = get_user_manager()
     await initialise_user(user_id, user_manager)

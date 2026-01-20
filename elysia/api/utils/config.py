@@ -291,16 +291,20 @@ class TreeGraphManager:
         )
 
     async def sync(self, user_id: str, client_manager: ClientManager) -> None:
-        self.presets = [
-            preset
-            for preset in default_presets
-            if preset.id not in self.removed_preset_ids
-        ]
+
         retrieved_presets = await get_presets_weaviate(user_id, client_manager)
         if any(preset.default for preset in retrieved_presets):
             for preset in self.presets:
                 preset.default = False
-        self.presets.extend(retrieved_presets)
+
+        self.presets = retrieved_presets
+        existing_ids = [preset.id for preset in self.presets]
+        self.presets += [
+            preset
+            for preset in default_presets
+            if preset.id not in existing_ids
+            and preset.id not in self.removed_preset_ids
+        ]
 
     def to_json(self) -> list[dict]:
         return [preset.model_dump() for preset in self.presets]
