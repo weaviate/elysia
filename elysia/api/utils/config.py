@@ -273,10 +273,10 @@ class TreeGraphManager:
             (preset for preset in self.presets if preset.id == id),
             None,
         )
-        if removed_preset and removed_preset.default:
-            self.presets[0].default = True
         self.removed_preset_ids.add(id)
         self.presets = [preset for preset in self.presets if preset.id != id]
+        if removed_preset and removed_preset.default and len(self.presets) > 0:
+            self.presets[0].default = True
 
     def get(self, id: str) -> TreeGraph | None:
         return next(

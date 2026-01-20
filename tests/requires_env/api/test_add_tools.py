@@ -272,7 +272,7 @@ async def test_cycle(test_preset: TreeGraph):
         data=SaveConfigUserData(
             name="test_add_tool_preset",
             default=True,
-            config={},
+            config={"logging_level": "DEBUG"},
             frontend_config={"save_configs_to_weaviate": True},
         ),
         user_manager=user_manager,

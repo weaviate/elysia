@@ -1,3 +1,4 @@
+from sys import base_exec_prefix
 from typing import Dict, Type
 
 from weaviate.classes.config import Configure, Property, DataType
@@ -161,9 +162,9 @@ async def get_presets_weaviate(
         if not await client.collections.exists(f"ELYSIA_TOOL_PRESETS__"):
             return []
 
-        preset_collection = client.collections.get(f"ELYSIA_TOOL_PRESETS__")
-        if await preset_collection.tenants.exists(user_id):
-            preset_collection = preset_collection.with_tenant(user_id)
+        base_preset_collection = client.collections.get(f"ELYSIA_TOOL_PRESETS__")
+        if await base_preset_collection.tenants.exists(user_id):
+            preset_collection = base_preset_collection.with_tenant(user_id)
 
             presets = await preset_collection.query.fetch_objects(
                 limit=9999,
@@ -205,11 +206,15 @@ async def delete_preset_weaviate(
     async with client_manager.connect_to_async_client() as client:
 
         if not await client.collections.exists(f"ELYSIA_TOOL_PRESETS__"):
-            return
+            raise ValueError(f"Collection ELYSIA_TOOL_PRESETS__ does not exist")
 
-        preset_collection = client.collections.get(
-            f"ELYSIA_TOOL_PRESETS__"
-        ).with_tenant(user_id)
+        base_preset_collection = client.collections.get(f"ELYSIA_TOOL_PRESETS__")
+        if not await base_preset_collection.tenants.exists(user_id):
+            raise ValueError(
+                f"User {user_id} does not have access to collection ELYSIA_TOOL_PRESETS__"
+            )
+
+        preset_collection = base_preset_collection.with_tenant(user_id)
 
         uuid = generate_uuid5(preset_id)
         if await preset_collection.data.exists(uuid):
