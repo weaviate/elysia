@@ -653,11 +653,14 @@ class Node:
                 elif isinstance(chunk, list):
                     yield FewShotExamples(chunk)
 
-        target_option = next(opt for opt in options if pred.function_name == opt.name)
+        target_option = next(
+            (opt for opt in available_options if pred.function_name == opt["name"])
+        )
+
         yield Decision(
             function_name=pred.function_name,
             function_inputs=self._get_function_inputs(
-                pred.function_inputs, target_option.inputs
+                pred.function_inputs, target_option["inputs"]
             ),
             reasoning=pred.reasoning,
             end_actions=pred.end_actions,

@@ -1,13 +1,12 @@
 from logging import Logger
 import datetime
 import os
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 from elysia.config import Settings
 from elysia.util.client import ClientManager
 from elysia.api.api_types import TreeGraph, TreeNode
-from pydantic import BaseModel
 
 BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
 
@@ -17,7 +16,7 @@ tool_metadata = find_tool_metadata()
 
 default_presets = [
     TreeGraph(
-        id="default",
+        id=f"base_preset_{str(uuid4())}",
         name="Default",
         default=True,
         nodes={
@@ -66,7 +65,7 @@ default_presets = [
         ],
     ),
     TreeGraph(
-        id="edward_preset_1",
+        id=f"edward_preset_1_{str(uuid4())}",
         name="Edward Preset 1",
         default=False,
         nodes={
@@ -127,7 +126,7 @@ default_presets = [
         ],
     ),
     TreeGraph(
-        id="edward_preset_2",
+        id=f"edward_preset_2_{str(uuid4())}",
         name="Edward Preset 2",
         default=False,
         nodes={

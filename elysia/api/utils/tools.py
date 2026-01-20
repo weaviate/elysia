@@ -122,54 +122,39 @@ async def add_preset_weaviate(
 
         # update or insert preset
         uuid = generate_uuid5(preset_id)
+        properties = {
+            "preset_id": preset_id,
+            "name": name,
+            "nodes": [
+                {
+                    "instance_id": node.id,
+                    "name": node.name,
+                    "is_branch": node.is_branch,
+                    "description": node.description,
+                    "instruction": node.instruction,
+                    "is_root": node.is_root,
+                }
+                for node in nodes.values()
+            ],
+            "edges": [{"from": from_, "to": to_} for from_, to_ in edges],
+            "default": default,
+        }
         if await preset_collection.data.exists(uuid):
             await preset_collection.data.update(
                 uuid=uuid,
-                properties={
-                    "preset_id": preset_id,
-                    "name": name,
-                    "nodes": [
-                        {
-                            "instance_id": node.id,
-                            "name": node.name,
-                            "is_branch": node.is_branch,
-                            "description": node.description,
-                            "instruction": node.instruction,
-                            "is_root": node.is_root,
-                        }
-                        for node in nodes.values()
-                    ],
-                    "edges": [{"from": from_, "to": to_} for from_, to_ in edges],
-                    "default": default,
-                },
+                properties=properties,
             )
         else:
             await preset_collection.data.insert(
                 uuid=uuid,
-                properties={
-                    "preset_id": preset_id,
-                    "name": name,
-                    "nodes": [
-                        {
-                            "instance_id": node.id,
-                            "name": node.name,
-                            "is_branch": node.is_branch,
-                            "description": node.description,
-                            "instruction": node.instruction,
-                            "is_root": node.is_root,
-                        }
-                        for node in nodes.values()
-                    ],
-                    "edges": [{"from": from_, "to": to_} for from_, to_ in edges],
-                    "default": default,
-                },
+                properties=properties,
             )
 
 
 async def get_presets_weaviate(
     user_id: str,
     client_manager: ClientManager,
-):
+) -> list[TreeGraph]:
 
     async with client_manager.connect_to_async_client() as client:
 
@@ -220,7 +205,7 @@ async def delete_preset_weaviate(
     async with client_manager.connect_to_async_client() as client:
 
         if not await client.collections.exists(f"ELYSIA_TOOL_PRESETS__"):
-            return []
+            return
 
         preset_collection = client.collections.get(
             f"ELYSIA_TOOL_PRESETS__"
