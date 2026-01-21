@@ -81,7 +81,11 @@ class CitedSummarizer(Tool):
                     if result.signature_field_name == "cited_text":
                         if title and not title_sent:
                             yield StreamedReturn(
-                                chunk={"title": title},
+                                chunk={
+                                    "title": title,
+                                    "reasoning": False,
+                                    "tool_name": "cited_summarize",
+                                },
                                 field_name="cited_text",
                                 output_type=dict,
                             )
@@ -90,7 +94,11 @@ class CitedSummarizer(Tool):
                         if title_sent or len(text_buffer) > 2:
                             if not title_sent:
                                 yield StreamedReturn(
-                                    chunk={"title": ""},
+                                    chunk={
+                                        "title": "",
+                                        "reasoning": False,
+                                        "tool_name": "cited_summarize",
+                                    },
                                     field_name="cited_text",
                                     output_type=dict,
                                 )

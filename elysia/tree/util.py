@@ -390,7 +390,11 @@ class Node:
                     aforward_fn = environment_decision_executor.aforward_streaming
 
                 yield StreamedReturn(
-                    chunk={"reasoning": True, "tool_name": "view_environment"},
+                    chunk={
+                        "reasoning": True,
+                        "tool_name": "view_environment",
+                        "title": None,
+                    },
                     output_type=dict,
                     field_name="reasoning",
                 )
@@ -621,7 +625,11 @@ class Node:
                 else decision_executor.aforward_streaming
             )
             yield StreamedReturn(
-                chunk={"reasoning": True, "tool_name": "decision"},
+                chunk={
+                    "reasoning": True,
+                    "tool_name": "decision",
+                    "title": None,
+                },
                 output_type=dict,
                 field_name="reasoning",
             )
