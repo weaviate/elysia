@@ -333,13 +333,13 @@ class Node:
             function_inputs = self._get_function_inputs(
                 llm_inputs=inputs,
                 real_inputs=[
-                    ToolInput(
-                        name=i.get("name", ""),
-                        description=i.get("description", ""),
-                        type=i.get("type", Any),
-                        default=i.get("default", None),
-                        required=i.get("required", False),
-                    )
+                    {
+                        "name": i.get("name", ""),
+                        "description": i.get("description", ""),
+                        "type": i.get("type", Any),
+                        "default": i.get("default", None),
+                        "required": i.get("required", False),
+                    }
                     for i in view_env_inputs
                 ],
             )
@@ -751,12 +751,12 @@ class TreeReturner:
             "streamed": True,
             "conversation_id": self.conversation_id,
             "query_id": query_id,
-            "id": str(uuid.uuid4()),
+            "id": stream_id,
             "payload": {
                 "type": result.type,
                 "chunk": result.chunk,
                 "index": result.index,
-                "stream_id": stream_id,
+                "payload_id": str(uuid.uuid4()),
             },
         }
         return payload
