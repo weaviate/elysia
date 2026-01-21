@@ -135,7 +135,6 @@ class CitedSummarizer(Tool):
             )
 
         yield Text(
-            "text_with_citations",
             objects=[t.model_dump() for t in summary.cited_text.cited_text],
             metadata={"title": summary.subtitle},
             display=not tree_data.streaming,

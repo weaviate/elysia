@@ -508,9 +508,11 @@ class TextObject(BaseModel):
 class Text(Return):
     """
     Object that the frontend is aware of.
+
     Contains `objects` which is a list of dictionaries, each dictionary contains:
         - `text`: A single text field (e.g. a paragraph, a page)
         - `ref_ids`: A list of reference IDs, which are citations relevant to the above `text`
+
     Contains `metadata` which can optionally have:
         - `title`: A title for the text
         - `author`: An author for the text
