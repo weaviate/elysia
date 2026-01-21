@@ -100,13 +100,25 @@ async def delete_tool_preset(
         fe_config.config["save_configs_to_weaviate"]
         and fe_config.save_location_client_manager.is_client
     ):
-        logger.debug(f"Deleting tool preset {preset_id} from Weaviate")
         client_manager: ClientManager = fe_config.save_location_client_manager
-        await delete_preset_weaviate(user_id, preset_id, client_manager)
-        await user["tree_graph_manager"].sync(user_id, client_manager)
+        try:
+            await delete_preset_weaviate(user_id, preset_id, client_manager)
+            await user["tree_graph_manager"].sync(user_id, client_manager)
+            logger.debug(f"Deleting tool preset {preset_id} from Weaviate - success")
+        except ValueError as e:
+            if "ELYSIA_TOOL_PRESETS__" in str(e):
+                user["tree_graph_manager"].remove(preset_id)
+                logger.debug(
+                    f"Deleting tool preset {preset_id} from local tree graph manager - success"
+                )
+            else:
+                raise e
+
     else:
-        logger.debug(f"Deleting tool preset {preset_id} from local tree graph manager")
         user["tree_graph_manager"].remove(preset_id)
+        logger.debug(
+            f"Deleting tool preset {preset_id} from local tree graph manager - success"
+        )
 
     return JSONResponse(
         content={"presets": user["tree_graph_manager"].to_json(), "error": ""},

@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pytest
 from fastapi.responses import JSONResponse
 
@@ -74,6 +75,8 @@ async def test_query():
                     "BASE_PROVIDER": "openai",
                     "COMPLEX_MODEL": "gpt-4o",
                     "COMPLEX_PROVIDER": "openai",
+                    "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+                    "LOGGING_LEVEL": "DEBUG",
                 },
             },
             frontend_config={

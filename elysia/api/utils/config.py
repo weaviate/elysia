@@ -1,13 +1,12 @@
 from logging import Logger
 import datetime
 import os
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 from elysia.config import Settings
 from elysia.util.client import ClientManager
 from elysia.api.api_types import TreeGraph, TreeNode
-from pydantic import BaseModel
 
 BranchInitType = Literal["default", "one_branch", "multi_branch", "empty"]
 
@@ -17,7 +16,7 @@ tool_metadata = find_tool_metadata()
 
 default_presets = [
     TreeGraph(
-        id="default",
+        id=f"base_preset_{str(uuid4())}",
         name="Default",
         default=True,
         nodes={
@@ -66,7 +65,7 @@ default_presets = [
         ],
     ),
     TreeGraph(
-        id="edward_preset_1",
+        id=f"edward_preset_1_{str(uuid4())}",
         name="Edward Preset 1",
         default=False,
         nodes={
@@ -127,7 +126,7 @@ default_presets = [
         ],
     ),
     TreeGraph(
-        id="edward_preset_2",
+        id=f"edward_preset_2_{str(uuid4())}",
         name="Edward Preset 2",
         default=False,
         nodes={
@@ -274,10 +273,10 @@ class TreeGraphManager:
             (preset for preset in self.presets if preset.id == id),
             None,
         )
-        if removed_preset and removed_preset.default:
-            self.presets[0].default = True
         self.removed_preset_ids.add(id)
         self.presets = [preset for preset in self.presets if preset.id != id]
+        if removed_preset and removed_preset.default and len(self.presets) > 0:
+            self.presets[0].default = True
 
     def get(self, id: str) -> TreeGraph | None:
         return next(
@@ -292,16 +291,20 @@ class TreeGraphManager:
         )
 
     async def sync(self, user_id: str, client_manager: ClientManager) -> None:
-        self.presets = [
-            preset
-            for preset in default_presets
-            if preset.id not in self.removed_preset_ids
-        ]
+
         retrieved_presets = await get_presets_weaviate(user_id, client_manager)
         if any(preset.default for preset in retrieved_presets):
             for preset in self.presets:
                 preset.default = False
-        self.presets.extend(retrieved_presets)
+
+        self.presets = retrieved_presets
+        existing_ids = [preset.id for preset in self.presets]
+        self.presets += [
+            preset
+            for preset in default_presets
+            if preset.id not in existing_ids
+            and preset.id not in self.removed_preset_ids
+        ]
 
     def to_json(self) -> list[dict]:
         return [preset.model_dump() for preset in self.presets]
