@@ -224,7 +224,7 @@ class Node:
         }
 
     def _get_function_inputs(
-        self, llm_inputs: dict[str, Any], real_inputs: list[ToolInput]
+        self, llm_inputs: dict[str, Any], real_inputs: list[dict[str, Any]]
     ) -> dict[str, Any]:
 
         # if the inputs match the 'schema' of keys: description, type, default, value, then take the value
@@ -236,13 +236,13 @@ class Node:
                 llm_inputs[input_name] = llm_inputs[input_name]["value"]
 
         # any non-provided inputs are set to the default
-        default_inputs = {value.name: value.default for value in real_inputs}
+        default_inputs = {value["name"]: value["default"] for value in real_inputs}
         for default_input_name in default_inputs:
             if default_input_name not in llm_inputs:
                 llm_inputs[default_input_name] = default_inputs[default_input_name]
 
         # any extra inputs are removed
-        real_input_names = [inp.name for inp in real_inputs]
+        real_input_names = [inp["name"] for inp in real_inputs]
         llm_inputs = {
             input_name: input_value
             for input_name, input_value in llm_inputs.items()
