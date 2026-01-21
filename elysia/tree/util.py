@@ -769,8 +769,14 @@ class TreeReturner:
             return
 
         payload = await result.to_frontend(self.user_id, self.conversation_id, query_id)
-        self.store.append(payload)
-        return payload
+
+        if result.store:
+            self.store.append(payload)
+
+        if result.display:
+            return payload
+
+        return None
 
 
 async def create_conversation_title(conversation: list[dict], lm: dspy.LM):

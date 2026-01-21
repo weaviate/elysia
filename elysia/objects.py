@@ -519,16 +519,17 @@ class Text(Return):
 
     def __init__(
         self,
-        payload_type: str,
         objects: list[dict],
         metadata: dict = {},
         display: bool = True,
+        store: bool | None = None,
     ):
-        Return.__init__(self, "text", payload_type)
+        Return.__init__(self, "text", "text")
         self.objects = [TextObject.model_validate(o) for o in objects]
         self.metadata = metadata
         self.text = self._concat_text(self.objects)
         self.display = display
+        self.store = display if store is None else store
 
     def _concat_text(self, objects: list[TextObject]):
         text = ""
@@ -568,9 +569,6 @@ class Text(Return):
         conversation_id: str,
         query_id: str,
     ):
-        if not self.display:
-            return
-
         return {
             "type": self.frontend_type,
             "streamed": False,
@@ -584,7 +582,7 @@ class Text(Return):
 
 class Response(Text):
     def __init__(self, text: str, **kwargs):
-        Text.__init__(self, "response", [{"text": text}], **kwargs)
+        Text.__init__(self, objects=[{"text": text, "ref_ids": []}], **kwargs)
 
 
 class StreamedReturn:
@@ -606,9 +604,17 @@ class Update(Return):
     E.g. a warning, error, status message, etc.
     """
 
-    def __init__(self, frontend_type: str, object: dict):
+    def __init__(
+        self,
+        frontend_type: str,
+        object: dict,
+        display: bool = True,
+        store: bool | None = None,
+    ):
         Return.__init__(self, frontend_type, "update")
         self.object = object
+        self.display = display
+        self.store = display if store is None else store
 
     def to_json(self):
         return self.object
@@ -672,6 +678,7 @@ class Result(Return):
         llm_message: str | None = None,
         unmapped_keys: list[str] = ["_REF_ID"],
         display: bool = True,
+        store: bool = True,
     ):
         """
         Args:
@@ -700,6 +707,7 @@ class Result(Return):
         self.llm_message = llm_message
         self.unmapped_keys = unmapped_keys
         self.display = display
+        self.store = display if store is None else store
 
     def __len__(self):
         return len(self.objects)
@@ -813,8 +821,6 @@ class Result(Return):
                 }
                 ```
         """
-        if not self.display:
-            return
 
         objects = self.to_json(mapping=True)
         if len(objects) == 0:

@@ -71,10 +71,12 @@ class CitedSummarizer(Tool):
             title_sent = False
             title = ""
             text_buffer = []
-            async for result in summarizer.aforward_streaming(
+
+            stream_iter = summarizer.aforward_streaming(
                 streamed_fields=["cited_text", "subtitle"],
                 lm=base_lm,
-            ):
+            )
+            async for result in stream_iter:
                 if isinstance(result, StreamResponse):
                     if result.signature_field_name == "subtitle":
                         title += result.chunk
@@ -137,6 +139,7 @@ class CitedSummarizer(Tool):
             objects=[t.model_dump() for t in summary.cited_text.cited_text],
             metadata={"title": summary.subtitle},
             display=not tree_data.streaming,
+            store=True,
         )
 
 
