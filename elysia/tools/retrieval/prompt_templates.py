@@ -197,7 +197,9 @@ def construct_query_output_prompt(vectorised: bool = False) -> str:
 
     7. Additional query parameters:
         - sort_by: Property and direction for sorting results
-        - limit: Maximum number of results to return (default: 5)
+        - limit: Maximum number of results to return (default: 5). 
+            Limit should be dynamic, depending on the search you are performing. Only use a high limit if you are sure you need it.
+            Aim for around the default of 5-10, unless the search requires specifically more, use judgement.
         - groupby_property: Group results by a specific property value
 
     When constructing queries:

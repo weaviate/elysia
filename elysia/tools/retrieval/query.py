@@ -673,7 +673,7 @@ class Query(Tool):
                         objects,
                         metadata,
                         mapping=(
-                            schemas[collection_name]["mappings"][display_type]
+                            schemas[collection_name]["mappings"].get(display_type, None)
                             if display_type != "table"
                             else None
                         ),
@@ -684,7 +684,7 @@ class Query(Tool):
                         metadata,
                         payload_type=display_type,
                         mapping=(
-                            schemas[collection_name]["mappings"][display_type]
+                            schemas[collection_name]["mappings"].get(display_type, None)
                             if display_type != "table"
                             else None
                         ),
