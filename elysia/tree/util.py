@@ -369,9 +369,14 @@ class Node:
             ) or (list(environment.keys())[0] if environment else None)
             preview_items = environment.get(first_key, []) if first_key else []
             preview = [
-                item["objects"]
+                obj
                 for item in preview_items[:5]
-                if isinstance(item, dict) and "objects" in item and item["objects"]
+                if isinstance(item, dict) and item.get("objects")
+                for obj in (
+                    item["objects"]
+                    if isinstance(item["objects"], list)
+                    else [item["objects"]]
+                )
             ]
 
             yield ViewEnvironment(
