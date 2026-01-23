@@ -396,32 +396,46 @@ class Node:
             if tree_data.streaming:
 
                 if tree_data.settings.USE_FEEDBACK:
-                    aforward_fn = (
-                        environment_decision_executor.aforward_streaming_with_feedback_examples
-                    )
+                    async for (
+                        chunk
+                    ) in environment_decision_executor.aforward_streaming_with_feedback_examples(
+                        streamed_fields=["reasoning"],
+                        environment=environment,
+                        available_actions=kwargs["available_actions"],
+                        history=history,
+                        lm=base_lm,
+                        add_tree_data_inputs=False,
+                        base_lm=base_lm,
+                        complex_lm=complex_lm,
+                        client_manager=client_manager,
+                        feedback_model="decision",
+                    ):
+                        if isinstance(chunk, StreamedReturn):
+                            yield chunk
+                        elif isinstance(chunk, dspy.Prediction):
+                            pred = chunk
+                        elif isinstance(chunk, list):
+                            yield FewShotExamples(chunk)
 
                 else:
-                    aforward_fn = environment_decision_executor.aforward_streaming
 
-                async for chunk in aforward_fn(
-                    streamed_fields=["reasoning"],
-                    environment=environment,
-                    available_actions=kwargs["available_actions"],
-                    history=history,
-                    lm=base_lm,
-                    add_tree_data_inputs=False,
-                    base_lm=base_lm,
-                    complex_lm=complex_lm,
-                    client_manager=client_manager,
-                    feedback_model="decision",
-                ):
-                    if isinstance(chunk, StreamedReturn):
-                        yield chunk
-                    elif isinstance(chunk, dspy.Prediction):
-                        pred = chunk
-                    elif isinstance(chunk, list):
-                        yield FewShotExamples(chunk)
-
+                    async for chunk in environment_decision_executor.aforward_streaming(
+                        streamed_fields=["reasoning"],
+                        additional_metadata={
+                            "reasoning": True,
+                            "tool_name": "decision",
+                            "title": None,
+                        },
+                        environment=environment,
+                        available_actions=kwargs["available_actions"],
+                        history=history,
+                        lm=base_lm,
+                        add_tree_data_inputs=False,
+                    ):
+                        if isinstance(chunk, StreamedReturn):
+                            yield chunk
+                        elif isinstance(chunk, dspy.Prediction):
+                            pred = chunk
             else:
                 if tree_data.settings.USE_FEEDBACK:
                     pred, uuids = (
