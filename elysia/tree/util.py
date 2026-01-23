@@ -403,16 +403,6 @@ class Node:
                 else:
                     aforward_fn = environment_decision_executor.aforward_streaming
 
-                yield StreamedReturn(
-                    chunk={
-                        "reasoning": True,
-                        "tool_name": "view_environment",
-                        "title": None,
-                    },
-                    output_type=dict,
-                    field_name="reasoning",
-                )
-
                 async for chunk in aforward_fn(
                     streamed_fields=["reasoning"],
                     environment=environment,
@@ -425,22 +415,13 @@ class Node:
                     client_manager=client_manager,
                     feedback_model="decision",
                 ):
-                    if isinstance(chunk, StreamResponse):
-                        yield StreamedReturn(
-                            chunk=chunk.chunk,
-                            output_type=str,
-                            field_name="reasoning",
-                        )
+                    if isinstance(chunk, StreamedReturn):
+                        yield chunk
                     elif isinstance(chunk, dspy.Prediction):
                         pred = chunk
                     elif isinstance(chunk, list):
                         yield FewShotExamples(chunk)
 
-                yield StreamedReturn(
-                    chunk=None,
-                    output_type=StreamEndMarker,
-                    field_name="reasoning",
-                )
             else:
                 if tree_data.settings.USE_FEEDBACK:
                     pred, uuids = (

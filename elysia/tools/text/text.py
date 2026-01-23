@@ -81,17 +81,7 @@ class CitedSummarizer(Tool):
                 if isinstance(result, dspy.Prediction):
                     summary = result
                 elif isinstance(result, StreamedReturn):
-                    if result.field_name == "end_marker":
-                        yield StreamedReturn(
-                            chunk={
-                                "objects": result.chunk["objects"]["cited_text"],
-                                "metadata": result.chunk["metadata"],
-                            },
-                            output_type=StreamEndMarker,
-                            field_name="end_marker",
-                        )
-                    else:
-                        yield result
+                    yield result
         else:
             summary = await summarizer.aforward(
                 lm=base_lm,
