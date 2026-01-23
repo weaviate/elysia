@@ -72,7 +72,14 @@ class AssertedModule(dspy.Module):
             type_=dspy.History,
         )
 
-        return dspy.Predict(signature)
+        if hasattr(FeedbackModule, "signature"):
+            FeedbackModule.signature = signature
+        elif hasattr(FeedbackModule, "predict"):
+            FeedbackModule.predict.signature = signature
+        else:
+            raise ValueError("Module has no signature or predict attribute!")
+
+        return FeedbackModule
 
     def forward(self, **kwargs) -> dspy.Prediction:
         prediction: dspy.Prediction = self.module.forward(**kwargs)  # type: ignore
