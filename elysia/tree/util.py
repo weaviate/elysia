@@ -259,6 +259,8 @@ class Node:
         # Custom logic if view environment is called incorrectly
         if pred.function_name == "view_environment":
             inputs = pred.function_inputs
+
+            has_tool_names = "tool_names" in inputs
             has_keys = "metadata_keys" in inputs
             has_values = "metadata_values" in inputs
 
@@ -301,6 +303,16 @@ class Node:
                             f"Number of values: {len(values)}"
                         ),
                     )
+
+            if has_tool_names:
+                tool_names = inputs["tool_names"]
+                for tool_name in tool_names:
+                    if tool_name not in kwargs["environment_keys"]:
+                        return (
+                            False,
+                            f"Tool name {tool_name} is not in the environment! "
+                            f"Your output MUST be one of the following: {kwargs['environment_keys']}",
+                        )
         return (
             pred.function_name in available_option_names,
             f"You picked the action `{pred.function_name}` - that is not in `available_actions`! "
@@ -357,7 +369,9 @@ class Node:
             ) or (list(environment.keys())[0] if environment else None)
             preview_items = environment.get(first_key, []) if first_key else []
             preview = [
-                item["objects"] for item in preview_items[:5] if isinstance(item, dict)
+                item["objects"]
+                for item in preview_items[:5]
+                if isinstance(item, dict) and "objects" in item and item["objects"]
             ]
 
             yield ViewEnvironment(
@@ -474,6 +488,7 @@ class Node:
         complex_lm: dspy.LM,
         client_manager: ClientManager,
         feedback: bool,
+        **kwargs,
     ) -> dict:
 
         if feedback:
@@ -487,6 +502,7 @@ class Node:
                 "complex_lm": complex_lm,
                 "client_manager": client_manager,
                 "feedback_model": "decision",
+                **kwargs,
             }
         else:
             return {
@@ -496,6 +512,7 @@ class Node:
                 "available_actions": available_options,
                 "unavailable_actions": unavailable_options,
                 "lm": base_lm,
+                **kwargs,
             }
 
     def _build_training_inputs(
@@ -615,6 +632,7 @@ class Node:
             complex_lm,
             client_manager,
             tree_data.settings.USE_FEEDBACK,
+            environment_keys=list(tree_data.environment.environment.keys()),
         )
 
         pred = None
@@ -624,28 +642,21 @@ class Node:
                 if tree_data.settings.USE_FEEDBACK
                 else decision_executor.aforward_streaming
             )
-            yield StreamedReturn(
-                chunk={
+            async for chunk in aforward_fn(
+                streamed_fields=["reasoning"],
+                additional_metadata={
                     "reasoning": True,
                     "tool_name": "decision",
                     "title": None,
                 },
-                output_type=dict,
-                field_name="reasoning",
-            )
-
-            async for chunk in aforward_fn(streamed_fields=["reasoning"], **kwargs):
-                yield_val, pred_val = self._process_stream_chunk(chunk)
-                if yield_val is not None:
-                    yield yield_val
-                if pred_val is not None:
-                    pred = pred_val
-
-            yield StreamedReturn(
-                chunk=None,
-                output_type=StreamEndMarker,
-                field_name="reasoning",
-            )
+                **kwargs,
+            ):
+                if isinstance(chunk, StreamedReturn):
+                    yield chunk
+                elif isinstance(chunk, dspy.Prediction):
+                    pred = chunk
+                elif isinstance(chunk, list):
+                    yield FewShotExamples(chunk)
         else:
             if tree_data.settings.USE_FEEDBACK:
                 pred, uuids = await decision_executor.aforward_with_feedback_examples(

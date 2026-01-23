@@ -1,7 +1,7 @@
 import json
 from typing import Type, Callable
 from copy import copy, deepcopy
-from typing import AsyncGenerator, Literal
+from typing import AsyncGenerator, Literal, Any
 
 import dspy
 from dspy.primitives.module import Module
@@ -11,7 +11,9 @@ from dspy.streaming import StreamListener, StreamResponse
 from elysia.tree.objects import TreeData, Atlas, Environment
 from elysia.util.feedback import retrieve_feedback
 from elysia.util.client import ClientManager
-from elysia.util.parsing import estimate_tokens
+from elysia.util.parsing import estimate_tokens, format_dict_to_serialisable
+from elysia.objects import StreamedReturn
+from elysia.util.streaming import StreamEndMarker
 
 elysia_meta_prompt = """
 You are part of an ensemble of agents that are working together to solve a task.
@@ -112,14 +114,14 @@ class AssertedModule(dspy.Module):
 
     async def aforward_streaming(
         self, streamed_fields: list[str], **kwargs
-    ) -> AsyncGenerator[dspy.Prediction | StreamResponse, None]:
+    ) -> AsyncGenerator[dspy.Prediction | StreamedReturn, None]:
 
         if not hasattr(self.module, "aforward_streaming"):
             raise ValueError("Module has no attribute aforward_streaming!")
 
         found_pred = False
         async for chunk in self.module.aforward_streaming(streamed_fields=streamed_fields, **kwargs):  # type: ignore
-            if isinstance(chunk, StreamResponse):
+            if isinstance(chunk, StreamedReturn):
                 yield chunk
             elif isinstance(chunk, dspy.Prediction):
                 prediction = chunk
@@ -718,8 +720,14 @@ class ElysiaPrompt(Module):
         return await self.predict.acall(**kwargs)
 
     async def aforward_streaming(
-        self, streamed_fields: list[str], add_tree_data_inputs: bool = True, **kwargs
-    ) -> AsyncGenerator[StreamResponse | dspy.Prediction, None]:
+        self,
+        streamed_fields: list[str],
+        streamed_output_types: dict[str, type] = {},
+        streamed_metadata_fields: list[str] = [],
+        additional_metadata: dict[str, Any] = {},
+        add_tree_data_inputs: bool = True,
+        **kwargs,
+    ) -> AsyncGenerator[StreamedReturn | dspy.Prediction, None]:
         """
         Performs an asynchronous forward pass to the signature with streaming enabled.
 
@@ -727,6 +735,9 @@ class ElysiaPrompt(Module):
             streamed_fields (list[str]): The fields in the dspy Module that will be streamed.
                 If given as e.g. `"reasoning"`, then this method will yield `StreamResponse`s whose `chunk` attributes are text pieces of the reasoning field.
                 The field given must be a string output type, otherwise this will error.
+            streamed_metadata_fields (list[str]): Optional. The fields in the dspy Module that will be added as metadata before the main stream.
+                These fields must come before the streamed_fields in the dspy signature.
+            additional_metadata (dict[str, Any]): Optional. Additional fields to be added to metadata.
             add_tree_data_inputs (bool): Optional. Whether to add the tree data inputs to the kwargs.
                 When enabled, this adds the inputs set up on initialisation (e.g. `message_update`, `reasoning`, etc).
                 If disabled, only the normal inputs to the signature are passed (and the fields will be missing in the forward pass).
@@ -737,22 +748,80 @@ class ElysiaPrompt(Module):
             AsyncGenerator[StreamResponse | dspy.Prediction, None]: The chunks from the streamed fields or the final prediction (at the end of streaming).
         """
 
+        for streamed_field in streamed_fields + streamed_metadata_fields:
+            if streamed_field not in streamed_output_types:
+                streamed_output_types[streamed_field] = str
+
         kwargs = self._add_tree_data_inputs(kwargs) if add_tree_data_inputs else kwargs
         stream_predict = dspy.streamify(
             self.predict,
             stream_listeners=[
                 StreamListener(signature_field_name=streamed_field)
-                for streamed_field in streamed_fields
+                for streamed_field in streamed_fields + streamed_metadata_fields
             ],
             is_async_program=True,
             async_streaming=True,
         )
+
+        output_buffer = {f: [] for f in streamed_fields}
+        output_metadata = {m: "" for m in streamed_metadata_fields}
         output_stream = stream_predict(**kwargs)  # type: ignore
+        metadata_sent = False
         async for chunk in output_stream:
             if isinstance(chunk, StreamResponse):
-                yield chunk
+                if chunk.signature_field_name in streamed_metadata_fields:
+                    output_metadata[chunk.signature_field_name] += chunk.chunk
+
+                if chunk.signature_field_name in streamed_fields:
+                    if not metadata_sent:
+                        yield StreamedReturn(
+                            chunk={
+                                **output_metadata,
+                                **additional_metadata,
+                            },
+                            field_name="metadata",
+                            output_type=dict,
+                        )
+                        metadata_sent = True
+
+                    for buffered_output in output_buffer[chunk.signature_field_name]:
+                        yield StreamedReturn(
+                            chunk=buffered_output,
+                            field_name=chunk.signature_field_name,
+                            output_type=streamed_output_types[
+                                chunk.signature_field_name
+                            ],
+                        )
+                    output_buffer[chunk.signature_field_name] = []
+
+                    yield StreamedReturn(
+                        chunk=chunk.chunk,
+                        field_name=chunk.signature_field_name,
+                        output_type=streamed_output_types[chunk.signature_field_name],
+                    )
+                else:
+                    if chunk.signature_field_name in output_buffer:
+                        output_buffer[chunk.signature_field_name].append(chunk.chunk)
+                    else:
+                        output_buffer[chunk.signature_field_name] = [chunk.chunk]
+
             elif isinstance(chunk, dspy.Prediction):
+                pred = {**chunk}
                 yield chunk
+
+        yield StreamedReturn(
+            chunk={
+                "objects": format_dict_to_serialisable(
+                    {field: pred[field] for field in streamed_fields}, inplace=False
+                ),
+                "metadata": {
+                    **{field: pred[field] for field in streamed_metadata_fields},
+                    **additional_metadata,
+                },
+            },
+            field_name="end_marker",
+            output_type=StreamEndMarker,
+        )
 
     async def aforward_with_feedback_examples(
         self,

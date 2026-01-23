@@ -2,9 +2,11 @@ import datetime
 import json
 import uuid
 import re
-
+from copy import deepcopy
 from typing import Any
 from types import GenericAlias
+
+from pydantic import BaseModel
 
 from weaviate.collections.classes.aggregate import (
     AggregateDate,
@@ -49,7 +51,12 @@ def format_datetime(dt: datetime.datetime | None) -> str:
         return output + "Z"
 
 
-def format_dict_to_serialisable(d: dict[str, Any], remove_unserialisable: bool = False):
+def format_dict_to_serialisable(
+    d: dict[str, Any], remove_unserialisable: bool = False, inplace: bool = True
+):
+    if not inplace:
+        d = deepcopy(d)
+
     if remove_unserialisable:
         keys_to_remove = []
 
@@ -72,6 +79,9 @@ def format_dict_to_serialisable(d: dict[str, Any], remove_unserialisable: bool =
                 elif isinstance(item, uuid.UUID):
                     d[key][i] = str(item)
 
+                elif isinstance(item, BaseModel):
+                    d[key][i] = item.model_dump()
+
                 elif remove_unserialisable and not isinstance(
                     item, (str, int, float, bool, list, dict)
                 ):
@@ -86,6 +96,9 @@ def format_dict_to_serialisable(d: dict[str, Any], remove_unserialisable: bool =
         elif isinstance(value, type):
             d[key] = value.__name__
 
+        elif isinstance(value, BaseModel):
+            d[key] = value.model_dump()
+
         elif isinstance(value, GenericAlias):
             d[key] = str(value)
 
@@ -97,6 +110,9 @@ def format_dict_to_serialisable(d: dict[str, Any], remove_unserialisable: bool =
     if remove_unserialisable:
         for key in keys_to_remove:
             del d[key]
+
+    if not inplace:
+        return d
 
 
 def remove_whitespace(text: str) -> str:

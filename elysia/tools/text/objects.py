@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 from dspy import Type
 
 
@@ -15,10 +15,14 @@ class TextWithCitation(BaseModel):
 
 
 class ListTextWithCitation(Type):
-    cited_text: List[TextWithCitation] = Field(
-        description="A list of TextWithCitation objects"
+    objects: List[TextWithCitation] = Field(
+        description="A list of TextWithCitation objects, containing the text and the ref_ids."
     )
 
     @classmethod
     def is_streamable(cls):
         return True
+
+    @model_serializer()
+    def serialize_model(self):
+        return [t.model_dump() for t in self.objects]

@@ -68,75 +68,38 @@ class CitedSummarizer(Tool):
         )
 
         if tree_data.streaming:
-            title_sent = False
-            title = ""
-            text_buffer = []
-
-            stream_iter = summarizer.aforward_streaming(
-                streamed_fields=["cited_text", "subtitle"],
+            async for result in summarizer.aforward_streaming(
+                streamed_fields=["cited_text"],
+                streamed_output_types={"cited_text": ListTextWithCitation},
+                streamed_metadata_fields=["title"],
+                additional_metadata={
+                    "reasoning": False,
+                    "tool_name": "cited_summarize",
+                },
                 lm=base_lm,
-            )
-            async for result in stream_iter:
-                if isinstance(result, StreamResponse):
-                    if result.signature_field_name == "subtitle":
-                        title += result.chunk
-                    if result.signature_field_name == "cited_text":
-                        if title and not title_sent:
-                            yield StreamedReturn(
-                                chunk={
-                                    "title": title,
-                                    "reasoning": False,
-                                    "tool_name": "cited_summarize",
-                                },
-                                field_name="cited_text",
-                                output_type=dict,
-                            )
-                            title_sent = True
-
-                        if title_sent or len(text_buffer) > 2:
-                            if not title_sent:
-                                yield StreamedReturn(
-                                    chunk={
-                                        "title": "",
-                                        "reasoning": False,
-                                        "tool_name": "cited_summarize",
-                                    },
-                                    field_name="cited_text",
-                                    output_type=dict,
-                                )
-                                title_sent = True
-
-                            for text in text_buffer:
-                                yield StreamedReturn(
-                                    chunk=text,
-                                    field_name="cited_text",
-                                    output_type=ListTextWithCitation,
-                                )
-                                text_buffer = []
-
-                            yield StreamedReturn(
-                                chunk=result.chunk,
-                                field_name="cited_text",
-                                output_type=ListTextWithCitation,
-                            )
-                        else:
-                            text_buffer.append(result.chunk)
-                elif isinstance(result, dspy.Prediction):
+            ):
+                if isinstance(result, dspy.Prediction):
                     summary = result
-
-            yield StreamedReturn(
-                chunk=None,
-                field_name="cited_text",
-                output_type=StreamEndMarker,
-            )
+                elif isinstance(result, StreamedReturn):
+                    if result.field_name == "end_marker":
+                        yield StreamedReturn(
+                            chunk={
+                                "objects": result.chunk["objects"]["cited_text"],
+                                "metadata": result.chunk["metadata"],
+                            },
+                            output_type=StreamEndMarker,
+                            field_name="end_marker",
+                        )
+                    else:
+                        yield result
         else:
             summary = await summarizer.aforward(
                 lm=base_lm,
             )
 
         yield Text(
-            objects=[t.model_dump() for t in summary.cited_text.cited_text],
-            metadata={"title": summary.subtitle},
+            objects=[t.model_dump() for t in summary.cited_text.objects],
+            metadata={"title": summary.title},
             display=not tree_data.streaming,
             store=True,
         )
@@ -193,9 +156,8 @@ class Summarizer(Tool):
             lm=base_lm,
         )
 
-        yield Text(
-            "text_with_title",
-            objects=[{"text": summary.summary}],
+        yield Response(
+            text=summary.summary,
             metadata={"title": summary.subtitle},
         )
 

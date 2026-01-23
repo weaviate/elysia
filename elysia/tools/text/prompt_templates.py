@@ -12,7 +12,7 @@ class CitedSummarizingPrompt(dspy.Signature):
     You should provide useful analysis, new information via analysing the existing objects, and synthesising the information.
     """
 
-    subtitle = dspy.OutputField(description="A subtitle for the summary")
+    title = dspy.OutputField(description="A title for the summary")
     cited_text: ListTextWithCitation = dspy.OutputField(
         description="""
         A list of TextWithCitation objects whose 'text' fields will be concatenated to form the complete summary.

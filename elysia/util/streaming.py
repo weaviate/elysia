@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal
+from typing import Literal, Any
 from dataclasses import dataclass
 import uuid
 
@@ -65,16 +65,16 @@ class StreamedTextWithCitations(StreamedParser):
 
         while self.buffer:
             if self.state == TextParserState.IDLE:
-                # Look for "cited_text" field to enter the array (wrapped format)
-                cited_text_field = self.buffer.find('"cited_text"')
+                # Look for "objects" field to enter the array (wrapped format)
+                objects_field = self.buffer.find('"objects"')
                 # Also look for direct array start (unwrapped format)
                 direct_array = self.buffer.find("[")
 
-                if cited_text_field != -1 and (
-                    direct_array == -1 or cited_text_field < direct_array
+                if objects_field != -1 and (
+                    direct_array == -1 or objects_field < direct_array
                 ):
-                    # Found "cited_text" field first - use wrapped format
-                    colon_pos = self.buffer.find(":", cited_text_field)
+                    # Found "objects" field first - use wrapped format
+                    colon_pos = self.buffer.find(":", objects_field)
                     if colon_pos != -1:
                         self.state = TextParserState.LOOKING_FOR_ARRAY
                         self.buffer = self.buffer[colon_pos + 1 :]
@@ -306,8 +306,8 @@ class StreamedEnd(StreamedParser):
     def __init__(self):
         StreamedParser.__init__(self)
 
-    def feed(self, chunk: None) -> list[StreamedPayload]:
-        return [StreamedPayload(type="end", chunk=None, index=None)]
+    def feed(self, chunk: Any) -> list[StreamedPayload]:
+        return [StreamedPayload(type="end", chunk=chunk, index=None)]
 
 
 class StreamEndMarker:
@@ -330,9 +330,10 @@ class StreamedParserFactory:
     def get_parser(
         self, field_type: type, field_name: str
     ) -> tuple[StreamedParser, str]:
+
         if field_name not in self.parsers:
-            self.parsers[field_name] = {}
             self.parser_ids[field_name] = str(uuid.uuid4())
+            self.parsers[field_name] = {}
 
         if field_type not in self.parsers[field_name]:
             self.parsers[field_name][field_type] = self.factory[field_type]()

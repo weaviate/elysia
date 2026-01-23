@@ -384,26 +384,22 @@ class Query(Tool):
                     async for chunk in query_generator.aforward_streaming(
                         streamed_fields=["reasoning"],
                         lm=complex_lm,
+                        additional_metadata={
+                            "reasoning": True,
+                            "tool_name": "query",
+                            "title": None,
+                        },
                         available_collections=collection_names,
                         previous_queries=previous_queries,
                         collection_display_types=display_types,
                         display_type_descriptions=display_type_descriptions,
                         searchable_fields=searchable_fields,
                     ):
-                        if isinstance(chunk, StreamResponse):
-                            yield StreamedReturn(
-                                chunk=chunk.chunk,
-                                output_type=str,
-                                field_name="reasoning",
-                            )
+                        if isinstance(chunk, StreamedReturn):
+                            yield chunk
                         elif isinstance(chunk, dspy.Prediction):
                             query = chunk
 
-                    yield StreamedReturn(
-                        chunk=None,
-                        output_type=StreamEndMarker,
-                        field_name="reasoning",
-                    )
                 else:
                     query = await query_generator.aforward(
                         lm=complex_lm,
