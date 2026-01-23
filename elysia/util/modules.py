@@ -72,7 +72,7 @@ class AssertedModule(dspy.Module):
             type_=dspy.History,
         )
 
-        return FeedbackModule
+        return dspy.Predict(signature)
 
     def forward(self, **kwargs) -> dspy.Prediction:
         prediction: dspy.Prediction = self.module.forward(**kwargs)  # type: ignore
@@ -81,7 +81,7 @@ class AssertedModule(dspy.Module):
         if not success:
             history.messages.append({**kwargs, **prediction})
             for attempt in range(self.num_tries):
-                prediction: dspy.Prediction = self.asserted_module.forward(feedback=feedback, history=history, lm=kwargs["lm"])  # type: ignore
+                prediction: dspy.Prediction = self.asserted_module.forward(feedback=feedback, history=history, **kwargs)  # type: ignore
                 success, feedback = self.assertion_function(prediction, kwargs)
                 if success:
                     break
@@ -100,7 +100,7 @@ class AssertedModule(dspy.Module):
         if not success:
             history.messages.append({**kwargs, **prediction})
             for attempt in range(self.num_tries):
-                prediction: dspy.Prediction = await self.asserted_module.aforward(feedback=feedback, history=history, lm=kwargs["lm"])  # type: ignore
+                prediction: dspy.Prediction = await self.asserted_module.aforward(feedback=feedback, history=history, **kwargs)  # type: ignore
                 success, feedback = self.assertion_function(prediction, kwargs)
                 if success:
                     break
@@ -137,8 +137,8 @@ class AssertedModule(dspy.Module):
             history.messages.append({**kwargs, **prediction})
             for attempt in range(self.num_tries):
                 found_pred = False
-                async for chunk in self.asserted_module.aforward_streaming(streamed_fields=streamed_fields, **kwargs):  # type: ignore
-                    if isinstance(chunk, StreamResponse):
+                async for chunk in self.asserted_module.aforward_streaming(streamed_fields=streamed_fields, history=history, **kwargs):  # type: ignore
+                    if isinstance(chunk, StreamedReturn):
                         yield chunk
                     elif isinstance(chunk, dspy.Prediction):
                         prediction = chunk
@@ -198,7 +198,7 @@ class AssertedModule(dspy.Module):
 
     async def aforward_streaming_with_feedback_examples(
         self, streamed_fields: list[str], **kwargs
-    ) -> AsyncGenerator[dspy.Prediction | StreamResponse | list[str], None]:
+    ) -> AsyncGenerator[dspy.Prediction | StreamedReturn | list[str], None]:
 
         if not hasattr(self.module, "aforward_streaming_with_feedback_examples"):
             raise ValueError(
@@ -211,7 +211,7 @@ class AssertedModule(dspy.Module):
         async for chunk in self.module.aforward_streaming_with_feedback_examples(
             streamed_fields=streamed_fields, **kwargs
         ):  # type: ignore
-            if isinstance(chunk, StreamResponse):
+            if isinstance(chunk, StreamedReturn):
                 yield chunk
             elif isinstance(chunk, dspy.Prediction):
                 prediction = chunk
@@ -229,8 +229,8 @@ class AssertedModule(dspy.Module):
             history.messages.append({**kwargs, **prediction})
             for attempt in range(self.num_tries):
                 found_pred = False
-                async for chunk in self.asserted_module.aforward_streaming(streamed_fields=streamed_fields, **kwargs):  # type: ignore
-                    if isinstance(chunk, StreamResponse):
+                async for chunk in self.asserted_module.aforward_streaming(streamed_fields=streamed_fields, history=history, **kwargs):  # type: ignore
+                    if isinstance(chunk, StreamedReturn):
                         yield chunk
                     elif isinstance(chunk, dspy.Prediction):
                         prediction = chunk
