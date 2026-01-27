@@ -593,10 +593,12 @@ class StreamedReturn:
         chunk: Any,
         field_name: str,
         output_type: type,
+        field_id: str | None = None,
     ):
         self.chunk = chunk
         self.output_type = output_type
         self.field_name = field_name
+        self.field_id = field_id if field_id is not None else str(uuid.uuid4())
 
 
 class Update(Return):

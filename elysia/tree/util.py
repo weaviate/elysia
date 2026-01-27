@@ -531,22 +531,6 @@ class Node:
             **decision_executor.module._add_tree_data_inputs({}),  # type: ignore
         }
 
-    def _process_stream_chunk(self, chunk) -> tuple[Any | None, dspy.Prediction | None]:
-        if isinstance(chunk, StreamResponse):
-            return (
-                StreamedReturn(
-                    chunk=chunk.chunk,
-                    output_type=str,
-                    field_name=chunk.signature_field_name,
-                ),
-                None,
-            )
-        elif isinstance(chunk, dspy.Prediction):
-            return None, chunk
-        elif isinstance(chunk, list):
-            return FewShotExamples(chunk), None
-        return None, None
-
     async def decide(
         self,
         tree_data: TreeData,

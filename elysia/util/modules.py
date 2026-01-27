@@ -788,6 +788,7 @@ class ElysiaPrompt(Module):
                             },
                             field_name="metadata",
                             output_type=dict,
+                            field_id=str(id(chunk.signature_field_name)),
                         )
                         metadata_sent = True
 
@@ -798,6 +799,7 @@ class ElysiaPrompt(Module):
                             output_type=streamed_output_types[
                                 chunk.signature_field_name
                             ],
+                            field_id=str(id(chunk.signature_field_name)),
                         )
                     output_buffer[chunk.signature_field_name] = []
 
@@ -805,6 +807,7 @@ class ElysiaPrompt(Module):
                         chunk=chunk.chunk,
                         field_name=chunk.signature_field_name,
                         output_type=streamed_output_types[chunk.signature_field_name],
+                        field_id=str(id(chunk.signature_field_name)),
                     )
                 else:
                     if chunk.signature_field_name in output_buffer:
@@ -816,19 +819,15 @@ class ElysiaPrompt(Module):
                 pred = {**chunk}
                 yield chunk
 
-        yield StreamedReturn(
-            chunk={
-                "objects": format_dict_to_serialisable(
+        for field in streamed_fields:
+            yield StreamedReturn(
+                chunk=format_dict_to_serialisable(
                     {field: pred[field] for field in streamed_fields}, inplace=False
                 ),
-                "metadata": {
-                    **{field: pred[field] for field in streamed_metadata_fields},
-                    **additional_metadata,
-                },
-            },
-            field_name="end_marker",
-            output_type=StreamEndMarker,
-        )
+                field_name=field,
+                output_type=StreamEndMarker,
+                field_id=str(id(field)),
+            )
 
     async def aforward_with_feedback_examples(
         self,

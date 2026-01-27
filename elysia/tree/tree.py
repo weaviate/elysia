@@ -1100,7 +1100,7 @@ class Tree:
                     client_manager=client_manager,
                 ):
                     if isinstance(result, StreamedReturn):
-                        parser, stream_id = self.streamer.get_parser(
+                        parser = self.streamer.get_parser(
                             result.output_type, result.field_name
                         )
                         streamed_payloads = parser.feed(result.chunk)
@@ -1108,7 +1108,7 @@ class Tree:
                             yield await self.returner.send_streamed(
                                 streamed_payload,
                                 self.prompt_to_query_id[self.user_prompt],
-                                stream_id,
+                                result.field_id,
                             )
                     else:
                         action_result, _ = await self._evaluate_result(
@@ -1140,7 +1140,7 @@ class Tree:
                 client_manager=client_manager,
             ):
                 if isinstance(result, StreamedReturn):
-                    parser, stream_id = self.streamer.get_parser(
+                    parser = self.streamer.get_parser(
                         result.output_type, result.field_name
                     )
                     streamed_payloads = parser.feed(result.chunk)
@@ -1148,7 +1148,7 @@ class Tree:
                         yield await self.returner.send_streamed(
                             streamed_payload,
                             self.prompt_to_query_id[user_prompt],
-                            stream_id,
+                            result.field_id,
                         )
                 elif isinstance(result, ViewEnvironment):
                     yield await self.returner.send(
@@ -1196,7 +1196,7 @@ class Tree:
                 **kwargs,
             ):
                 if isinstance(result, StreamedReturn):
-                    parser, stream_id = self.streamer.get_parser(
+                    parser = self.streamer.get_parser(
                         result.output_type, result.field_name
                     )
                     streamed_payloads = parser.feed(result.chunk)
@@ -1205,7 +1205,7 @@ class Tree:
                             await self.returner.send_streamed(
                                 streamed_payload,
                                 self.prompt_to_query_id[self.user_prompt],
-                                stream_id,
+                                result.field_id,
                             ),
                             False,
                         )

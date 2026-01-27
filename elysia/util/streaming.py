@@ -327,18 +327,15 @@ class StreamedParserFactory:
         self.parsers = {}
         self.parser_ids = {}
 
-    def get_parser(
-        self, field_type: type, field_name: str
-    ) -> tuple[StreamedParser, str]:
+    def get_parser(self, field_type: type, field_name: str) -> StreamedParser:
 
         if field_name not in self.parsers:
-            self.parser_ids[field_name] = str(uuid.uuid4())
             self.parsers[field_name] = {}
 
         if field_type not in self.parsers[field_name]:
             self.parsers[field_name][field_type] = self.factory[field_type]()
 
-        return self.parsers[field_name][field_type], self.parser_ids[field_name]
+        return self.parsers[field_name][field_type]
 
     def reset(self):
         self.parsers = {}
