@@ -374,13 +374,14 @@ class Tree:
         self,
         collection_names: list[str],
         client_manager: ClientManager,
+        check_existence: bool = True,
     ) -> None:
         self.settings.logger.debug(
             f"Using the following collection names: {collection_names}"
         )
 
         collection_names = await self.tree_data.set_collection_names(
-            collection_names, client_manager
+            collection_names, client_manager, check_existence
         )
 
     async def _check_rules(
@@ -1330,9 +1331,14 @@ class Tree:
 
             if self.tree_data.use_weaviate_collections:
                 if not collection_names:
+                    check_existence = False
                     async with client_manager.connect_to_async_client() as client:
                         collection_names = await retrieve_all_collection_names(client)
-                await self.set_collection_names(collection_names, client_manager)
+                else:
+                    check_existence = True
+                await self.set_collection_names(
+                    collection_names, client_manager, check_existence
+                )
 
         self._print_panel(user_prompt, "User Prompt", "yellow")
 

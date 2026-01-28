@@ -550,7 +550,10 @@ class CollectionData:
         self.logger = logger
 
     async def set_collection_names(
-        self, collection_names: list[str], client_manager: ClientManager
+        self,
+        collection_names: list[str],
+        client_manager: ClientManager,
+        check_existence: bool = True,
     ):
         temp_metadata = {}
 
@@ -567,10 +570,13 @@ class CollectionData:
 
         async with client_manager.connect_to_async_client() as client:
             # check if the metadata collection exists
-            if not await client.collections.exists(metadata_name):
+            metadata_exists = await client.collections.exists(metadata_name)
+
+            if not metadata_exists:
                 self.removed_collections.extend(collections_to_get)
             else:
                 metadata_collection = client.collections.get(metadata_name)
+
                 filters = (
                     Filter.any_of(
                         [
@@ -581,20 +587,25 @@ class CollectionData:
                     if len(collections_to_get) >= 1
                     else None
                 )
+
                 metadata = await metadata_collection.query.fetch_objects(
                     filters=filters,
                     limit=9999,
                 )
+
                 metadata_map = {
                     metadata_obj.properties["name"]: metadata_obj.properties
                     for metadata_obj in metadata.objects
                 }
 
                 for collection_name in collections_to_get:
-
-                    if not await client.collections.exists(collection_name):
-                        self.incorrect_collections.append(collection_name)
-                        continue
+                    if check_existence:
+                        collection_exists = await client.collections.exists(
+                            collection_name
+                        )
+                        if not collection_exists:
+                            self.incorrect_collections.append(collection_name)
+                            continue
 
                     if collection_name not in metadata_map:
                         self.removed_collections.append(collection_name)
@@ -943,10 +954,13 @@ class TreeData:
         return "\n".join(lines)
 
     async def set_collection_names(
-        self, collection_names: list[str], client_manager: ClientManager
+        self,
+        collection_names: list[str],
+        client_manager: ClientManager,
+        check_existence: bool = True,
     ):
         self.collection_names = await self.collection_data.set_collection_names(
-            collection_names, client_manager
+            collection_names, client_manager, check_existence
         )
         return self.collection_names
 
