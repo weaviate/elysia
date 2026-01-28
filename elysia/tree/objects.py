@@ -764,6 +764,7 @@ class TreeData:
         settings: Settings | None = None,
         use_weaviate_collections: bool = True,
         streaming: bool = False,
+        view_env_vars: ViewEnvironment | None = None,
     ):
 
         # -- Base Data --
@@ -789,7 +790,7 @@ class TreeData:
         # -- Errors --
         self.errors: dict[str, list[str]] = {}
         self.current_task = None
-        self.view_env_vars: ViewEnvironment | None = None
+        self.view_env_vars = view_env_vars
 
         # -- Other --
         self.env_token_limit = self.settings.ENV_TOKEN_LIMIT
@@ -1074,12 +1075,22 @@ class TreeData:
         out = {
             k: v
             for k, v in self.__dict__.items()
-            if k not in ["collection_data", "atlas", "environment", "settings"]
+            if k
+            not in [
+                "collection_data",
+                "atlas",
+                "environment",
+                "settings",
+                "view_env_vars",
+            ]
         }
         out["collection_data"] = self.collection_data.to_json()
         out["atlas"] = self.atlas.model_dump()
         out["environment"] = self.environment.to_json(remove_unserialisable)
         out["settings"] = self.settings.to_json()
+        out["view_env_vars"] = (
+            self.view_env_vars.to_json() if self.view_env_vars else None
+        )
         return out
 
     @classmethod
@@ -1089,13 +1100,18 @@ class TreeData:
         collection_data = CollectionData.from_json(json_data["collection_data"], logger)
         atlas = Atlas.model_validate(json_data["atlas"])
         environment = Environment.from_json(json_data["environment"])
-
+        view_env_vars = (
+            ViewEnvironment.from_json(json_data["view_env_vars"])
+            if json_data["view_env_vars"]
+            else None
+        )
         tree_data = cls(
             user_id=json_data["user_id"],
             collection_data=collection_data,
             atlas=atlas,
             environment=environment,
             settings=settings,
+            view_env_vars=view_env_vars,
         )
         for item in json_data:
             if item not in [

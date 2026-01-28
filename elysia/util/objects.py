@@ -232,6 +232,15 @@ class ViewEnvironment(Update):
             },
         )
 
+    @classmethod
+    def from_json(cls, json_data: dict):
+        return cls(
+            tool_names=json_data["tool_names"],
+            metadata_keys=json_data["metadata_keys"],
+            metadata_values=json_data["metadata_values"],
+            environment_preview=json_data["environment_preview"],
+        )
+
 
 class GraphUpdate(Update):
     """
