@@ -1302,6 +1302,7 @@ class Tree:
         query_id: str | None,
         collection_names: list[str],
         client_manager: ClientManager,
+        _check_collection_existence: bool | None = None,
     ) -> str:
         self.settings.logger.debug(f"Style: {self.tree_data.atlas.style}")
         self.settings.logger.debug(
@@ -1325,17 +1326,21 @@ class Tree:
         self._update_conversation_history("user", user_prompt)
         self.user_prompt = user_prompt
 
+        check_existence = (
+            _check_collection_existence
+            if _check_collection_existence is not None
+            else len(collection_names) > 0
+        )
+
         # Check and start clients if not already started
         if client_manager.is_client:
             await client_manager.start_clients()
 
             if self.tree_data.use_weaviate_collections:
                 if not collection_names:
-                    check_existence = False
                     async with client_manager.connect_to_async_client() as client:
                         collection_names = await retrieve_all_collection_names(client)
-                else:
-                    check_existence = True
+
                 await self.set_collection_names(
                     collection_names, client_manager, check_existence
                 )
@@ -1429,6 +1434,7 @@ class Tree:
         query_id: str | None = None,
         close_clients_after_completion: bool = True,
         _first_run: bool = True,
+        _check_collection_existence: bool | None = None,
         **kwargs,
     ) -> AsyncGenerator[dict | None, None]:
         """
@@ -1440,7 +1446,11 @@ class Tree:
 
         if _first_run:
             query_id = await self._initialize_run(
-                user_prompt, query_id, collection_names, client_manager
+                user_prompt,
+                query_id,
+                collection_names,
+                client_manager,
+                _check_collection_existence,
             )
             yield await self.returner.send(
                 GraphUpdate(

@@ -501,6 +501,7 @@ class TreeManager:
                 query_id=query_id,
                 training_route=training_route,
                 close_clients_after_completion=False,
+                _check_collection_existence=False,
             ):
                 yield yielded_result
                 self.update_tree_last_request(conversation_id)
