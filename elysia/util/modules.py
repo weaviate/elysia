@@ -2,6 +2,7 @@ import json
 from typing import Type, Callable
 from copy import copy, deepcopy
 from typing import AsyncGenerator, Literal, Any
+from uuid import uuid4
 
 import dspy
 from dspy.primitives.module import Module
@@ -770,6 +771,7 @@ class ElysiaPrompt(Module):
             async_streaming=True,
         )
 
+        field_ids = {f: str(uuid4()) for f in streamed_fields}
         output_buffer = {f: [] for f in streamed_fields}
         output_metadata = {m: "" for m in streamed_metadata_fields}
         output_stream = stream_predict(**kwargs)  # type: ignore
@@ -788,7 +790,7 @@ class ElysiaPrompt(Module):
                             },
                             field_name="metadata",
                             output_type=dict,
-                            field_id=str(id(chunk.signature_field_name)),
+                            field_id=field_ids[chunk.signature_field_name],
                         )
                         metadata_sent = True
 
@@ -799,7 +801,7 @@ class ElysiaPrompt(Module):
                             output_type=streamed_output_types[
                                 chunk.signature_field_name
                             ],
-                            field_id=str(id(chunk.signature_field_name)),
+                            field_id=field_ids[chunk.signature_field_name],
                         )
                     output_buffer[chunk.signature_field_name] = []
 
@@ -807,7 +809,7 @@ class ElysiaPrompt(Module):
                         chunk=chunk.chunk,
                         field_name=chunk.signature_field_name,
                         output_type=streamed_output_types[chunk.signature_field_name],
-                        field_id=str(id(chunk.signature_field_name)),
+                        field_id=field_ids[chunk.signature_field_name],
                     )
                 else:
                     if chunk.signature_field_name in output_buffer:
@@ -826,7 +828,7 @@ class ElysiaPrompt(Module):
                 ),
                 field_name=field,
                 output_type=StreamEndMarker,
-                field_id=str(id(field)),
+                field_id=field_ids[field],
             )
 
     async def aforward_with_feedback_examples(
