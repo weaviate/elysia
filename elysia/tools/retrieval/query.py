@@ -375,12 +375,6 @@ class Query(Tool):
             else:
                 if tree_data.streaming:
 
-                    yield StreamedReturn(
-                        chunk={"reasoning": True, "tool_name": "query"},
-                        output_type=dict,
-                        field_name="reasoning",
-                    )
-
                     async for chunk in query_generator.aforward_streaming(
                         streamed_fields=["reasoning"],
                         lm=complex_lm,
