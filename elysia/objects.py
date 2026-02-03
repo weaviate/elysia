@@ -634,6 +634,15 @@ class Update(Return):
             "payload": self.to_json(),
         }
 
+    @classmethod
+    def from_json(cls, json_data: dict):
+        return cls(
+            frontend_type=json_data["frontend_type"],
+            object=json_data["object"],
+            display=json_data["display"],
+            store=json_data["store"],
+        )
+
 
 class Status(Update):
     """

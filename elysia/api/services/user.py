@@ -169,7 +169,7 @@ class UserManager:
 
         Args:
             user_id (str): Required. The unique identifier for the user.
-            config (Config): Required. The config for the user.
+            config (Config): The config for the user.
         """
 
         # add user if it doesn't exist

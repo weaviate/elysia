@@ -107,7 +107,6 @@ class Chunker:
     ) -> tuple[list[str], list[tuple[int, int]]]:
         """
         Given a document (string), return the sentences as chunks and span annotations (start and end indices of chunks).
-        Using spaCy to do sentence chunking.
         """
         if num_sentences is None:
             num_sentences = self.num_sentences
@@ -149,7 +148,6 @@ class Chunker:
         """
         Given a document (string), return the tokens as chunks and span annotations (start and end indices of chunks).
         Includes overlapping tokens between chunks for better context preservation.
-        Uses spaCy for tokenization.
         """
         if num_tokens is None:
             num_tokens = self.num_tokens

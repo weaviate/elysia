@@ -10,7 +10,6 @@ from elysia.api.dependencies.common import get_user_manager
 from elysia.api.services.user import UserManager
 from elysia.api.utils.websocket import help_websocket
 from elysia.api.utils.ner import named_entity_recognition
-from elysia.util.collection import retrieve_all_collection_names
 from elysia.api.utils.default_payloads import error_payload
 
 router = APIRouter()

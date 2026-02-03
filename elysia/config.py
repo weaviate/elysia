@@ -5,7 +5,6 @@ from litellm.exceptions import AuthenticationError, NotFoundError, BadRequestErr
 from rich.logging import RichHandler
 from typing import Callable, Literal
 
-import spacy
 import random
 
 from dotenv import load_dotenv
@@ -14,11 +13,6 @@ from copy import deepcopy
 
 load_dotenv(override=True)
 
-try:
-    nlp = spacy.load("en_core_web_sm")
-except Exception:
-    spacy.cli.download("en_core_web_sm")  # type: ignore
-    nlp = spacy.load("en_core_web_sm")
 
 api_key_to_provider = {
     "openai_api_key": ["openai"],
@@ -572,14 +566,21 @@ class Settings:
             and self.COMPLEX_MODEL != "",
             "complex_provider": self.COMPLEX_PROVIDER is not None
             and self.COMPLEX_PROVIDER != "",
-            "wcd_url": self.WCD_URL != "",
-            "wcd_api_key": self.WCD_API_KEY != "",
-            "weaviate_is_local": self.WEAVIATE_IS_LOCAL,
-            "local_weaviate_port": self.LOCAL_WEAVIATE_PORT != 8080,
-            "local_weaviate_grpc_port": self.LOCAL_WEAVIATE_GRPC_PORT != 50051,
-            "weaviate_is_custom": self.WEAVIATE_IS_CUSTOM,
-            "custom_http_host": self.CUSTOM_HTTP_HOST is not None,
-            "custom_grpc_host": self.CUSTOM_GRPC_HOST is not None,
+            "weaviate_cloud": {
+                "enabled": not self.WEAVIATE_IS_LOCAL and not self.WEAVIATE_IS_CUSTOM,
+                "wcd_url": self.WCD_URL != "",
+                "wcd_api_key": self.WCD_API_KEY != "",
+            },
+            "weaviate_local": {
+                "enabled": self.WEAVIATE_IS_LOCAL,
+                "local_weaviate_port": self.LOCAL_WEAVIATE_PORT != 8080,
+                "local_weaviate_grpc_port": self.LOCAL_WEAVIATE_GRPC_PORT != 50051,
+            },
+            "weaviate_custom": {
+                "enabled": self.WEAVIATE_IS_CUSTOM,
+                "custom_http_host": self.CUSTOM_HTTP_HOST is not None,
+                "custom_grpc_host": self.CUSTOM_GRPC_HOST is not None,
+            },
         }
 
 
@@ -755,7 +756,7 @@ class ElysiaKeyManager:
             raise IncorrectModelError(
                 f"Either one of the models or providers: '{self.settings.BASE_MODEL}' or '{self.settings.COMPLEX_MODEL}' "
                 f"({self.settings.BASE_PROVIDER} or {self.settings.COMPLEX_PROVIDER}) "
-                f"is incorrect, or you do not have the required API keys. "
+                f"is out of credit, incorrect, or you do not have the required API keys. "
                 f"Check the model documentation (https://docs.litellm.ai/docs/providers)."
             )
 

@@ -10,7 +10,7 @@ from weaviate.classes.query import Metrics, Filter
 from weaviate.collections import CollectionAsync
 from weaviate.classes.config import Configure, Property, DataType, Tokenization
 
-from elysia.config import nlp, Settings, load_base_lm, ElysiaKeyManager
+from elysia.config import Settings, load_base_lm, ElysiaKeyManager
 from elysia.config import settings as environment_settings
 
 from elysia.util import return_types as rt
@@ -184,7 +184,7 @@ async def _evaluate_field_statistics(
     # Text (lengths)
     elif properties[property] == "text":
 
-        # For text, we want to evaluate the length of the text in tokens (use spacy)
+        # For text, we want to evaluate the length of the text in tokens
         lengths = []
         for obj in sample_objects:
             if property in obj and isinstance(obj[property], str):

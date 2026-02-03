@@ -1,5 +1,3 @@
-from elysia.config import nlp
-
 from multi_rake import Rake
 import re
 import asyncio
@@ -30,7 +28,7 @@ def _get_entities_with_spans(text: str):
 
 async def named_entity_recognition(text: str):
     """
-    Performs Named Entity Recognition using spaCy.
+    Performs Named Entity Recognition using multi_rake.
     Returns a list of entities with their labels, start and end positions.
     """
     try:

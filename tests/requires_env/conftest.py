@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-def get_frontend_config_file_paths() -> Path:
+def get_frontend_config_file_paths() -> list[str]:
     elysia_package_dir = Path(__file__).parent.parent.parent  # Gets to elysia/
     config_dir = elysia_package_dir / "elysia" / "api" / "user_configs"
     config_files = os.listdir(config_dir)
@@ -56,17 +56,21 @@ def cleanup_configs(request):
     with client_manager.connect_to_client() as client:
         if client.collections.exists("ELYSIA_CONFIG__"):
             collection = client.collections.get("ELYSIA_CONFIG__")
-            test_configs_response = collection.query.fetch_objects(
-                limit=1000,
-                filters=Filter.all_of(
-                    [
-                        Filter.by_property("user_id").like("test_*"),
-                        Filter.by_property("config_id").like("test_*"),
-                    ]
-                ),
-            )
-            for config in test_configs_response.objects:
-                collection.data.delete_by_id(config.uuid)
+            for user_id in collection.tenants.get():
+                if not user_id.startswith("test_"):
+                    continue
+
+                user_collection = collection.with_tenant(user_id)
+                test_configs_response = user_collection.query.fetch_objects(
+                    limit=1000,
+                    filters=Filter.all_of(
+                        [
+                            Filter.by_property("config_id").like("test_*"),
+                        ]
+                    ),
+                )
+                for config in test_configs_response.objects:
+                    user_collection.data.delete_by_id(config.uuid)
 
     client_manager.client.close()
 
@@ -104,11 +108,12 @@ def cleanup_feedbacks(request):
     with client_manager.connect_to_client() as client:
         if client.collections.exists("ELYSIA_FEEDBACK__"):
             collection = client.collections.get("ELYSIA_FEEDBACK__")
-            test_feedback_response = collection.query.fetch_objects(
-                limit=1000,
-                filters=Filter.by_property("user_id").like("test_*"),
-            )
-            for feedback in test_feedback_response.objects:
-                collection.data.delete_by_id(feedback.uuid)
+            for user_id in collection.tenants.get():
+                if not user_id.startswith("test_"):
+                    continue
+                user_collection = collection.with_tenant(user_id)
+                test_feedback_response = user_collection.query.fetch_objects(limit=1000)
+                for feedback in test_feedback_response.objects:
+                    user_collection.data.delete_by_id(feedback.uuid)
 
     client_manager.client.close()
