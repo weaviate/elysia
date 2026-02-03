@@ -22,12 +22,13 @@ from elysia.config import Settings
 from elysia.api.services.tree import TreeManager
 from elysia.api.utils.config import FrontendConfig
 from elysia.api.utils.encryption import encrypt_api_keys, decrypt_api_keys
+from elysia.api.utils.collection_migration import check_elysia_version
 from elysia.api.utils.models import models
 
 import weaviate.classes.config as wc
 from weaviate.util import generate_uuid5
 from weaviate.classes.query import MetadataQuery, Sort, Filter
-from weaviate.classes.config import Property, DataType
+from weaviate.classes.config import Property, DataType, Configure
 from uuid import uuid4
 
 
@@ -345,7 +346,13 @@ async def save_config_user(
     except Exception as e:
         logger.exception(f"Error in /save_config_user API during user retrieval")
         return JSONResponse(
-            content={"error": str(e), "config": {}, "frontend_config": {}}
+            content={
+                "error": str(e),
+                "config": {},
+                "frontend_config": {},
+                "warnings": warnings,
+                "elysia_collections_supported": None,
+            }
         )
 
     if data.default:
@@ -372,6 +379,7 @@ async def save_config_user(
                     "config": tree_manager.config.to_json(),
                     "frontend_config": user["frontend_config"].to_json(),
                     "warnings": warnings,
+                    "elysia_collections_supported": None,
                 }
             )
 
@@ -393,6 +401,7 @@ async def save_config_user(
                             "config": tree_manager.config.to_json(),
                             "frontend_config": user["frontend_config"].to_json(),
                             "warnings": warnings,
+                            "elysia_collections_supported": None,
                         }
                     )
                 else:
@@ -405,6 +414,7 @@ async def save_config_user(
                             "config": tree_manager.config.to_json(),
                             "frontend_config": user["frontend_config"].to_json(),
                             "warnings": warnings,
+                            "elysia_collections_supported": None,
                         }
                     )
 
@@ -415,6 +425,25 @@ async def save_config_user(
                 "config": tree_manager.config.to_json(),
                 "frontend_config": user["frontend_config"].to_json(),
                 "warnings": warnings,
+                "elysia_collections_supported": None,
+            }
+        )
+
+    #
+    # -- Put check elysia version supported here, if supported: continue, if not: return with Flag=True
+    #
+    save_location_client_manager = user["frontend_config"].save_location_client_manager
+    async with save_location_client_manager.connect_to_async_client() as client:
+        elysia_collections_supported = (await check_elysia_version(client)) >= 0.3
+
+    if not elysia_collections_supported:
+        return JSONResponse(
+            content={
+                "error": "",
+                "config": tree_manager.config.to_json(),
+                "frontend_config": user["frontend_config"].to_json(),
+                "warnings": warnings,
+                "elysia_collections_supported": False,
             }
         )
 
@@ -458,8 +487,8 @@ async def save_config_user(
                 else:
                     collection = await client.collections.create(
                         "ELYSIA_CONFIG__",
-                        vectorizer_config=wc.Configure.Vectorizer.none(),
-                        inverted_index_config=wc.Configure.inverted_index(
+                        vector_config=Configure.Vectors.self_provided(),
+                        inverted_index_config=Configure.inverted_index(
                             index_timestamps=True
                         ),
                         properties=[
@@ -496,6 +525,11 @@ async def save_config_user(
                                 data_type=DataType.BOOL,
                             ),
                         ],
+                        multi_tenancy_config=Configure.multi_tenancy(
+                            enabled=True,
+                            auto_tenant_creation=True,
+                            auto_tenant_activation=True,
+                        ),
                     )
 
                 format_dict_to_serialisable(settings_dict)
@@ -515,30 +549,30 @@ async def save_config_user(
                     "branch_initialisation": branch_initialisation,
                     "frontend_config": user["frontend_config"].config,
                     "config_id": config_id,
-                    "user_id": user_id,
                     "default": data.default,
                 }
 
+                user_collection = collection.with_tenant(user_id)
+
                 # if the config is a default config, set all other default configs to False
                 if data.default:
-                    existing_default_config = await collection.query.fetch_objects(
+                    existing_default_config = await user_collection.query.fetch_objects(
                         filters=Filter.all_of(
                             [
                                 Filter.by_property("default").equal(True),
-                                Filter.by_property("user_id").equal(user_id),
                             ]
                         )
                     )
                     for item in existing_default_config.objects:
-                        await collection.data.update(
+                        await user_collection.data.update(
                             properties={"default": False}, uuid=item.uuid
                         )
 
                 # save the config to the weaviate database
-                if await collection.data.exists(uuid=uuid):
-                    await collection.data.update(properties=config_item, uuid=uuid)
+                if await user_collection.data.exists(uuid=uuid):
+                    await user_collection.data.update(properties=config_item, uuid=uuid)
                 else:
-                    await collection.data.insert(config_item, uuid=uuid)
+                    await user_collection.data.insert(config_item, uuid=uuid)
 
     except Exception as e:
         logger.exception(f"Error in /save_config_user API during weaviate save")
@@ -548,6 +582,7 @@ async def save_config_user(
                 "config": tree_manager.config.to_json(),
                 "frontend_config": user["frontend_config"].to_json(),
                 "warnings": warnings,
+                "elysia_collections_supported": None,
             }
         )
 
@@ -560,6 +595,7 @@ async def save_config_user(
             "config": tree_manager.config.to_json(),
             "frontend_config": user["frontend_config"].to_json(),
             "warnings": warnings,
+            "elysia_collections_supported": elysia_collections_supported,
         }
     )
 

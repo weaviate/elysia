@@ -22,9 +22,6 @@ from elysia.api.dependencies.common import get_user_manager
 # Services
 from elysia.api.services.user import UserManager
 
-# Settings
-from elysia.config import nlp
-
 # util
 from elysia.api.core.log import logger
 from elysia.api.utils.collection_migration import (
@@ -162,12 +159,10 @@ async def debug(data: DebugData, user_manager: UserManager = Depends(get_user_ma
 @router.post("/migrate/{user_id}")
 async def migrate(
     user_id: str,
-    data: MigrateDataData,
     user_manager: UserManager = Depends(get_user_manager),
 ):
     logger.debug(f"/migrate API request received")
     logger.debug(f"User ID: {user_id}")
-    logger.debug(f"Reset: {data.reset}")
 
     try:
         collection_names = [
@@ -182,19 +177,12 @@ async def migrate(
         ].save_location_client_manager
         async with save_location_client_manager.connect_to_async_client() as client:
 
-            if data.reset:
-                try:
-                    await reset_collections(client)
-                except Exception as e:
-                    logger.exception(f"Error in resetting collections")
-                    return JSONResponse(
-                        content={"error": f"Error in resetting collections: {str(e)}"},
-                        status_code=200,
-                    )
-                return JSONResponse(content={"error": ""}, status_code=200)
-
             try:
                 for collection_name in collection_names:
+
+                    # check if migration already in progress, delete temporary collections
+                    if await client.collections.exists(f"{collection_name}_MIGRATED__"):
+                        await client.collections.delete(f"{collection_name}_MIGRATED__")
 
                     # 0. check existence of collection
                     if not await client.collections.exists(collection_name):
@@ -216,9 +204,12 @@ async def migrate(
                         client, collection_name, f"{collection_name}_MIGRATED__"
                     )
 
+                    logger.info(f"Migrated data to {f"{collection_name}_MIGRATED__"}")
+
             except Exception as e:
                 for collection_name in collection_names:
-                    await client.collections.delete(f"{collection_name}_MIGRATED__")
+                    if await client.collections.exists(f"{collection_name}_MIGRATED__"):
+                        await client.collections.delete(f"{collection_name}_MIGRATED__")
 
                 logger.exception(
                     f"Error in migrating collections. Rolling back migrations."
@@ -234,21 +225,50 @@ async def migrate(
                 # do all migrations first before deleting and moving
                 for collection_name in collection_names:
 
+                    # 0. check existence of collection
+                    if not await client.collections.exists(collection_name):
+                        continue
+
+                    # 0.5 check existence of tenants in existing collection
+                    collection = client.collections.get(collection_name)
+                    try:
+                        await collection.tenants.get()
+                        multi_tenancy = True
+                    except Exception as e:
+                        multi_tenancy = False
+
+                    if multi_tenancy:
+                        continue
+
                     # 2. delete old collection
                     await client.collections.delete(collection_name)
+                    logger.info(f"Deleted old collection {collection_name}")
 
                     # 3. migrate data back to original named collection
                     await migrate_data_both_multi_tenancy(
                         client, f"{collection_name}_MIGRATED__", collection_name
                     )
 
+                    logger.info(
+                        f"Migrated data back to original named collection {collection_name}"
+                    )
+
                     # 4. delete the temporary migrated collection
                     await client.collections.delete(f"{collection_name}_MIGRATED__")
+
+                    logger.info(
+                        f"Deleted temporary migrated collection {f"{collection_name}_MIGRATED__"}"
+                    )
 
             except Exception as e:
                 logger.exception(
                     f"Error in migrating collections during final migration. Some data may be lost."
                 )
+                # try to cleanup migrated collections
+                for collection_name in collection_names:
+                    if await client.collections.exists(f"{collection_name}_MIGRATED__"):
+                        await client.collections.delete(f"{collection_name}_MIGRATED__")
+
                 return JSONResponse(
                     content={
                         "error": f"Error in migrating collections during final migration. Some data may be lost."

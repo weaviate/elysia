@@ -10,7 +10,7 @@ from elysia.api.core.log import logger
 from elysia.util.client import ClientManager
 from elysia.api.utils.config import Config
 from elysia.api.utils.encryption import decrypt_api_keys
-
+from elysia.api.utils.collection_migration import check_elysia_version
 from weaviate.classes.query import Filter
 
 router = APIRouter()
@@ -26,13 +26,13 @@ async def get_default_config(
             return None
 
         collection = client.collections.get(config_collection_name)
-        default_configs = await collection.query.fetch_objects(
-            filters=Filter.all_of(
-                [
-                    Filter.by_property("default").equal(True),
-                    Filter.by_property("user_id").equal(user_id),
-                ]
-            )
+
+        if not await collection.tenants.exists(user_id):
+            return None
+
+        user_collection = collection.with_tenant(user_id)
+        default_configs = await user_collection.query.fetch_objects(
+            filters=Filter.all_of([Filter.by_property("default").equal(True)])
         )
 
         if len(default_configs.objects) > 0:
@@ -76,14 +76,22 @@ async def initialise_user(
                     user_id,
                 )  # leave config empty to create defaults for a new user
 
-                # find any default configs
-                if user_manager.users[user_id][
+                user = await user_manager.get_user_local(user_id=user_id)
+
+                async with user[
                     "frontend_config"
-                ].save_location_client_manager.is_client:
+                ].save_location_client_manager.connect_to_async_client() as client:
+                    elysia_collections_supported = (
+                        await check_elysia_version(client)
+                    ) >= 0.3
+
+                # find any default configs
+                if (
+                    elysia_collections_supported
+                    and user["frontend_config"].save_location_client_manager.is_client
+                ):
                     default_config = await get_default_config(
-                        user_manager.users[user_id][
-                            "frontend_config"
-                        ].save_location_client_manager,
+                        user["frontend_config"].save_location_client_manager,
                         user_id,
                     )
                     if default_config:
@@ -103,13 +111,22 @@ async def initialise_user(
                 logger.error("Error initialising user, removing user")
                 if user_id in user_manager.users:
                     del user_manager.users[user_id]
+        else:
+            user = await user_manager.get_user_local(user_id=user_id)
+            async with user[
+                "frontend_config"
+            ].save_location_client_manager.connect_to_async_client() as client:
+                elysia_collections_supported = (
+                    await check_elysia_version(client)
+                ) >= 0.3
 
         # if a user exists, get the existing configs
-        user = await user_manager.get_user_local(user_id)
+        user = await user_manager.get_user_local(user_id=user_id)
         config = user["tree_manager"].config.to_json()
         frontend_config = user["frontend_config"].to_json()
 
         correct_settings = user["tree_manager"].config.settings.check()
+        correct_settings["elysia_collections_supported"] = elysia_collections_supported
 
         logger.debug(f"--------------------------------")
         logger.debug(f"Output of init/user:")

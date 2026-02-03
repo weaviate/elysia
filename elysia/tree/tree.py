@@ -1976,7 +1976,6 @@ class Tree:
             date_now = datetime.now()
 
             properties = {
-                "user_id": self.user_id,
                 "conversation_id": self.conversation_id,
                 "query_id": query_id,
                 "feedback": int(feedback_level),
@@ -2004,7 +2003,6 @@ class Tree:
             # so if the user re-selects the same feedback, it will be updated instead of added
             session_uuid = generate_uuid5(
                 {
-                    "user_id": self.user_id,
                     "conversation_id": self.conversation_id,
                     "query_id": query_id,
                 }

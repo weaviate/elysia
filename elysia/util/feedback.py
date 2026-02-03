@@ -25,10 +25,6 @@ async def create_feedback_collection(
         properties=[
             # session data
             wc.Property(
-                name="user_id",
-                data_type=wc.DataType.TEXT,
-            ),
-            wc.Property(
                 name="conversation_id",
                 data_type=wc.DataType.TEXT,
             ),
@@ -135,16 +131,7 @@ async def create_feedback_collection(
             # dump training_updates as string
             wc.Property(name="training_updates", data_type=wc.DataType.TEXT),
         ],
-        vector_config=[
-            wc.Configure.Vectors.text2vec_openai(
-                name="user_prompt",
-                model="text-embedding-3-small",
-                source_properties=["user_prompt"],
-                vector_index_config=wc.Configure.VectorIndex.hnsw(
-                    quantizer=wc.Configure.VectorIndex.Quantizer.sq(),
-                ),
-            ),
-        ],
+        vector_config=wc.Configure.Vectors.text2vec_weaviate(),
         multi_tenancy_config=Configure.multi_tenancy(
             enabled=True,
             auto_tenant_creation=True,
@@ -172,7 +159,6 @@ async def view_feedback(
 
     session_uuid = generate_uuid5(
         {
-            "user_id": user_id,
             "conversation_id": conversation_id,
             "query_id": query_id,
         }
@@ -203,7 +189,6 @@ async def remove_feedback(
 
     session_uuid = generate_uuid5(
         {
-            "user_id": user_id,
             "conversation_id": conversation_id,
             "query_id": query_id,
         }

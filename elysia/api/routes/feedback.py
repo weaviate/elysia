@@ -29,8 +29,9 @@ async def run_add_feedback(
     logger.debug(f"Feedback: {data.feedback}")
 
     tree: Tree = await user_manager.get_tree(data.user_id, data.conversation_id)
-    user = user_manager.users[data.user_id]
-    client_manager: ClientManager = user["client_manager"]
+    user = await user_manager.get_user_local(data.user_id)
+    frontend_config = user["frontend_config"]
+    client_manager: ClientManager = frontend_config.save_location_client_manager
 
     try:
         await tree.feedback(
