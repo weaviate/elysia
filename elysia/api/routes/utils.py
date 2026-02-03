@@ -7,9 +7,11 @@ from elysia.api.api_types import (
     FollowUpSuggestionsData,
     NERData,
     TitleData,
+    MigrateDataData,
 )
 
 from elysia.tree.tree import Tree
+from elysia.util.client import ClientManager
 
 # Logging
 from elysia.api.core.log import logger
@@ -25,46 +27,14 @@ from elysia.config import nlp
 
 # util
 from elysia.api.core.log import logger
+from elysia.api.utils.collection_migration import (
+    migrate_data_to_multi_tenancy,
+    migrate_data_both_multi_tenancy,
+    set_elysia_version,
+    reset_collections,
+)
 
 router = APIRouter()
-
-
-@router.post("/ner")
-async def named_entity_recognition(data: NERData):
-    """
-    Performs Named Entity Recognition using spaCy.
-    Returns a list of entities with their labels, start and end positions.
-    """
-    logger.debug(f"/ner API request received")
-    logger.debug(f"Text: {data.text}")
-
-    try:
-
-        doc = nlp(data.text)
-        out = {"text": data.text, "entity_spans": [], "noun_spans": [], "error": ""}
-
-        for ent in doc.ents:
-            out["entity_spans"].append((ent.start_char, ent.end_char))
-
-        # Get noun spans
-        for token in doc:
-            if token.pos_ == "NOUN":
-                span = doc[token.i : token.i + 1]
-                out["noun_spans"].append((span.start_char, span.end_char))
-
-        return JSONResponse(content=out, status_code=200)
-
-    except Exception as e:
-        logger.exception(f"Error in /ner API")
-        return JSONResponse(
-            content={
-                "text": data.text,
-                "entity_spans": [],
-                "noun_spans": [],
-                "error": str(e),
-            },
-            status_code=200,
-        )
 
 
 @router.post("/title")
@@ -97,56 +67,6 @@ async def title(data: TitleData, user_manager: UserManager = Depends(get_user_ma
             content={"title": "", "error": str(e)},
             status_code=200,
         )
-
-
-# @router.post("/object_relevance")
-# async def object_relevance(
-#     data: ObjectRelevanceData, user_manager: UserManager = Depends(get_user_manager)
-# ):
-#     logger.debug(f"/object_relevance API request received")
-#     logger.debug(f"User ID: {data.user_id}")
-#     logger.debug(f"Conversation ID: {data.conversation_id}")
-#     logger.debug(f"Query ID: {data.query_id}")
-#     logger.debug(f"Number of objects: {len(data.objects)}")
-
-#     if user_manager.check_tree_timeout(data.user_id, data.conversation_id):
-#         logger.warning(
-#             f"(/object_relevance) Conversation {data.conversation_id} has timed out for user {data.user_id}"
-#         )
-#         return JSONResponse(
-#             content={"title": "", "error": "Conversation has timed out"},
-#             status_code=401,
-#         )
-
-
-#     try:
-
-#         config = user_manager.get_current_user_config(data.user_id)
-
-#         error = ""
-#         object_relevance = ObjectRelevanceExecutor()
-
-#         tree = await user_manager.get_tree(data.user_id, data.conversation_id)
-#         user_prompt = tree.query_id_to_prompt[data.query_id]
-#         prediction = object_relevance(
-#             user_prompt=user_prompt,
-#             objects=data.objects,
-#             lm=load_lm(config.BASE_PROVIDER, config.BASE_MODEL, config.MODEL_API_BASE),
-#         )
-#         any_relevant = prediction.any_relevant
-
-#     except Exception as e:
-#         any_relevant = True
-#         error = str(e)
-
-#     return JSONResponse(
-#         content={
-#             "conversation_id": data.conversation_id,
-#             "any_relevant": any_relevant,
-#             "error": error,
-#         },
-#         status_code=200,
-#     )
 
 
 @router.post("/follow_up_suggestions")
@@ -203,9 +123,9 @@ async def debug(data: DebugData, user_manager: UserManager = Depends(get_user_ma
             base_lm = tree.base_lm
             complex_lm = tree.complex_lm
 
-            histories = [None] * 2
+            histories = []
             for i, lm in enumerate([base_lm, complex_lm]):
-                histories[i] = []
+                histories.append([])
                 for lm_history in lm.history:
                     message_thread = []
                     for message in lm_history["messages"]:
@@ -239,12 +159,107 @@ async def debug(data: DebugData, user_manager: UserManager = Depends(get_user_ma
         )
 
 
-# @router.post("/get_user_requests")
-# async def get_user_requests(
-#     data: GetUserRequestsData, user_manager: UserManager = Depends(get_user_manager)
-# ):
-#     num_requests, max_requests = await user_manager.get_user_requests(data.user_id)
-#     return JSONResponse(
-#         content={"num_requests": num_requests, "max_requests": max_requests},
-#         status_code=200,
-#     )
+@router.post("/migrate/{user_id}")
+async def migrate(
+    user_id: str,
+    data: MigrateDataData,
+    user_manager: UserManager = Depends(get_user_manager),
+):
+    logger.debug(f"/migrate API request received")
+    logger.debug(f"User ID: {user_id}")
+    logger.debug(f"Reset: {data.reset}")
+
+    try:
+        collection_names = [
+            "ELYSIA_CONFIG__",
+            "ELYSIA_TREES__",
+            "ELYSIA_TOOL_PRESETS__",
+            "ELYSIA_FEEDBACK__",
+        ]
+        user_local = await user_manager.get_user_local(user_id)
+        save_location_client_manager: ClientManager = user_local[
+            "frontend_config"
+        ].save_location_client_manager
+        async with save_location_client_manager.connect_to_async_client() as client:
+
+            if data.reset:
+                try:
+                    await reset_collections(client)
+                except Exception as e:
+                    logger.exception(f"Error in resetting collections")
+                    return JSONResponse(
+                        content={"error": f"Error in resetting collections: {str(e)}"},
+                        status_code=200,
+                    )
+                return JSONResponse(content={"error": ""}, status_code=200)
+
+            try:
+                for collection_name in collection_names:
+
+                    # 0. check existence of collection
+                    if not await client.collections.exists(collection_name):
+                        continue
+
+                    # 0.5 check existence of tenants in existing collection
+                    collection = client.collections.get(collection_name)
+                    try:
+                        await collection.tenants.get()
+                        multi_tenancy = True
+                    except Exception as e:
+                        multi_tenancy = False
+
+                    if multi_tenancy:
+                        continue
+
+                    # 1. create a new collection and move data
+                    await migrate_data_to_multi_tenancy(
+                        client, collection_name, f"{collection_name}_MIGRATED__"
+                    )
+
+            except Exception as e:
+                for collection_name in collection_names:
+                    await client.collections.delete(f"{collection_name}_MIGRATED__")
+
+                logger.exception(
+                    f"Error in migrating collections. Rolling back migrations."
+                )
+                return JSONResponse(
+                    content={
+                        "error": f"Error in migrating collections. Rolling back migrations."
+                    },
+                    status_code=200,
+                )
+
+            try:
+                # do all migrations first before deleting and moving
+                for collection_name in collection_names:
+
+                    # 2. delete old collection
+                    await client.collections.delete(collection_name)
+
+                    # 3. migrate data back to original named collection
+                    await migrate_data_both_multi_tenancy(
+                        client, f"{collection_name}_MIGRATED__", collection_name
+                    )
+
+                    # 4. delete the temporary migrated collection
+                    await client.collections.delete(f"{collection_name}_MIGRATED__")
+
+            except Exception as e:
+                logger.exception(
+                    f"Error in migrating collections during final migration. Some data may be lost."
+                )
+                return JSONResponse(
+                    content={
+                        "error": f"Error in migrating collections during final migration. Some data may be lost."
+                    },
+                    status_code=200,
+                )
+
+            await set_elysia_version(client, 0.3)
+
+    except Exception as e:
+        logger.exception(f"Error in migrating collections")
+        return JSONResponse(content={"error": str(e)}, status_code=200)
+
+    return JSONResponse(content={"error": ""}, status_code=200)

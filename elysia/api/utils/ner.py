@@ -1,23 +1,44 @@
 from elysia.config import nlp
 
+from multi_rake import Rake
+import re
+import asyncio
 
-def named_entity_recognition(text: str):
+
+def _get_entities_with_spans(text: str):
+    rake = Rake()
+    keywords = rake.apply(text)
+
+    results = []
+
+    for keyword, score in keywords:
+        pattern = re.escape(keyword)
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            results.append(
+                {
+                    "text": match.group(),
+                    "start": match.start(),
+                    "end": match.end(),
+                    "score": score,
+                }
+            )
+
+    results.sort(key=lambda x: x["start"])
+
+    return results
+
+
+async def named_entity_recognition(text: str):
     """
     Performs Named Entity Recognition using spaCy.
     Returns a list of entities with their labels, start and end positions.
     """
     try:
-        doc = nlp(text)
+        entities = await asyncio.to_thread(_get_entities_with_spans, text)
         out = {"text": text, "entity_spans": [], "noun_spans": [], "error": ""}
 
-        for ent in doc.ents:
-            out["entity_spans"].append((ent.start_char, ent.end_char))
-
-        # Get noun spans
-        for token in doc:
-            if token.pos_ == "NOUN":
-                span = doc[token.i : token.i + 1]
-                out["noun_spans"].append((span.start_char, span.end_char))
+        for ent in entities:
+            out["entity_spans"].append((ent["start"], ent["end"]))
 
         return out
 
@@ -25,6 +46,5 @@ def named_entity_recognition(text: str):
         return {
             "text": text,
             "entity_spans": [],
-            "noun_spans": [],
             "error": str(e),
         }

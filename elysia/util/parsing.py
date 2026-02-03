@@ -208,6 +208,23 @@ def format_aggregation_response(response):
     return out
 
 
+def get_estimated_tokens(text: str) -> tuple[list[str], list[tuple[int, int]]]:
+    if not text:
+        return ([], [])
+
+    pattern = r"\b\w{1,4}\b|[^\w\s]|\b\w{5,}\b"
+
+    tokens = []
+    spans = []
+
+    # Single pass extraction preserving order with position tracking
+    for match in re.finditer(pattern, text):
+        tokens.append(match.group())
+        spans.append((match.start(), match.end()))
+
+    return (tokens, spans)
+
+
 def estimate_tokens(text: str) -> int:
     short = len(re.findall(r"\b\w{1,4}\b|[^\w\s]", text))
     long_chars = sum(len(m) for m in re.findall(r"\b\w{5,}\b", text))
