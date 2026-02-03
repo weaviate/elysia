@@ -23,7 +23,7 @@ from elysia.preprocessing.prompt_templates import (
 )
 from elysia.util.collection import async_get_collection_data_types
 from elysia.util.async_util import asyncio_run
-from elysia.util.parsing import format_dict_to_serialisable
+from elysia.util.parsing import format_dict_to_serialisable, estimate_tokens
 from elysia.util.client import ClientManager
 
 
@@ -188,7 +188,7 @@ async def _evaluate_field_statistics(
         lengths = []
         for obj in sample_objects:
             if property in obj and isinstance(obj[property], str):
-                lengths.append(len(nlp(obj[property])))
+                lengths.append(estimate_tokens(obj[property]))
 
         if len(lengths) == 0:
             out["range"] = None
@@ -462,7 +462,7 @@ async def preprocess_async(
 
         # Get first object to estimate token count
         obj = await collection.query.fetch_objects(limit=1, offset=indices[0])
-        token_count_0 = len(nlp(str(obj.objects[0].properties)))
+        token_count_0 = estimate_tokens(str(obj.objects[0].properties))
         subset_objects: list[dict] = [obj.objects[0].properties]  # type: ignore
 
         # Get number of objects to sample to get close to num_sample_tokens
@@ -791,19 +791,9 @@ async def preprocess_async(
             error=f"Error preprocessing collection: {str(e)}",
         )
 
-    # finally:
-    #     print(f"\n\n\n\n\n\n\nCHECKING CLOSE CLIENT\n\n\n\n\n\n")
-    #     if close_clients_after_completion:
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-    #         print("\n\n\nCLOSING CLIENTS\n\n\n")
-
-    #         await client_manager.close_clients()
+    finally:
+        if close_clients_after_completion:
+            await client_manager.close_clients()
 
 
 async def _preprocess_async(
