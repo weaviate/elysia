@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-import spacy
+import re
 
 from weaviate.classes.config import Configure, DataType, Property, ReferenceProperty
 from weaviate.collections.classes.data import DataObject, DataReference
@@ -12,9 +12,7 @@ from weaviate.util import generate_uuid5
 from weaviate.client import WeaviateAsyncClient
 
 from elysia.util.client import ClientManager
-from elysia.util.collection import (
-    async_get_collection_weaviate_data_types,
-)
+from elysia.util.parsing import estimate_tokens, get_estimated_tokens
 
 
 def chunked_collection_exists(
@@ -38,6 +36,8 @@ def delete_chunked_collection(
 
 
 class Chunker:
+    sentence_boundaries: list[str] = [".", "?", "!"]
+
     def __init__(
         self,
         chunking_strategy: str = "fixed",
@@ -47,13 +47,57 @@ class Chunker:
         self.chunking_strategy = chunking_strategy
         assert chunking_strategy in ["fixed", "sentences"]
 
-        self.nlp = spacy.load("en_core_web_sm")
-
         self.num_tokens = num_tokens
         self.num_sentences = num_sentences
 
+    def _get_sentences(self, document: str) -> tuple[list[str], list[tuple[int, int]]]:
+        """
+        Split document into sentences based on sentence_boundaries.
+        Maintains original order and preserves boundaries in chunks.
+        Returns sentences and their character spans (start, end) in the original document.
+        """
+        if not self.sentence_boundaries or not document:
+            return ([document], [(0, len(document))]) if document else ([], [])
+
+        escaped_boundaries = [
+            re.escape(boundary) for boundary in self.sentence_boundaries
+        ]
+        pattern = r"(?<=" + "|".join(escaped_boundaries) + r")\s+"
+
+        sentences = []
+        spans = []
+        current_pos = 0
+
+        for match in re.finditer(pattern, document):
+            sentence_end = match.start()
+            sentence = document[current_pos:sentence_end].strip()
+
+            if sentence:
+                sentences.append(sentence)
+                spans.append((current_pos, sentence_end))
+
+            current_pos = match.end()
+
+        remaining = document[current_pos:].strip()
+        if remaining:
+            sentences.append(remaining)
+            spans.append((current_pos, len(document)))
+
+        filtered_sentences = []
+        filtered_spans = []
+        for sentence, span in zip(sentences, spans):
+            if sentence:
+                filtered_sentences.append(sentence)
+                filtered_spans.append(span)
+
+        return (
+            (filtered_sentences, filtered_spans)
+            if filtered_sentences
+            else ([document], [(0, len(document))])
+        )
+
     def count_tokens(self, document: str) -> int:
-        return len(self.nlp(document))
+        return estimate_tokens(document)
 
     def chunk_by_sentences(
         self,
@@ -74,22 +118,21 @@ class Chunker:
             )
             overlap_sentences = num_sentences - 1
 
-        doc = self.nlp(document)
-        sentences = list(doc.sents)  # Get sentence boundaries from spaCy
+        sentences = self._get_sentences(document)
 
         span_annotations = []
         chunks = []
 
         i = 0
-        while i < len(sentences):
+        while i < len(sentences[0]):
             # Get chunk of num_sentences sentences
-            chunk_sentences = sentences[i : i + num_sentences]
+            chunk_sentences = sentences[1][i : i + num_sentences]
             if not chunk_sentences:
                 break
 
             # Get start and end char positions
-            start_char = chunk_sentences[0].start_char
-            end_char = chunk_sentences[-1].end_char
+            start_char = chunk_sentences[0][0]
+            end_char = chunk_sentences[-1][1]
 
             # Add chunk and its span annotation
             chunks.append(document[start_char:end_char])
@@ -111,21 +154,17 @@ class Chunker:
         if num_tokens is None:
             num_tokens = self.num_tokens
 
-        doc = self.nlp(document)
-        tokens = list(doc)  # Get tokens from spaCy doc
+        tokens, spans = get_estimated_tokens(document)
 
         span_annotations = []
         chunks = []
         i = 0
 
         while i < len(tokens):
-            # Find end index for current chunk
-            end_idx = min(i + num_tokens, len(tokens))
-            chunk_tokens = tokens[i:end_idx]
 
             # Get character spans for the chunk
-            start_char = chunk_tokens[0].idx
-            end_char = chunk_tokens[-1].idx + len(chunk_tokens[-1])
+            start_char = spans[i][0]
+            end_char = spans[min(i + num_tokens - 1, len(spans) - 1)][1]
 
             # Add chunk and its span annotation
             chunks.append(document[start_char:end_char])
@@ -134,12 +173,16 @@ class Chunker:
             # Move forward but account for overlap
             i += max(1, num_tokens - overlap_tokens)
 
+        if i < len(tokens):
+            chunks.append(" ".join(tokens[i:]))
+            span_annotations.append((i, len(document)))
+
         return chunks, span_annotations
 
     def chunk(self, document: str) -> tuple[list[str], list[tuple[int, int]]]:
         if self.chunking_strategy == "sentences":
             return self.chunk_by_sentences(document)
-        elif self.chunking_strategy == "tokens":
+        elif self.chunking_strategy == "fixed":
             return self.chunk_by_tokens(document)
         else:
             raise ValueError(f"Invalid chunking strategy: {self.chunking_strategy}")
@@ -471,3 +514,15 @@ class AsyncCollectionChunker:
                 await self.insert_references(
                     full_collection, original_uuid_to_chunk_uuids
                 )
+
+
+if __name__ == "__main__":
+
+    chunker = Chunker()
+    chunks, spans = chunker.chunk_by_tokens(
+        "Hello, world! First one such test. Second another. " * 5,
+        num_tokens=20,
+        overlap_tokens=5,
+    )
+    print(chunks)
+    print(spans)
