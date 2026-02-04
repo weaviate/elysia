@@ -277,3 +277,5 @@ async def reset_collections(client: WeaviateAsyncClient):
         await client.collections.delete("ELYSIA_TOOL_PRESETS__")
     if await client.collections.exists("ELYSIA_FEEDBACK__"):
         await client.collections.delete("ELYSIA_FEEDBACK__")
+
+    await set_elysia_version(client, 0.3)

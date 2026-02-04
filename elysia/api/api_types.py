@@ -137,3 +137,7 @@ class TreeGraph(BaseModel):
     default: bool
     nodes: dict[str, TreeNode]
     edges: list[tuple[str, str]]
+
+
+class MigrateDataData(BaseModel):
+    reset: bool

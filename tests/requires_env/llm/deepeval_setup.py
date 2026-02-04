@@ -6,7 +6,7 @@ from deepeval.models import DeepEvalBaseLLM
 from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 
 class CustomLlama(DeepEvalBaseLLM):

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv, set_key
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 from elysia.api.api_types import (
     SaveConfigUserData,
@@ -430,7 +430,7 @@ async def save_config_user(
         )
 
     #
-    # -- Put check elysia version supported here, if supported: continue, if not: return with Flag=True
+    # -- Check elysia version supported here, if supported: continue, if not: return with Flag=True
     #
     save_location_client_manager = user["frontend_config"].save_location_client_manager
     async with save_location_client_manager.connect_to_async_client() as client:

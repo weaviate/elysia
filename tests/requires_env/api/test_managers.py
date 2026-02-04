@@ -7,7 +7,7 @@ from elysia.api.services.tree import TreeManager
 from elysia.config import Settings
 from elysia.api.utils.config import Config
 
-dotenv.load_dotenv(override=True)
+dotenv.load_dotenv(override=False)
 
 
 @pytest.mark.asyncio

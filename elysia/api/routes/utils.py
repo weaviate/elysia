@@ -159,11 +159,12 @@ async def debug(data: DebugData, user_manager: UserManager = Depends(get_user_ma
 @router.post("/migrate/{user_id}")
 async def migrate(
     user_id: str,
+    data: MigrateDataData,
     user_manager: UserManager = Depends(get_user_manager),
 ):
     logger.debug(f"/migrate API request received")
     logger.debug(f"User ID: {user_id}")
-
+    logger.debug(f"Reset: {data.reset}")
     try:
         collection_names = [
             "ELYSIA_CONFIG__",
@@ -176,6 +177,14 @@ async def migrate(
             "frontend_config"
         ].save_location_client_manager
         async with save_location_client_manager.connect_to_async_client() as client:
+            if data.reset:
+                try:
+                    await reset_collections(client)
+                    logger.info(f"Reset collections")
+                    return JSONResponse(content={"error": ""}, status_code=200)
+                except Exception as e:
+                    logger.exception(f"Error in resetting collections")
+                    return JSONResponse(content={"error": str(e)}, status_code=500)
 
             try:
                 for collection_name in collection_names:
@@ -218,7 +227,7 @@ async def migrate(
                     content={
                         "error": f"Error in migrating collections. Rolling back migrations."
                     },
-                    status_code=200,
+                    status_code=500,
                 )
 
             try:
@@ -273,13 +282,13 @@ async def migrate(
                     content={
                         "error": f"Error in migrating collections during final migration. Some data may be lost."
                     },
-                    status_code=200,
+                    status_code=500,
                 )
 
             await set_elysia_version(client, 0.3)
 
     except Exception as e:
         logger.exception(f"Error in migrating collections")
-        return JSONResponse(content={"error": str(e)}, status_code=200)
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
     return JSONResponse(content={"error": ""}, status_code=200)
