@@ -8,7 +8,7 @@ from weaviate.util import generate_uuid5
 from typing import AsyncGenerator
 
 # Load environment variables from .env file
-load_dotenv(override=False)
+# load_dotenv(override=False)
 
 from elysia.api.api_types import TreeGraph, TreeNode
 from elysia.tree.tree import Tree

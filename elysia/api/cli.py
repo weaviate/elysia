@@ -2,7 +2,7 @@ import os
 from dotenv import set_key, load_dotenv
 from rich import print
 
-load_dotenv()
+# load_dotenv()
 
 if "FIRST_START_ELYSIA" not in os.environ:
     print(

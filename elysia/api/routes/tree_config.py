@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from uuid import uuid4
 
-load_dotenv(override=False)
+# load_dotenv(override=False)
 
 # API Types
 from elysia.api.api_types import SaveConfigTreeData

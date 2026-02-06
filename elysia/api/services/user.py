@@ -8,7 +8,7 @@ from typing import Any
 from pathlib import Path
 from logging import Logger
 
-load_dotenv(override=False)
+# load_dotenv(override=False)
 
 from elysia.api.services.tree import TreeManager
 from elysia.objects import Update

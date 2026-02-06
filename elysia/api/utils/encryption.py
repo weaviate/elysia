@@ -6,7 +6,7 @@ from copy import deepcopy
 
 def encrypt_api_keys(settings_dict: dict):
 
-    load_dotenv()
+    # load_dotenv()
 
     settings_dict_copy = deepcopy(settings_dict)
 
@@ -36,7 +36,7 @@ def encrypt_api_keys(settings_dict: dict):
 
 def decrypt_api_keys(settings_dict: dict):
 
-    load_dotenv()
+    # load_dotenv()
 
     settings_dict_copy = deepcopy(settings_dict)
 

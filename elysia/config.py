@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from dspy import LM
 from copy import deepcopy
 
-load_dotenv(override=False)
+# load_dotenv(override=False)
 
 
 api_key_to_provider = {
