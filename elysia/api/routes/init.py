@@ -133,12 +133,18 @@ async def initialise_user(
         else:
             logger.debug(f"User exists locally, getting existing configs from memory")
             user = await user_manager.get_user_local(user_id=user_id)
-            async with user[
-                "frontend_config"
-            ].save_location_client_manager.connect_to_async_client() as client:
-                elysia_collections_supported = (
-                    await check_elysia_version(client)
-                ) >= 0.3
+            if user["frontend_config"].save_location_client_manager.is_client:
+                async with user[
+                    "frontend_config"
+                ].save_location_client_manager.connect_to_async_client() as client:
+                    elysia_collections_supported = (
+                        await check_elysia_version(client)
+                    ) >= 0.3
+            else:
+                elysia_collections_supported = None
+                logger.debug(
+                    f"No valid connection in frontend config, setting elysia_collections_supported to None"
+                )
 
             logger.debug(
                 f"Elysia collections supported: {elysia_collections_supported}"
