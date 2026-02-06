@@ -834,10 +834,10 @@ async def list_configs(
             user_collection = collection.with_tenant(user_id)
 
             len_collection = (
-                await collection.aggregate.over_all(total_count=True)
+                await user_collection.aggregate.over_all(total_count=True)
             ).total_count
 
-            response = await collection.query.fetch_objects(
+            response = await user_collection.query.fetch_objects(
                 limit=len_collection,
                 sort=Sort.by_update_time(ascending=False),
                 return_metadata=MetadataQuery(last_update_time=True),
