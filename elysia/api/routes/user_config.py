@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv, set_key
 
-load_dotenv(override=False)
+# load_dotenv(override=False)
 
 from elysia.api.api_types import (
     SaveConfigUserData,
@@ -552,10 +552,11 @@ async def save_config_user(
                     "default": data.default,
                 }
 
+                tenant_exists = await collection.tenants.exists(user_id)
                 user_collection = collection.with_tenant(user_id)
 
                 # if the config is a default config, set all other default configs to False
-                if data.default:
+                if data.default and tenant_exists:
                     existing_default_config = await user_collection.query.fetch_objects(
                         filters=Filter.all_of(
                             [
@@ -569,7 +570,8 @@ async def save_config_user(
                         )
 
                 # save the config to the weaviate database
-                if await user_collection.data.exists(uuid=uuid):
+                logger.info(f"Saving config to weaviate database")
+                if tenant_exists and await user_collection.data.exists(uuid=uuid):
                     await user_collection.data.update(properties=config_item, uuid=uuid)
                 else:
                     await user_collection.data.insert(config_item, uuid=uuid)
