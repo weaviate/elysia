@@ -15,8 +15,10 @@ from elysia.api.utils.default_payloads import error_payload
 router = APIRouter()
 
 
-def format_ner_response(text: str, user_id: str, conversation_id: str, query_id: str):
-    response = named_entity_recognition(text)
+async def format_ner_response(
+    text: str, user_id: str, conversation_id: str, query_id: str
+):
+    response = await named_entity_recognition(text)
     return {
         "type": "ner",
         "id": str(uuid.uuid4()),
@@ -74,7 +76,7 @@ async def process(data: dict, websocket: WebSocket, user_manager: UserManager):
     try:
         # send ner response in advance
         await websocket.send_json(
-            format_ner_response(
+            await format_ner_response(
                 text=data["query"],
                 user_id=data["user_id"],
                 conversation_id=data["conversation_id"],

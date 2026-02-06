@@ -134,9 +134,9 @@ async def load_a_config(
     user_manager: UserManager = Depends(get_user_manager),
 ):
     """
-    Get the current config for a single user (in memory).
+    Get the current config for a single user, but don't load it into memory.
     """
-    logger.debug(f"/get_current_user_config API request received")
+    logger.debug(f"/load_a_config API request received")
     logger.debug(f"User ID: {user_id}")
 
     headers = {"Cache-Control": "no-cache"}
@@ -158,8 +158,17 @@ async def load_a_config(
             frontend_config.save_location_client_manager.connect_to_async_client() as client
         ):
             uuid = generate_uuid5(config_id)
+            if not await client.collections.exists("ELYSIA_CONFIG__"):
+                raise Exception("No collection found.")
+
             collection = client.collections.get("ELYSIA_CONFIG__")
-            config_response = await collection.query.fetch_object_by_id(uuid=uuid)
+
+            if not await collection.tenants.exists(user_id):
+                raise Exception("User ID not in collection.")
+
+            user_collection = collection.with_tenant(user_id)
+
+            config_response = await user_collection.query.fetch_object_by_id(uuid=uuid)
             if config_response is None:
                 raise Exception(f"Config with ID {config_id} not found.")
 
@@ -429,10 +438,25 @@ async def save_config_user(
             }
         )
 
+    save_location_client_manager = user["frontend_config"].save_location_client_manager
+    if not save_location_client_manager.is_client:
+        warnings.append(
+            "No valid Weaviate database destination for config save location found. "
+            "Config has not been saved to Weaviate database."
+        )
+        return JSONResponse(
+            content={
+                "error": "",
+                "config": tree_manager.config.to_json(),
+                "frontend_config": user["frontend_config"].to_json(),
+                "warnings": warnings,
+                "elysia_collections_supported": None,
+            }
+        )
+
     #
     # -- Check elysia version supported here, if supported: continue, if not: return with Flag=True
     #
-    save_location_client_manager = user["frontend_config"].save_location_client_manager
     async with save_location_client_manager.connect_to_async_client() as client:
         elysia_collections_supported = (await check_elysia_version(client)) >= 0.3
 
@@ -464,117 +488,110 @@ async def save_config_user(
         # Do not override frontend storage settings with backend settings here;
         # storage cluster for configs/conversations is controlled via frontend payload
 
-        # Check if the user has a valid save location (allow local without API key)
-        if not user["frontend_config"].save_location_client_manager.is_client:
-            warnings.append(
-                "No valid Weaviate database destination for config save location found. "
-                "Config has not been saved to Weaviate database."
-            )
-        else:
+        # Check if the user has a valid save location (allow local without API key
+        settings_dict = encrypt_api_keys(settings_dict)
 
-            settings_dict = encrypt_api_keys(settings_dict)
+        # Connect to the weaviate database
+        async with user[
+            "frontend_config"
+        ].save_location_client_manager.connect_to_async_client() as client:
 
-            # Connect to the weaviate database
-            async with user[
-                "frontend_config"
-            ].save_location_client_manager.connect_to_async_client() as client:
+            uuid = generate_uuid5(config_id)
 
-                uuid = generate_uuid5(config_id)
-
-                # Create a collection if it doesn't exist
-                if await client.collections.exists("ELYSIA_CONFIG__"):
-                    collection = client.collections.get("ELYSIA_CONFIG__")
-                else:
-                    collection = await client.collections.create(
-                        "ELYSIA_CONFIG__",
-                        vector_config=Configure.Vectors.self_provided(),
-                        inverted_index_config=Configure.inverted_index(
-                            index_timestamps=True
+            # Create a collection if it doesn't exist
+            if await client.collections.exists("ELYSIA_CONFIG__"):
+                collection = client.collections.get("ELYSIA_CONFIG__")
+            else:
+                collection = await client.collections.create(
+                    "ELYSIA_CONFIG__",
+                    vector_config=Configure.Vectors.self_provided(),
+                    inverted_index_config=Configure.inverted_index(
+                        index_timestamps=True
+                    ),
+                    properties=[
+                        Property(
+                            name="name",
+                            data_type=DataType.TEXT,
                         ),
-                        properties=[
-                            Property(
-                                name="name",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="style",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="agent_description",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="end_goal",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="branch_initialisation",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="user_id",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="config_id",
-                                data_type=DataType.TEXT,
-                            ),
-                            Property(
-                                name="default",
-                                data_type=DataType.BOOL,
-                            ),
-                        ],
-                        multi_tenancy_config=Configure.multi_tenancy(
-                            enabled=True,
-                            auto_tenant_creation=True,
-                            auto_tenant_activation=True,
+                        Property(
+                            name="style",
+                            data_type=DataType.TEXT,
                         ),
+                        Property(
+                            name="agent_description",
+                            data_type=DataType.TEXT,
+                        ),
+                        Property(
+                            name="end_goal",
+                            data_type=DataType.TEXT,
+                        ),
+                        Property(
+                            name="branch_initialisation",
+                            data_type=DataType.TEXT,
+                        ),
+                        Property(
+                            name="user_id",
+                            data_type=DataType.TEXT,
+                        ),
+                        Property(
+                            name="config_id",
+                            data_type=DataType.TEXT,
+                        ),
+                        Property(
+                            name="default",
+                            data_type=DataType.BOOL,
+                        ),
+                    ],
+                    multi_tenancy_config=Configure.multi_tenancy(
+                        enabled=True,
+                        auto_tenant_creation=True,
+                        auto_tenant_activation=True,
+                    ),
+                )
+
+            format_dict_to_serialisable(settings_dict)
+
+            if settings_dict == {}:
+                settings_dict["null"] = "null"
+
+            if "API_KEYS" in settings_dict and settings_dict["API_KEYS"] == {}:
+                settings_dict["API_KEYS"]["null"] = "null"
+
+            config_item = {
+                "name": data.name,
+                "settings": settings_dict,
+                "style": style,
+                "agent_description": agent_description,
+                "end_goal": end_goal,
+                "branch_initialisation": branch_initialisation,
+                "frontend_config": user["frontend_config"].config,
+                "config_id": config_id,
+                "default": data.default,
+            }
+
+            tenant_exists = await collection.tenants.exists(user_id)
+            user_collection = collection.with_tenant(user_id)
+
+            # if the config is a default config, set all other default configs to False
+            if data.default and tenant_exists:
+                existing_default_config = await user_collection.query.fetch_objects(
+                    filters=Filter.all_of(
+                        [
+                            Filter.by_property("default").equal(True),
+                        ]
+                    )
+                )
+                for item in existing_default_config.objects:
+                    await user_collection.data.update(
+                        properties={"default": False}, uuid=item.uuid
                     )
 
-                format_dict_to_serialisable(settings_dict)
-
-                if settings_dict == {}:
-                    settings_dict["null"] = "null"
-
-                if "API_KEYS" in settings_dict and settings_dict["API_KEYS"] == {}:
-                    settings_dict["API_KEYS"]["null"] = "null"
-
-                config_item = {
-                    "name": data.name,
-                    "settings": settings_dict,
-                    "style": style,
-                    "agent_description": agent_description,
-                    "end_goal": end_goal,
-                    "branch_initialisation": branch_initialisation,
-                    "frontend_config": user["frontend_config"].config,
-                    "config_id": config_id,
-                    "default": data.default,
-                }
-
-                tenant_exists = await collection.tenants.exists(user_id)
-                user_collection = collection.with_tenant(user_id)
-
-                # if the config is a default config, set all other default configs to False
-                if data.default and tenant_exists:
-                    existing_default_config = await user_collection.query.fetch_objects(
-                        filters=Filter.all_of(
-                            [
-                                Filter.by_property("default").equal(True),
-                            ]
-                        )
-                    )
-                    for item in existing_default_config.objects:
-                        await user_collection.data.update(
-                            properties={"default": False}, uuid=item.uuid
-                        )
-
-                # save the config to the weaviate database
-                logger.info(f"Saving config to weaviate database")
-                if tenant_exists and await user_collection.data.exists(uuid=uuid):
-                    await user_collection.data.update(properties=config_item, uuid=uuid)
-                else:
-                    await user_collection.data.insert(config_item, uuid=uuid)
+            # save the config to the weaviate database
+            logger.info(f"Saving config to weaviate database")
+            if tenant_exists and await user_collection.data.exists(uuid=uuid):
+                await user_collection.data.update(properties=config_item, uuid=uuid)
+            else:
+                await user_collection.data.insert(config_item, uuid=uuid)
 
     except Exception as e:
         logger.exception(f"Error in /save_config_user API during weaviate save")
@@ -651,28 +668,29 @@ async def load_config_user(
     try:
 
         # check if the user has a valid save location
-        if (
-            frontend_config.save_location_wcd_url == ""
-            or frontend_config.save_location_wcd_api_key == ""
-        ):
-            raise Exception("WCD URL or API key not found.")
-
-        if (
-            frontend_config.save_location_wcd_url == ""
-            or frontend_config.save_location_wcd_api_key == ""
-        ):
+        if not frontend_config.save_location_client_manager.is_client:
             raise Exception(
-                "No valid destination for config load location found. "
-                "Please update the save location using the /update_save_location API."
+                "No valid Weaviate database destination for config load location found. "
+                "Cannot load config from Weaviate database."
             )
 
         # Retrieve the config from the weaviate database
         async with (
             frontend_config.save_location_client_manager.connect_to_async_client() as client
         ):
-            uuid = generate_uuid5(config_id)
+
+            if not await client.collections.exists("ELYSIA_CONFIG__"):
+                raise Exception("No collection found.")
+
             collection = client.collections.get("ELYSIA_CONFIG__")
-            config_response = await collection.query.fetch_object_by_id(uuid=uuid)
+
+            if not await collection.tenants.exists(user_id):
+                raise Exception("User ID not in collection.")
+
+            user_collection = collection.with_tenant(user_id)
+
+            uuid = generate_uuid5(config_id)
+            config_response = await user_collection.query.fetch_object_by_id(uuid=uuid)
             if config_response is None:
                 raise Exception(f"Config with ID {config_id} not found.")
 
@@ -757,9 +775,18 @@ async def delete_config(
         async with (
             frontend_config.save_location_client_manager.connect_to_async_client()
         ) as client:
+
+            if not await client.collections.exists("ELYSIA_CONFIG__"):
+                raise Exception("No collection found.")
+
             collection = client.collections.get("ELYSIA_CONFIG__")
+
+            if not await collection.tenants.exists(user_id):
+                raise Exception("User ID not in collection.")
+
+            user_collection = collection.with_tenant(user_id)
             uuid = generate_uuid5(config_id)
-            await collection.data.delete_by_id(uuid)
+            await user_collection.data.delete_by_id(uuid)
 
     except Exception as e:
         logger.exception(f"Error in /delete_config API")

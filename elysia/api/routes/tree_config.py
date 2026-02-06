@@ -271,8 +271,18 @@ async def load_config_tree(
             "frontend_config"
         ].save_location_client_manager.connect_to_async_client() as client:
             uuid = generate_uuid5(config_id)
+
+            if not await client.collections.exists("ELYSIA_CONFIG__"):
+                raise Exception("No collection found.")
+
             collection = client.collections.get("ELYSIA_CONFIG__")
-            config_item = await collection.query.fetch_object_by_id(uuid=uuid)
+
+            if not await collection.tenants.exists(user_id):
+                raise Exception("User ID not in collection.")
+
+            user_collection = collection.with_tenant(user_id)
+
+            config_item = await user_collection.query.fetch_object_by_id(uuid=uuid)
 
         # Load the configs to the current user
         format_dict_to_serialisable(config_item.properties)

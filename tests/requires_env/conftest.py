@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv(override=False)
+# load_dotenv(override=False)
 
 
 def get_frontend_config_file_paths() -> list[str]:
