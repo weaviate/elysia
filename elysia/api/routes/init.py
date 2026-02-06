@@ -63,7 +63,7 @@ async def initialise_user(
             - config (dict): The user's config.
             - frontend_config (dict): The user's frontend config.
     """
-    logger.debug(f"/initialise_user API request received")
+    logger.debug(f"/initialise_user API request received. User ID: {user_id}")
 
     try:
 
@@ -71,30 +71,45 @@ async def initialise_user(
 
         # if a user does not exist, create a user and set up the configs
         if not user_exists:
+            logger.debug(f"User does not exist, creating user")
             try:
+                logger.debug(f"Adding user locally")
                 await user_manager.add_user_local(
                     user_id,
                 )  # leave config empty to create defaults for a new user
 
                 user = await user_manager.get_user_local(user_id=user_id)
 
-                async with user[
-                    "frontend_config"
-                ].save_location_client_manager.connect_to_async_client() as client:
-                    elysia_collections_supported = (
-                        await check_elysia_version(client)
-                    ) >= 0.3
+                if user["frontend_config"].save_location_client_manager.is_client:
+                    async with user[
+                        "frontend_config"
+                    ].save_location_client_manager.connect_to_async_client() as client:
+                        elysia_collections_supported = (
+                            await check_elysia_version(client)
+                        ) >= 0.3
+                    logger.debug(
+                        f" Elysia collections versions good: {elysia_collections_supported}"
+                    )
+                else:
+                    elysia_collections_supported = None
+                    logger.debug(
+                        f"No valid connection in frontend config, setting elysia_collections_supported to None"
+                    )
 
                 # find any default configs
                 if (
                     elysia_collections_supported
                     and user["frontend_config"].save_location_client_manager.is_client
                 ):
+                    logger.debug(
+                        f"Elysia collections versions good, finding default config"
+                    )
                     default_config = await get_default_config(
                         user["frontend_config"].save_location_client_manager,
                         user_id,
                     )
                     if default_config:
+                        logger.debug(f"Default config found, updating config")
                         await user_manager.update_config(
                             user_id,
                             config_id=default_config.id,
@@ -105,13 +120,18 @@ async def initialise_user(
                             end_goal=default_config.end_goal,
                             branch_initialisation=default_config.branch_initialisation,
                         )
-                        logger.debug("Using default config")
+                        logger.debug(
+                            f"Default config loaded, Config ID: {default_config.id}"
+                        )
+                    else:
+                        logger.debug(f"No default config found, using default settings")
             except Exception as e:
                 logger.exception(e)
                 logger.error("Error initialising user, removing user")
                 if user_id in user_manager.users:
                     del user_manager.users[user_id]
         else:
+            logger.debug(f"User exists locally, getting existing configs from memory")
             user = await user_manager.get_user_local(user_id=user_id)
             async with user[
                 "frontend_config"
@@ -119,6 +139,10 @@ async def initialise_user(
                 elysia_collections_supported = (
                     await check_elysia_version(client)
                 ) >= 0.3
+
+            logger.debug(
+                f"Elysia collections supported: {elysia_collections_supported}"
+            )
 
         # if a user exists, get the existing configs
         user = await user_manager.get_user_local(user_id=user_id)

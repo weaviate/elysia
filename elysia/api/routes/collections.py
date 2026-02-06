@@ -318,7 +318,6 @@ async def view_paginated_collection(
                 ascending=data.ascending,
                 filter_config=data.filter_config,
             )
-
             logger.info(f"Returning collection info for {collection_name}")
             return JSONResponse(
                 content={"properties": data_types, "items": items, "error": ""},

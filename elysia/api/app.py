@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
     user_manager = get_user_manager()
 
     scheduler = AsyncIOScheduler()
-    set_log_level("INFO")
+    set_log_level("DEBUG")
 
     # use prime numbers for intervals so they don't overlap
     scheduler.add_job(check_timeouts, "interval", seconds=29)

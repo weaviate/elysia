@@ -48,8 +48,10 @@ async def load_frontend_config_from_file(
         config_file = config_dir / f"frontend_config_{user_id}.json"
 
         if not config_file.exists():
+            logger.debug(f"No frontend config file found, creating new frontend config")
             return FrontendConfig(logger=logger)
 
+        logger.debug(f"Loading frontend config from file: {config_file}")
         with open(config_file, "r") as f:
             fe_config = await FrontendConfig.from_json(json.load(f), logger)
             return fe_config
