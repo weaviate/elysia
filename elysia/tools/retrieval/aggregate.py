@@ -233,7 +233,7 @@ class Aggregate(Tool):
                         else ""
                     ),
                     "aggregation_output": (
-                        aggregation.aggregation_queries.model_dump()
+                        [a.model_dump() for a in aggregation.aggregation_queries]
                         if aggregation.aggregation_queries is not None
                         else None
                     ),
