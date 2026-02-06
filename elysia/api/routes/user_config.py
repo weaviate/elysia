@@ -813,41 +813,45 @@ async def list_configs(
                 headers=headers,
             )
 
-        if user_id is not None:
-            user_id_filter = Filter.by_property("user_id").equal(user_id)
-        else:
-            user_id_filter = None
-
         async with user[
             "frontend_config"
         ].save_location_client_manager.connect_to_async_client() as client:
 
-            if await client.collections.exists("ELYSIA_CONFIG__"):
-                collection = client.collections.get("ELYSIA_CONFIG__")
-                len_collection = (
-                    await collection.aggregate.over_all(total_count=True)
-                ).total_count
-
-                response = await collection.query.fetch_objects(
-                    limit=len_collection,
-                    sort=Sort.by_update_time(ascending=False),
-                    return_metadata=MetadataQuery(last_update_time=True),
-                    filters=user_id_filter,
+            if not await client.collections.exists("ELYSIA_CONFIG__"):
+                return JSONResponse(
+                    content={"error": "", "configs": [], "warnings": warnings},
+                    headers=headers,
                 )
 
-                configs = [
-                    {
-                        "config_id": obj.properties["config_id"],
-                        "name": obj.properties["name"],
-                        "default": obj.properties["default"],
-                        "last_update_time": format_datetime(
-                            obj.metadata.last_update_time
-                        ),
-                    }
-                    for obj in response.objects
-                ]
-            else:
-                configs = []
+            collection = client.collections.get("ELYSIA_CONFIG__")
+
+            if not await collection.tenants.exists(user_id):
+                return JSONResponse(
+                    content={"error": "", "configs": [], "warnings": warnings},
+                    headers=headers,
+                )
+
+            user_collection = collection.with_tenant(user_id)
+
+            len_collection = (
+                await collection.aggregate.over_all(total_count=True)
+            ).total_count
+
+            response = await collection.query.fetch_objects(
+                limit=len_collection,
+                sort=Sort.by_update_time(ascending=False),
+                return_metadata=MetadataQuery(last_update_time=True),
+            )
+
+            configs = [
+                {
+                    "config_id": obj.properties["config_id"],
+                    "name": obj.properties["name"],
+                    "default": obj.properties["default"],
+                    "last_update_time": format_datetime(obj.metadata.last_update_time),
+                }
+                for obj in response.objects
+            ]
 
     except Exception as e:
         logger.exception(f"Error in /list_configs API")
