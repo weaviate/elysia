@@ -66,7 +66,10 @@ SERIALIZABLE_TYPES = (str, list, dict, float, int, bool)
 def _convert_value(value: Any) -> Any:
     """Convert a single value to a serializable format."""
     if isinstance(value, str) and value.startswith("[") and value.endswith("]"):
-        return ast.literal_eval(value)
+        try:
+            return ast.literal_eval(value)
+        except:
+            return value
     if isinstance(value, datetime.datetime):
         return format_datetime(value)
     if isinstance(value, UUID):
